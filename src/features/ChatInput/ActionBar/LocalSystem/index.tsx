@@ -37,8 +37,8 @@ const LocalSystem = memo(() => {
       title={t('localSystem.title')}
       popover={{
         content: <Controls />,
-        maxWidth: 360,
-        minWidth: 360,
+        maxWidth: 320,
+        minWidth: 320,
         placement: 'topLeft',
         styles: {
           content: {
