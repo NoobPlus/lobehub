@@ -140,6 +140,11 @@ const Body = memo<BodyProps>(
   }) => {
     const { t } = useTranslation('agent');
     const origin = useAppOrigin();
+    const applicationId = Form.useWatch('applicationId', form);
+
+    const webhookUrl = applicationId
+      ? `${origin}/api/agent/webhooks/${provider.id}/${applicationId}`
+      : `${origin}/api/agent/webhooks/${provider.id}`;
 
     return (
       <Form component={false} form={form}>
@@ -426,12 +431,10 @@ const Body = memo<BodyProps>(
                 </div>
               </div>
               <Flexbox horizontal gap={8}>
-                <div className={styles.webhookBox}>
-                  {`${origin}/api/agent/webhooks/${provider.id}`}
-                </div>
+                <div className={styles.webhookBox}>{webhookUrl}</div>
                 <Button
                   onClick={() => {
-                    navigator.clipboard.writeText(`${origin}/api/agent/webhooks/${provider.id}`);
+                    navigator.clipboard.writeText(webhookUrl);
                     onCopied();
                   }}
                 >
@@ -446,7 +449,7 @@ const Body = memo<BodyProps>(
                     components={{ bold: <strong /> }}
                     i18nKey="integration.endpointUrlHint"
                     ns="agent"
-                    values={{ name: provider.name }}
+                    values={{ fieldName: provider.fieldTags.webhook, name: provider.name }}
                   />
                 }
               />
