@@ -7,6 +7,7 @@ import { TopicModel } from '@/database/models/topic';
 import { verifyQStashSignature } from '@/libs/qstash';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { DiscordRestApi } from '@/server/services/bot/discordRestApi';
+import { LarkRestApi } from '@/server/services/bot/larkRestApi';
 import {
   renderError,
   renderFinalReply,
@@ -48,8 +49,17 @@ function detectPlatform(platformThreadId: string): string {
   return platformThreadId.split(':')[0];
 }
 
+/**
+ * Extract chat ID from Lark platformThreadId (e.g. "lark:oc_xxx" or "feishu:oc_xxx").
+ */
+function extractLarkChatId(platformThreadId: string): string {
+  const parts = platformThreadId.split(':');
+  return parts[1];
+}
+
 /** Telegram has a 4096 char limit vs Discord's 2000 */
 const TELEGRAM_CHAR_LIMIT = 4000;
+const LARK_CHAR_LIMIT = 4000;
 
 // --------------- Platform-agnostic message interface ---------------
 
@@ -103,6 +113,16 @@ function createTelegramMessenger(telegram: TelegramRestApi, chatId: string): Pla
     removeReaction: (messageId) =>
       telegram.removeMessageReaction(chatId, parseTelegramMessageId(messageId)),
     triggerTyping: () => telegram.sendChatAction(chatId, 'typing'),
+  };
+}
+
+function createLarkMessenger(lark: LarkRestApi, chatId: string): PlatformMessenger {
+  return {
+    createMessage: (content) => lark.sendMessage(chatId, content).then(() => {}),
+    editMessage: (messageId, content) => lark.editMessage(messageId, content),
+    // Lark has no reaction/typing API for bots
+    removeReaction: () => Promise.resolve(),
+    triggerTyping: () => Promise.resolve(),
   };
 }
 
@@ -178,10 +198,11 @@ export async function POST(request: Request): Promise<Response> {
       credentials = JSON.parse(row.credentials);
     }
 
-    const botToken = credentials.botToken;
-    if (!botToken) {
-      log('bot-callback: no botToken in credentials for %s appId=%s', platform, applicationId);
-      return NextResponse.json({ error: 'Bot token not found' }, { status: 500 });
+    // Validate required credentials exist for the platform
+    const isLark = platform === 'lark' || platform === 'feishu';
+    if (isLark ? !credentials.appId || !credentials.appSecret : !credentials.botToken) {
+      log('bot-callback: missing credentials for %s appId=%s', platform, applicationId);
+      return NextResponse.json({ error: 'Bot credentials incomplete' }, { status: 500 });
     }
 
     // Create platform-specific messenger
@@ -190,15 +211,23 @@ export async function POST(request: Request): Promise<Response> {
 
     switch (platform) {
       case 'telegram': {
-        const telegram = new TelegramRestApi(botToken);
+        const telegram = new TelegramRestApi(credentials.botToken);
         const chatId = extractTelegramChatId(platformThreadId);
         messenger = createTelegramMessenger(telegram, chatId);
         charLimit = TELEGRAM_CHAR_LIMIT;
         break;
       }
+      case 'lark':
+      case 'feishu': {
+        const lark = new LarkRestApi(credentials.appId, credentials.appSecret, platform);
+        const chatId = extractLarkChatId(platformThreadId);
+        messenger = createLarkMessenger(lark, chatId);
+        charLimit = LARK_CHAR_LIMIT;
+        break;
+      }
       case 'discord':
       default: {
-        const discord = new DiscordRestApi(botToken);
+        const discord = new DiscordRestApi(credentials.botToken);
         const channelId = extractDiscordChannelId(platformThreadId);
         messenger = createDiscordMessenger(discord, channelId, platformThreadId);
         break;

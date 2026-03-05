@@ -76,7 +76,7 @@ const Header = memo<HeaderProps>(({ provider, currentConfig, onToggleEnable }) =
                 {provider.name}
               </Title>
               <Text style={{ fontSize: 12 }} type="secondary">
-                {provider.description}
+                {t(provider.description)}
               </Text>
             </Flexbox>
           </div>

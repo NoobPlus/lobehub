@@ -34,9 +34,12 @@ interface CurrentConfig {
 
 export interface IntegrationFormValues {
   applicationId: string;
+  appSecret?: string;
   botToken: string;
+  encryptKey?: string;
   publicKey: string;
   secretToken?: string;
+  verificationToken?: string;
   webhookProxyUrl?: string;
 }
 
@@ -75,9 +78,12 @@ const PlatformDetail = memo<PlatformDetailProps>(({ provider, agentId, currentCo
     if (currentConfig) {
       form.setFieldsValue({
         applicationId: currentConfig.applicationId || '',
+        appSecret: currentConfig.credentials?.appSecret || '',
         botToken: currentConfig.credentials?.botToken || '',
+        encryptKey: currentConfig.credentials?.encryptKey || '',
         publicKey: currentConfig.credentials?.publicKey || '',
         secretToken: currentConfig.credentials?.secretToken || '',
+        verificationToken: currentConfig.credentials?.verificationToken || '',
         webhookProxyUrl: currentConfig.credentials?.webhookProxyUrl || '',
       });
     }
@@ -101,12 +107,22 @@ const PlatformDetail = memo<PlatformDetailProps>(({ provider, agentId, currentCo
       }
 
       // Build platform-specific credentials
-      const credentials: Record<string, string> = { botToken: values.botToken };
+      const credentials: Record<string, string> =
+        provider.authMode === 'app-secret'
+          ? { appId: applicationId, appSecret: values.appSecret || '' }
+          : { botToken: values.botToken };
+
       if (provider.fieldTags.publicKey) {
         credentials.publicKey = values.publicKey || 'default';
       }
       if (provider.fieldTags.secretToken && values.secretToken) {
         credentials.secretToken = values.secretToken;
+      }
+      if (provider.fieldTags.verificationToken && values.verificationToken) {
+        credentials.verificationToken = values.verificationToken;
+      }
+      if (provider.fieldTags.encryptKey && values.encryptKey) {
+        credentials.encryptKey = values.encryptKey;
       }
       if (provider.webhookMode === 'auto' && values.webhookProxyUrl) {
         credentials.webhookProxyUrl = values.webhookProxyUrl;
@@ -138,7 +154,9 @@ const PlatformDetail = memo<PlatformDetailProps>(({ provider, agentId, currentCo
     agentId,
     provider.id,
     provider.autoAppId,
+    provider.authMode,
     provider.fieldTags,
+    provider.webhookMode,
     form,
     currentConfig,
     createBotProvider,

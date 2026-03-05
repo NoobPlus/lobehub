@@ -162,43 +162,84 @@ const Body = memo<BodyProps>(
               </div>
             )}
 
-            <div className={styles.field}>
-              <div className={styles.label}>
-                <div className={styles.labelLeft}>
-                  {t('integration.botToken')}
-                  {provider.fieldTags.token && <Tag>{provider.fieldTags.token}</Tag>}
+            {/* Bot Token (Discord/Telegram) or App Secret (Lark/Feishu) */}
+            {provider.authMode === 'app-secret' ? (
+              <div className={styles.field}>
+                <div className={styles.label}>
+                  <div className={styles.labelLeft}>
+                    {t('integration.appSecret')}
+                    {provider.fieldTags.appSecret && <Tag>{provider.fieldTags.appSecret}</Tag>}
+                  </div>
+                  <a
+                    className={styles.helperLink}
+                    href={provider.docsLink}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    {t('integration.botTokenHowToGet')} <Icon icon={ExternalLink} size={'small'} />
+                  </a>
                 </div>
-                <a
-                  className={styles.helperLink}
-                  href={provider.docsLink}
-                  rel="noreferrer"
-                  target="_blank"
+                <Form.Item noStyle name="appSecret" rules={[{ required: true }]}>
+                  <Input.Password
+                    style={{ fontFamily: 'monospace' }}
+                    placeholder={
+                      hasConfig
+                        ? t('integration.botTokenPlaceholderExisting')
+                        : t('integration.appSecretPlaceholder')
+                    }
+                  />
+                </Form.Item>
+                <Text
+                  type="secondary"
+                  style={{
+                    alignItems: 'center',
+                    display: 'flex',
+                    fontSize: 12,
+                    gap: 4,
+                  }}
                 >
-                  {t('integration.botTokenHowToGet')} <Icon icon={ExternalLink} size={'small'} />
-                </a>
+                  <Icon icon={Info} size={'small'} /> {t('integration.botTokenEncryptedHint')}
+                </Text>
               </div>
-              <Form.Item noStyle name="botToken" rules={[{ required: true }]}>
-                <Input.Password
-                  style={{ fontFamily: 'monospace' }}
-                  placeholder={
-                    hasConfig
-                      ? t('integration.botTokenPlaceholderExisting')
-                      : t('integration.botTokenPlaceholderNew')
-                  }
-                />
-              </Form.Item>
-              <Text
-                type="secondary"
-                style={{
-                  alignItems: 'center',
-                  display: 'flex',
-                  fontSize: 12,
-                  gap: 4,
-                }}
-              >
-                <Icon icon={Info} size={'small'} /> {t('integration.botTokenEncryptedHint')}
-              </Text>
-            </div>
+            ) : (
+              <div className={styles.field}>
+                <div className={styles.label}>
+                  <div className={styles.labelLeft}>
+                    {t('integration.botToken')}
+                    {provider.fieldTags.token && <Tag>{provider.fieldTags.token}</Tag>}
+                  </div>
+                  <a
+                    className={styles.helperLink}
+                    href={provider.docsLink}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    {t('integration.botTokenHowToGet')} <Icon icon={ExternalLink} size={'small'} />
+                  </a>
+                </div>
+                <Form.Item noStyle name="botToken" rules={[{ required: true }]}>
+                  <Input.Password
+                    style={{ fontFamily: 'monospace' }}
+                    placeholder={
+                      hasConfig
+                        ? t('integration.botTokenPlaceholderExisting')
+                        : t('integration.botTokenPlaceholderNew')
+                    }
+                  />
+                </Form.Item>
+                <Text
+                  type="secondary"
+                  style={{
+                    alignItems: 'center',
+                    display: 'flex',
+                    fontSize: 12,
+                    gap: 4,
+                  }}
+                >
+                  <Icon icon={Info} size={'small'} /> {t('integration.botTokenEncryptedHint')}
+                </Text>
+              </div>
+            )}
 
             {provider.fieldTags.publicKey && (
               <div className={styles.field}>
@@ -244,6 +285,62 @@ const Body = memo<BodyProps>(
                 </Text>
               </div>
             )}
+            {provider.fieldTags.verificationToken && (
+              <div className={styles.field}>
+                <div className={styles.label}>
+                  <div className={styles.labelLeft}>
+                    {t('integration.verificationToken')}
+                    <Tag>{provider.fieldTags.verificationToken}</Tag>
+                  </div>
+                </div>
+                <Form.Item noStyle name="verificationToken">
+                  <Input
+                    placeholder={t('integration.verificationTokenPlaceholder')}
+                    style={{ fontFamily: 'monospace' }}
+                  />
+                </Form.Item>
+                <Text
+                  type="secondary"
+                  style={{
+                    alignItems: 'center',
+                    display: 'flex',
+                    fontSize: 12,
+                    gap: 4,
+                  }}
+                >
+                  <Icon icon={Info} size={'small'} /> {t('integration.verificationTokenHint')}
+                </Text>
+              </div>
+            )}
+
+            {provider.fieldTags.encryptKey && (
+              <div className={styles.field}>
+                <div className={styles.label}>
+                  <div className={styles.labelLeft}>
+                    {t('integration.encryptKey')}
+                    <Tag>{provider.fieldTags.encryptKey}</Tag>
+                  </div>
+                </div>
+                <Form.Item noStyle name="encryptKey">
+                  <Input.Password
+                    placeholder={t('integration.encryptKeyPlaceholder')}
+                    style={{ fontFamily: 'monospace' }}
+                  />
+                </Form.Item>
+                <Text
+                  type="secondary"
+                  style={{
+                    alignItems: 'center',
+                    display: 'flex',
+                    fontSize: 12,
+                    gap: 4,
+                  }}
+                >
+                  <Icon icon={Info} size={'small'} /> {t('integration.encryptKeyHint')}
+                </Text>
+              </div>
+            )}
+
             {/* Dev-only: HTTPS tunnel URL for Telegram webhook */}
             {provider.webhookMode === 'auto' && process.env.NODE_ENV === 'development' && (
               <div className={styles.field}>
