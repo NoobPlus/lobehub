@@ -158,8 +158,9 @@ const Body = memo<BodyProps>(
         <Form
           className={styles.form}
           form={form}
-          itemMinWidth={'max(30%, 280px)'}
+          itemMinWidth={'max(50%, 400px)'}
           items={[group]}
+          requiredMark={false}
           style={{ maxWidth: 1024, padding: 24, width: '100%' }}
           variant={'borderless'}
         />
@@ -190,8 +191,8 @@ const Body = memo<BodyProps>(
               closable
               showIcon
               description={saveResult.type === 'error' ? saveResult.errorDetail : undefined}
-              type={saveResult.type}
               title={saveResult.type === 'success' ? t('channel.saved') : t('channel.saveFailed')}
+              type={saveResult.type}
             />
           )}
 
