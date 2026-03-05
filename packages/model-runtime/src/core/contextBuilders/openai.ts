@@ -1,4 +1,5 @@
 import { imageUrlToBase64 } from '@lobechat/utils';
+import { Buffer } from 'buffer/';
 import type OpenAI from 'openai';
 import { toFile } from 'openai';
 
@@ -73,7 +74,7 @@ export const convertOpenAIMessages = async (
 
 export const convertOpenAIResponseInputs = async (
   messages: OpenAIChatMessage[],
-  options?: ConvertMessageContentOptions,
+  _options?: ConvertMessageContentOptions,
 ) => {
   const input: OpenAI.Responses.ResponseInputItem[] = [];
   await Promise.all(

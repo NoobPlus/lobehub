@@ -1,4 +1,5 @@
 import { type ChatContextContent } from '@lobechat/types';
+import { Buffer } from 'buffer/';
 import { t } from 'i18next';
 
 import { notification } from '@/components/AntdStaticMethods';

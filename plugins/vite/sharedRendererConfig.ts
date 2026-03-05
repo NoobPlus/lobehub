@@ -1,6 +1,5 @@
 import react from '@vitejs/plugin-react';
 import { codeInspectorPlugin } from 'code-inspector-plugin';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 import { viteEmotionSpeedy } from './emotionSpeedy';
@@ -123,7 +122,6 @@ export function sharedRendererPlugins(options: SharedRendererOptions) {
   const defaultTsconfigPaths = options.tsconfigPaths ?? true;
   return [
     viteEmotionSpeedy(),
-    nodePolyfills({ include: ['buffer'] }),
     viteNodeModuleStub(),
     vitePlatformResolve(options.platform),
     defaultTsconfigPaths && tsconfigPaths({ projects: ['.'] }),
