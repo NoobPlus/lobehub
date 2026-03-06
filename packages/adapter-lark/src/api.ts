@@ -104,6 +104,25 @@ export class LarkApiClient {
     return data.bot;
   }
 
+  async getUserInfo(openId: string): Promise<{ name?: string } | null> {
+    const userIdType = openId.startsWith('ou_')
+      ? 'open_id'
+      : openId.startsWith('on_')
+        ? 'union_id'
+        : 'user_id';
+
+    const data = await this.call(
+      'GET',
+      `/contact/v3/users/${openId}?user_id_type=${userIdType}`,
+      {},
+    );
+    const user = data.data?.user;
+    if (!user) return null;
+
+    const name = user.name || user.display_name || user.nickname || user.en_name;
+    return name ? { name } : null;
+  }
+
   // ------------------------------------------------------------------
   // Auth
   // ------------------------------------------------------------------

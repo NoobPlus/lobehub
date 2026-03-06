@@ -36,6 +36,9 @@ export class LarkAdapter implements Adapter<LarkThreadId, LarkRawMessage> {
   private _botUserId?: string;
   private chat!: ChatInstance;
   private logger!: Logger;
+  private static SENDER_NAME_TTL_MS = 10 * 60_000;
+  private senderNameCache = new Map<string, { expireAt: number; name: string }>();
+  private senderNamePermissionDenied = false;
 
   get userName(): string {
     return this._userName;
@@ -152,8 +155,7 @@ export class LarkAdapter implements Adapter<LarkThreadId, LarkRawMessage> {
     });
 
     // Create message lazily via factory
-    const messageFactory = () =>
-      Promise.resolve(this.parseRawEvent(message, sender, threadId, messageText));
+    const messageFactory = () => this.parseRawEvent(message, sender, threadId, messageText);
 
     // Delegate to Chat SDK pipeline
     this.chat.processMessage(this, threadId, messageFactory, options);
@@ -360,25 +362,30 @@ export class LarkAdapter implements Adapter<LarkThreadId, LarkRawMessage> {
   // Private helpers
   // ------------------------------------------------------------------
 
-  private parseRawEvent(
+  private async parseRawEvent(
     message: LarkMessageBody,
     sender: { sender_id: { open_id: string }; sender_type: string },
     threadId: string,
     messageText: string,
-  ): Message<LarkRawMessage> {
+  ): Promise<Message<LarkRawMessage>> {
     const cleanText = messageText
       .replaceAll(/@_user_\d+/g, '')
       .replaceAll('@_all', '')
       .trim();
     const formatted = parseMarkdown(cleanText);
 
+    const openId = sender.sender_id.open_id;
     const isBot = sender.sender_type === 'bot';
+
+    // Resolve user display name via contact API (cached, graceful degradation)
+    const displayName = (await this.resolveSenderName(openId)) || openId;
+
     const author: Author = {
-      fullName: sender.sender_id.open_id,
+      fullName: displayName,
       isBot,
-      isMe: isBot && sender.sender_id.open_id === this._botUserId,
-      userId: sender.sender_id.open_id,
-      userName: sender.sender_id.open_id,
+      isMe: isBot && openId === this._botUserId,
+      userId: openId,
+      userName: displayName,
     };
 
     return new Message({
@@ -394,6 +401,35 @@ export class LarkAdapter implements Adapter<LarkThreadId, LarkRawMessage> {
       text: cleanText,
       threadId,
     });
+  }
+
+  private async resolveSenderName(openId: string): Promise<string | undefined> {
+    // Skip API calls if we already know permission is denied
+    if (this.senderNamePermissionDenied) return undefined;
+
+    const now = Date.now();
+    const cached = this.senderNameCache.get(openId);
+    if (cached && cached.expireAt > now) return cached.name;
+
+    try {
+      const info = await this.api.getUserInfo(openId);
+      if (info?.name) {
+        this.senderNameCache.set(openId, {
+          expireAt: now + LarkAdapter.SENDER_NAME_TTL_MS,
+          name: info.name,
+        });
+        return info.name;
+      }
+      return undefined;
+    } catch (err) {
+      const msg = String(err);
+      // Mark permission denied to avoid repeated failing calls
+      if (msg.includes('99991672') || msg.includes('Access denied')) {
+        this.senderNamePermissionDenied = true;
+        console.warn('[adapter-lark] sender name resolution disabled: missing contact permission');
+      }
+      return undefined;
+    }
   }
 
   private toEmojiType(emoji: EmojiValue | string): string {
