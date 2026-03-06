@@ -57,6 +57,7 @@ export const marketRouter = router({
   // ============================== Skill Management ==============================
   skill: skillRouter,
 
+
   getAgentsByPlugin: marketProcedure
     .input(
       z.object({
@@ -81,7 +82,7 @@ export const marketRouter = router({
     }),
 
   // ============================== Assistant Market ==============================
-  getAssistantCategories: marketProcedure
+getAssistantCategories: marketProcedure
     .input(
       z
         .object({
@@ -689,17 +690,13 @@ export const marketRouter = router({
 
         log('expirationTime:', expirationTime.toISOString());
 
-        // Determine if we should use secure cookies
-        // Use secure cookies in production OR on Vercel (preview/production deployments)
-        const isSecure = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
-
         // Set HTTP-Only Cookie to store the actual access token
         const tokenCookie = serialize('mp_token', accessToken, {
           expires: expirationTime,
           httpOnly: true,
           path: '/',
           sameSite: 'lax',
-          secure: isSecure,
+          secure: process.env.NODE_ENV === 'production',
         });
 
         // Set client-readable status marker cookie (without actual token)
@@ -708,7 +705,7 @@ export const marketRouter = router({
           httpOnly: false,
           path: '/',
           sameSite: 'lax',
-          secure: isSecure,
+          secure: process.env.NODE_ENV === 'production',
         });
 
         // Set Set-Cookie header via context's resHeaders
