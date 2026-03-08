@@ -79,7 +79,7 @@ export const CHANNEL_PROVIDERS: ChannelProvider[] = [
   },
   {
     authMode: 'app-secret',
-    color: '#3370FF',
+    color: '#00D6B9',
     description: 'channel.lark.description',
     docsLink:
       'https://open.larksuite.com/document/home/introduction-to-custom-app-development/self-built-application-development-process',
