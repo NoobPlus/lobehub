@@ -90,6 +90,7 @@ async function customEmailValidator(email: string): Promise<boolean> {
 
 interface CustomBetterAuthOptions {
   plugins: BetterAuthPlugin[];
+  rateLimit?: BetterAuthOptions['rateLimit'];
 }
 
 export function defineConfig(customOptions: CustomBetterAuthOptions) {
@@ -254,9 +255,11 @@ export function defineConfig(customOptions: CustomBetterAuthOptions) {
       },
     },
     rateLimit: {
+      ...customOptions.rateLimit,
       customRules: {
         '/request-password-reset': { max: 3, window: 60 },
         '/send-verification-email': { max: 3, window: 60 },
+        ...customOptions.rateLimit?.customRules,
       },
     },
     plugins: [
