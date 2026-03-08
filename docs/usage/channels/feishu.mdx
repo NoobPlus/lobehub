@@ -58,54 +58,41 @@ By connecting a Feishu (or Lark) channel to your LobeHub agent, team members can
 
   In your app settings, go to **Permissions & Scopes**, click **Batch Import**, and paste the JSON below to grant the bot all necessary permissions.
 
-  <Tabs items={['Feishu (飞书)', 'Lark (International)']}>
-    <Tab>
-      ```json
-      {
-        "scopes": {
-          "tenant": [
-            "contact:user.employee_id:readonly",
-            "event:ip_list",
-            "im:chat.access_event.bot_p2p_chat:read",
-            "im:chat.members:bot_access",
-            "im:message",
-            "im:message.group_at_msg:readonly",
-            "im:message.p2p_msg:readonly",
-            "im:message:readonly",
-            "im:message:send_as_bot",
-            "im:resource"
-          ],
-          "user": [
-            "im:chat.access_event.bot_p2p_chat:read"
-          ]
-        }
-      }
-      ```
-    </Tab>
+  ```json
+  {
+    "scopes": {
+      "tenant": [
+        "aily:file:read",
+        "aily:file:write",
+        "application:application.app_message_stats.overview:readonly",
+        "application:application:self_manage",
+        "application:bot.menu:write",
+        "cardkit:card:read",
+        "cardkit:card:write",
+        "contact:user.employee_id:readonly",
+        "corehr:file:download",
+        "event:ip_list",
+        "im:chat.access_event.bot_p2p_chat:read",
+        "im:chat.members:bot_access",
+        "im:message",
+        "im:message.group_at_msg:readonly",
+        "im:message.p2p_msg:readonly",
+        "im:message:readonly",
+        "im:message:send_as_bot",
+        "im:resource"
+      ],
+      "user": [
+        "aily:file:read",
+        "aily:file:write",
+        "im:chat.access_event.bot_p2p_chat:read"
+      ]
+    }
+  }
+  ```
 
-    <Tab>
-      ```json
-      {
-        "scopes": {
-          "tenant": [
-            "contact:user.employee_id:readonly",
-            "im:chat.members:read",
-            "im:message",
-            "im:message.group_at_msg:readonly",
-            "im:message.p2p_msg:readonly",
-            "im:message:readonly",
-            "im:message:send_as_bot",
-            "im:resource"
-          ]
-        }
-      }
-      ```
-
-      <Callout type={'warning'}>
-        Lark (international) does not support some Feishu-specific scopes such as `im:chat.access_event.bot_p2p_chat:read` and `im:chat.members:bot_access`. The JSON above uses Lark-compatible equivalents.
-      </Callout>
-    </Tab>
-  </Tabs>
+  <Callout type={'warning'}>
+    The JSON above is for **Feishu (飞书)**. If you are using **Lark (international)**, some scopes may not be available (e.g. `aily:*`, `corehr:*`, `im:chat.access_event.bot_p2p_chat:read`). Remove any scopes that the batch import rejects.
+  </Callout>
 
   ### Enable Bot Capability
 
