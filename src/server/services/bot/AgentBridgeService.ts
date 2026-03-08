@@ -307,11 +307,17 @@ export class AgentBridgeService {
     try {
       progressMessage = await thread.post(renderStart(userMessage.text, { timezone }));
     } catch (error) {
+      console.error('[AgentBridge] executeWithWebhooks: failed to post progress message:', error);
       log('executeWithWebhooks: failed to post progress message: %O', error);
     }
 
     const progressMessageId = progressMessage?.id;
     if (!progressMessageId) {
+      console.error(
+        '[AgentBridge] executeWithWebhooks: progressMessage=%O, id=%s',
+        progressMessage,
+        progressMessage?.id,
+      );
       throw new Error('Failed to post initial progress message');
     }
 
