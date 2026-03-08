@@ -125,13 +125,13 @@ By connecting a Feishu (or Lark) channel to your LobeHub agent, team members can
 
   - **App ID** — The App ID from your Feishu/Lark app
   - **App Secret** — The App Secret from your Feishu/Lark app
+  - **Verification Token** — Used to verify that webhook events originate from Feishu/Lark
 
   Optionally, you can also configure:
 
-  - **Verification Token** — Used to verify that webhook events originate from Feishu/Lark
   - **Encrypt Key** — Used to decrypt encrypted event payloads from Feishu/Lark
 
-  > You can find these values in the Feishu/Lark Developer Portal under **Event Subscription** → **Encryption Strategy** at the top of the page. If you haven't opened the Event Subscription page yet, you can leave these blank for now and fill them in after Step 4.
+  > You can find the Verification Token and Encrypt Key in the Feishu/Lark Developer Portal under **Event Subscription** → **Encryption Strategy** at the top of the page. If you haven't opened the Event Subscription page yet, you can fill in the Verification Token after Step 4.
 
   ### Save and Copy the Webhook URL
 
@@ -144,15 +144,6 @@ By connecting a Feishu (or Lark) channel to your LobeHub agent, team members can
   ### Open Event Subscription Settings
 
   Go back to your app in the Feishu/Lark Developer Portal. Navigate to **Event Subscription**.
-
-  ### Copy Verification Token and Encrypt Key (Optional)
-
-  At the top of the Event Subscription page, under **Encryption Strategy**, you will see:
-
-  - **Verification Token** — Copy this value
-  - **Encrypt Key** — Copy this value
-
-  Go back to LobeHub and paste them into the corresponding fields if you left them blank earlier, then save again.
 
   ### Configure the Request URL
 
@@ -189,7 +180,7 @@ Back in LobeHub's channel settings, click **Test Connection** to verify the cred
 | -------------------------- | -------- | -------------------------------------------------------------------- |
 | **App ID**                 | Yes      | Your Feishu/Lark app's App ID (`cli_xxx`)                            |
 | **App Secret**             | Yes      | Your Feishu/Lark app's App Secret                                    |
-| **Verification Token**     | No       | Verifies webhook event source                                        |
+| **Verification Token**     | Yes      | Verifies webhook event source                                        |
 | **Encrypt Key**            | No       | Decrypts encrypted event payloads                                    |
 | **Event Subscription URL** | —        | Auto-generated after saving; paste into Feishu/Lark Developer Portal |
 
