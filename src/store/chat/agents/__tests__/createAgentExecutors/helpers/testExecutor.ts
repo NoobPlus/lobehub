@@ -1,8 +1,21 @@
 import type { AgentInstruction, AgentState } from '@lobechat/agent-runtime';
+import type { MessageMapScope } from '@lobechat/types';
 
+import { DEFAULT_AGENT_CHAT_CONFIG, DEFAULT_AGENT_CONFIG } from '@/const/settings';
+import { type ResolvedAgentConfig } from '@/services/chat/mecha';
 import { createAgentExecutors } from '@/store/chat/agents/createAgentExecutors';
-import type { OperationType } from '@/store/chat/slices/operation/types';
-import type { ChatStore } from '@/store/chat/store';
+import { type OperationType } from '@/store/chat/slices/operation/types';
+import { type ChatStore } from '@/store/chat/store';
+
+/**
+ * Create a mock ResolvedAgentConfig for testing
+ */
+const createMockResolvedAgentConfig = (): ResolvedAgentConfig => ({
+  agentConfig: { ...DEFAULT_AGENT_CONFIG },
+  chatConfig: { ...DEFAULT_AGENT_CHAT_CONFIG },
+  isBuiltinAgent: false,
+  plugins: [],
+});
 
 /**
  * Execute an executor with mock context
@@ -25,10 +38,13 @@ export const executeWithMockContext = async ({
   skipCreateFirstMessage = false,
 }: {
   context: {
+    agentId?: string;
+    groupId?: string;
     messageKey: string;
     operationId: string;
     parentId: string;
-    sessionId?: string;
+    scope?: MessageMapScope;
+    subAgentId?: string;
     topicId?: string | null;
   };
   executor: AgentInstruction['type'];
@@ -43,8 +59,11 @@ export const executeWithMockContext = async ({
       abortController: new AbortController(),
       childOperationIds: [],
       context: {
+        agentId: context.agentId || 'test-session',
+        groupId: context.groupId,
         messageId: context.parentId,
-        sessionId: context.sessionId || 'test-session',
+        scope: context.scope,
+        subAgentId: context.subAgentId,
         topicId: context.topicId !== undefined ? context.topicId : 'test-topic',
       },
       id: context.operationId,
@@ -56,6 +75,7 @@ export const executeWithMockContext = async ({
 
   // Create executors with mock context
   const executors = createAgentExecutors({
+    agentConfig: createMockResolvedAgentConfig(),
     get: () => mockStore,
     messageKey: context.messageKey,
     operationId: context.operationId,
@@ -119,18 +139,26 @@ export const createInitialState = (overrides: Partial<AgentState> = {}): AgentSt
  */
 export const createTestContext = (
   overrides: {
+    agentId?: string;
+    groupId?: string;
     messageKey?: string;
     operationId?: string;
     parentId?: string;
-    sessionId?: string;
+    scope?: MessageMapScope;
+    subAgentId?: string;
     topicId?: string | null;
   } = {},
 ) => {
   return {
+    agentId: overrides.agentId || 'test-session',
+    groupId: overrides.groupId,
     messageKey:
       overrides.messageKey ||
-      `${overrides.sessionId || 'test-session'}_${overrides.topicId !== undefined ? overrides.topicId : 'test-topic'}`,
+      `${overrides.agentId || 'test-session'}_${overrides.topicId !== undefined ? overrides.topicId : 'test-topic'}`,
     operationId: overrides.operationId || 'op_test',
     parentId: overrides.parentId || 'msg_parent',
+    scope: overrides.scope,
+    subAgentId: overrides.subAgentId,
+    topicId: overrides.topicId !== undefined ? overrides.topicId : 'test-topic',
   };
 };

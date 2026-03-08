@@ -1,13 +1,16 @@
-import { MarketSDK } from '@lobehub/market-sdk';
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
+import { getTrustedClientTokenForSession } from '@/libs/trusted-client';
+import { MarketService } from '@/server/services/market';
+
+const MARKET_BASE_URL = process.env.MARKET_BASE_URL || 'https://market.lobehub.com';
 
 type RouteContext = {
   params: Promise<{
     segments?: string[];
   }>;
 };
-
-const MARKET_BASE_URL = process.env.NEXT_PUBLIC_MARKET_BASE_URL || 'https://market.lobehub.com';
 const ALLOWED_ENDPOINTS = new Set(['handoff', 'token', 'userinfo']);
 
 const ensureEndpoint = (segments?: string[]) => {
@@ -42,9 +45,8 @@ const methodNotAllowed = (allowed: string[]) =>
   );
 
 const handleProxy = async (req: NextRequest, context: RouteContext) => {
-  const market = new MarketSDK({
-    baseURL: MARKET_BASE_URL,
-  });
+  const marketService = new MarketService();
+  const market = marketService.market;
 
   const { segments } = await context.params;
   const endpointResult = ensureEndpoint(segments);
@@ -162,15 +164,38 @@ const handleProxy = async (req: NextRequest, context: RouteContext) => {
 
       try {
         const { token } = (await req.json()) as { token?: string };
+
+        // 如果没有 token，尝试使用 trustedClientToken
         if (!token) {
-          return NextResponse.json(
-            {
-              error: 'missing_token',
-              message: 'Token is required for userinfo proxy.',
-              status: 'error',
+          const trustedClientToken = await getTrustedClientTokenForSession();
+
+          if (!trustedClientToken) {
+            return NextResponse.json(
+              {
+                error: 'missing_token',
+                message: 'Token is required for userinfo proxy.',
+                status: 'error',
+              },
+              { status: 400 },
+            );
+          }
+
+          // 使用 trustedClientToken 直接调用 Market userinfo 端点
+          const userInfoUrl = `${MARKET_BASE_URL}/lobehub-oidc/userinfo`;
+          const response = await fetch(userInfoUrl, {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-lobe-trust-token': trustedClientToken,
             },
-            { status: 400 },
-          );
+            method: 'GET',
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch user info: ${response.status} ${response.statusText}`);
+          }
+
+          const userInfo = await response.json();
+          return NextResponse.json(userInfo);
         }
 
         const response = await market.auth.getUserInfo(token);

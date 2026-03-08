@@ -1,19 +1,23 @@
-import type { ThemeMode } from 'antd-style';
-import type { NavigateFunction } from 'react-router-dom';
+import { type NavigateFunction } from 'react-router-dom';
 
-import { DatabaseLoadingState, MigrationSQL, MigrationTableItem } from '@/types/clientDB';
-import { LocaleMode } from '@/types/locale';
+import { type MigrationSQL, type MigrationTableItem } from '@/types/clientDB';
+import { DatabaseLoadingState } from '@/types/clientDB';
+import { type LocaleMode } from '@/types/locale';
 import { SessionDefaultGroup } from '@/types/session';
 import { AsyncLocalStorage } from '@/utils/localStorage';
 
 export enum SidebarTabKey {
   Chat = 'chat',
-  Discover = 'discover',
-  Files = 'knowledge',
+  Community = 'community',
+  Home = 'home',
   Image = 'image',
   Knowledge = 'knowledge',
   Me = 'me',
+  Memory = 'memory',
+  Pages = 'pages',
+  Resource = 'resource',
   Setting = 'settings',
+  Video = 'video',
 }
 
 export enum ChatSettingsTabs {
@@ -34,20 +38,40 @@ export enum GroupSettingsTabs {
 
 export enum SettingsTabs {
   About = 'about',
+  Advanced = 'advanced',
   Agent = 'agent',
+  APIKey = 'apikey',
+  Beta = 'beta',
+  Billing = 'billing',
+  ChatAppearance = 'chat-appearance',
   Common = 'common',
+  Funds = 'funds',
   Hotkey = 'hotkey',
   Image = 'image',
   LLM = 'llm',
+  Memory = 'memory',
+  // business
+  Plans = 'plans',
+  Profile = 'profile',
   Provider = 'provider',
   Proxy = 'proxy',
+  Referral = 'referral',
+  Security = 'security',
+  Skill = 'skill',
+
+  Stats = 'stats',
   Storage = 'storage',
-  SystemAgent = 'system-agent',
+  SystemTools = 'system-tools',
   TTS = 'tts',
+  Usage = 'usage',
 }
 
+/**
+ * @deprecated Use SettingsTabs instead
+ */
 export enum ProfileTabs {
   APIKey = 'apikey',
+  Memory = 'memory',
   Profile = 'profile',
   Security = 'security',
   Stats = 'stats',
@@ -55,56 +79,99 @@ export enum ProfileTabs {
 }
 
 export interface SystemStatus {
+  /**
+   * Agent Builder panel width
+   */
+  agentBuilderPanelWidth?: number;
+  /**
+   * number of agents (defaultList) to display
+   */
+  agentPageSize?: number;
   chatInputHeight?: number;
   disabledModelProvidersSortType?: string;
   disabledModelsSortType?: string;
   expandInputActionbar?: boolean;
   // which sessionGroup should expand
   expandSessionGroupKeys: string[];
+  // which topicGroup should expand
+  expandTopicGroupKeys?: string[];
   fileManagerViewMode?: 'list' | 'masonry';
   filePanelWidth: number;
-  hideGemini2_5FlashImagePreviewChineseWarning?: boolean;
+  /**
+   * Group Agent Builder panel width
+   */
+  groupAgentBuilderPanelWidth?: number;
   hidePWAInstaller?: boolean;
   hideThreadLimitAlert?: boolean;
+  hideTopicSharePrivacyWarning?: boolean;
   imagePanelWidth: number;
   imageTopicPanelWidth?: number;
   /**
-   * 应用初始化时不启用 PGLite，只有当用户手动开启时才启用
+   * Do not enable PGLite on app initialization, only enable when user manually turns it on
    */
   isEnablePglite?: boolean;
   isShowCredit?: boolean;
   knowledgeBaseModalViewMode?: 'list' | 'masonry';
   language?: LocaleMode;
   /**
-   * 记住用户最后选择的图像生成模型
+   * Remember user's last selected image generation model
    */
   lastSelectedImageModel?: string;
   /**
-   * 记住用户最后选择的图像生成提供商
+   * Remember user's last selected image generation provider
    */
   lastSelectedImageProvider?: string;
+  lastSelectedVideoModel?: string;
+  lastSelectedVideoProvider?: string;
   latestChangelogId?: string;
+  leftPanelWidth: number;
   mobileShowPortal?: boolean;
   mobileShowTopic?: boolean;
+  /**
+   * ModelSwitchPanel grouping mode
+   */
+  modelSwitchPanelGroupMode?: 'byModel' | 'byProvider';
+  /**
+   * ModelSwitchPanel width
+   */
+  modelSwitchPanelWidth?: number;
   noWideScreen?: boolean;
+  pageAgentPanelWidth?: number;
+  /**
+   * number of pages (documents) to display per page
+   */
+  pagePageSize?: number;
   portalWidth: number;
-  sessionsWidth: number;
-  showChatSideBar?: boolean;
+  readNotificationSlugs?: string[];
+  /**
+   * Resource Manager column widths
+   */
+  resourceManagerColumnWidths?: {
+    date: number;
+    name: number;
+    size: number;
+  };
+  showCommandMenu?: boolean;
   showFilePanel?: boolean;
   showHotkeyHelper?: boolean;
   showImagePanel?: boolean;
   showImageTopicPanel?: boolean;
-  showSessionPanel?: boolean;
+  showLeftPanel?: boolean;
+  showRightPanel?: boolean;
   showSystemRole?: boolean;
+  showVideoPanel?: boolean;
+  showVideoTopicPanel?: boolean;
   systemRoleExpandedMap: Record<string, boolean>;
   /**
-   * theme mode
-   */
-  themeMode?: ThemeMode;
-  /**
-   * 是否使用短格式显示 token
+   * Whether to display tokens in short format
    */
   tokenDisplayFormatShort?: boolean;
+  /**
+   * number of topics to display per page
+   */
+  topicPageSize?: number;
+  videoPanelWidth: number;
+  videoTopicPanelWidth?: number;
   zenMode?: boolean;
 }
 
@@ -118,20 +185,31 @@ export interface GlobalState {
 
   initClientDBProcess?: { costTime?: number; phase: 'wasm' | 'dependencies'; progress: number };
   /**
-   * 客户端数据库初始化状态
-   * 启动时为 Idle，完成为 Ready，报错为 Error
+   * Client database initialization state
+   * Idle on startup, Ready when complete, Error on failure
    */
   initClientDBStage: DatabaseLoadingState;
   isMobile?: boolean;
+  /**
+   * Server version is too old, does not support /api/version endpoint
+   * Need to prompt user to update server
+   */
+  isServerVersionOutdated?: boolean;
   isStatusInit?: boolean;
   latestVersion?: string;
   navigate?: NavigateFunction;
+  /**
+   * Server version number, used to detect client-server version consistency
+   */
+  serverVersion?: string;
   sidebarKey: SidebarTabKey;
   status: SystemStatus;
   statusStorage: AsyncLocalStorage<SystemStatus>;
 }
 
 export const INITIAL_STATUS = {
+  agentBuilderPanelWidth: 360,
+  agentPageSize: 10,
   chatInputHeight: 64,
   disabledModelProvidersSortType: 'default',
   disabledModelsSortType: 'default',
@@ -139,26 +217,42 @@ export const INITIAL_STATUS = {
   expandSessionGroupKeys: [SessionDefaultGroup.Pinned, SessionDefaultGroup.Default],
   fileManagerViewMode: 'list' as const,
   filePanelWidth: 320,
-  hideGemini2_5FlashImagePreviewChineseWarning: false,
+  groupAgentBuilderPanelWidth: 360,
   hidePWAInstaller: false,
   hideThreadLimitAlert: false,
+  hideTopicSharePrivacyWarning: false,
   imagePanelWidth: 320,
   imageTopicPanelWidth: 80,
   knowledgeBaseModalViewMode: 'list' as const,
+  leftPanelWidth: 320,
   mobileShowTopic: false,
+  modelSwitchPanelGroupMode: 'byProvider',
+  modelSwitchPanelWidth: 430,
   noWideScreen: true,
+  pageAgentPanelWidth: 360,
+  pagePageSize: 20,
   portalWidth: 400,
-  sessionsWidth: 320,
-  showChatSideBar: true,
+  readNotificationSlugs: [],
+  resourceManagerColumnWidths: {
+    date: 160,
+    name: 574,
+    size: 140,
+  },
+  showCommandMenu: false,
   showFilePanel: true,
   showHotkeyHelper: false,
   showImagePanel: true,
   showImageTopicPanel: true,
-  showSessionPanel: true,
+  showLeftPanel: true,
+  showRightPanel: true,
   showSystemRole: false,
+  showVideoPanel: true,
+  showVideoTopicPanel: true,
   systemRoleExpandedMap: {},
-  themeMode: 'auto',
   tokenDisplayFormatShort: true,
+  topicPageSize: 20,
+  videoPanelWidth: 320,
+  videoTopicPanelWidth: 80,
   zenMode: false,
 } satisfies SystemStatus;
 

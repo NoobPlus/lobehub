@@ -1,7 +1,6 @@
-/* eslint-disable sort-keys-fix/sort-keys-fix  */
 import { isNotNull } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import {
-  AnyPgColumn,
   boolean,
   index,
   integer,
@@ -15,10 +14,10 @@ import {
 } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 
-import { LobeDocumentPage } from '@/types/document';
-import { FileSource } from '@/types/files';
+import type { LobeDocumentPage } from '@/types/document';
+import type { FileSource } from '@/types/files';
 
-import { idGenerator } from '../utils/idGenerator';
+import { idGenerator, randomSlug } from '../utils/idGenerator';
 import { accessedAt, createdAt, timestamps } from './_helpers';
 import { asyncTasks } from './asyncTask';
 import { users } from './user';
@@ -55,6 +54,7 @@ export const documents = pgTable(
 
     // Basic information
     title: text('title'),
+    description: text('description'),
     content: text('content'),
 
     // Special type: custom/folder
@@ -72,13 +72,17 @@ export const documents = pgTable(
     pages: jsonb('pages').$type<LobeDocumentPage[]>(),
 
     // Source type
-    sourceType: text('source_type', { enum: ['file', 'web', 'api'] }).notNull(),
+    sourceType: text('source_type', { enum: ['file', 'web', 'api', 'topic'] }).notNull(),
     source: text('source').notNull(), // File path or web URL
 
     // Associated file (optional)
     // forward reference needs AnyPgColumn to avoid circular type inference
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+
     fileId: text('file_id').references((): AnyPgColumn => files.id, { onDelete: 'set null' }),
+
+    knowledgeBaseId: text('knowledge_base_id').references(() => knowledgeBases.id, {
+      onDelete: 'set null',
+    }),
 
     // Parent document (for folder hierarchy structure)
     parentId: varchar('parent_id', { length: 255 }).references((): AnyPgColumn => documents.id, {
@@ -93,7 +97,7 @@ export const documents = pgTable(
 
     editorData: jsonb('editor_data').$type<Record<string, any>>(),
 
-    slug: varchar('slug', { length: 255 }),
+    slug: varchar('slug', { length: 255 }).$defaultFn(() => randomSlug(3)),
 
     // Timestamps
     ...timestamps,
@@ -105,6 +109,7 @@ export const documents = pgTable(
     index('documents_user_id_idx').on(table.userId),
     index('documents_file_id_idx').on(table.fileId),
     index('documents_parent_id_idx').on(table.parentId),
+    index('documents_knowledge_base_id_idx').on(table.knowledgeBaseId),
     uniqueIndex('documents_client_id_user_id_unique').on(table.clientId, table.userId),
     uniqueIndex('documents_slug_user_id_unique')
       .on(table.slug, table.userId)
@@ -160,6 +165,8 @@ export const files = pgTable(
       fileHashIdx: index('file_hash_idx').on(table.fileHash),
       userIdIdx: index('files_user_id_idx').on(table.userId),
       parentIdIdx: index('files_parent_id_idx').on(table.parentId),
+      chunkTaskIdIdx: index('files_chunk_task_id_idx').on(table.chunkTaskId),
+      embeddingTaskIdIdx: index('files_embedding_task_id_idx').on(table.embeddingTaskId),
       clientIdUnique: uniqueIndex('files_client_id_user_id_unique').on(
         table.clientId,
         table.userId,
@@ -225,5 +232,7 @@ export const knowledgeBaseFiles = pgTable(
   (t) => [
     primaryKey({ columns: [t.knowledgeBaseId, t.fileId] }),
     index('knowledge_base_files_kb_id_idx').on(t.knowledgeBaseId),
+    index('knowledge_base_files_user_id_idx').on(t.userId),
+    index('knowledge_base_files_file_id_idx').on(t.fileId),
   ],
 );

@@ -1,17 +1,16 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import type { PartialDeep } from 'type-fest';
+import { type PartialDeep } from 'type-fest';
 
 import { lambdaClient } from '@/libs/trpc/client';
-import { LobeAgentChatConfig, LobeAgentConfig } from '@/types/agent';
-import { MetaData } from '@/types/meta';
+import { type LobeAgentChatConfig, type LobeAgentConfig } from '@/types/agent';
+import { type MetaData } from '@/types/meta';
 import {
-  ChatSessionList,
-  LobeAgentSession,
-  LobeSessionType,
-  LobeSessions,
-  SessionGroupItem,
-  SessionRankItem,
-  UpdateSessionParams,
+  type ChatSessionList,
+  type LobeAgentSession,
+  type LobeSessions,
+  type LobeSessionType,
+  type SessionGroupItem,
+  type SessionRankItem,
+  type UpdateSessionParams,
 } from '@/types/session';
 
 export class SessionService {

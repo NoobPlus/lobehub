@@ -1,4 +1,4 @@
-import { ChatTranslate } from '../common';
+import type { ChatTranslate } from '../common';
 
 export interface ChatTTS {
   contentMd5?: string;
@@ -9,8 +9,8 @@ export interface ChatTTS {
 export interface ChatMessageExtra {
   model?: string;
   provider?: string;
-  // 翻译
+  // Translation
   translate?: ChatTranslate | false | null;
-  // TTS
+  // Text-to-Speech
   tts?: ChatTTS;
 }

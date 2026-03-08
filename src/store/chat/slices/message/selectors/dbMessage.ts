@@ -1,7 +1,9 @@
-import { UIChatMessage } from '@lobechat/types';
+import { GTDIdentifier } from '@lobechat/builtin-tool-gtd';
+import { LobeToolIdentifier } from '@lobechat/builtin-tool-tools';
+import { type StepContextTodos, type UIChatMessage } from '@lobechat/types';
 
 import { chatHelpers } from '../../../helpers';
-import type { ChatStoreState } from '../../../initialState';
+import { type ChatStoreState } from '../../../initialState';
 import { messageMapKey } from '../../../utils/messageMapKey';
 
 /**
@@ -21,7 +23,8 @@ import { messageMapKey } from '../../../utils/messageMapKey';
 /**
  * Get the current chat key for accessing dbMessagesMap
  */
-export const currentDbChatKey = (s: ChatStoreState) => messageMapKey(s.activeId, s.activeTopicId);
+export const currentDbChatKey = (s: ChatStoreState) =>
+  messageMapKey({ agentId: s.activeAgentId, topicId: s.activeTopicId });
 
 /**
  * Get raw messages from database by key
@@ -33,10 +36,10 @@ const getDbMessagesByKey =
   };
 
 /**
- * Get current active session's raw messages from database
+ * Get current active agent's raw messages from database
  */
 const activeDbMessages = (s: ChatStoreState): UIChatMessage[] => {
-  if (!s.activeId) return [];
+  if (!s.activeAgentId) return [];
   return getDbMessagesByKey(currentDbChatKey(s))(s);
 };
 
@@ -74,6 +77,21 @@ const getTraceIdByDbMessageId = (id: string) => (s: ChatStoreState) =>
  * Get latest raw message from database
  */
 const latestDbMessage = (s: ChatStoreState) => activeDbMessages(s).at(-1);
+
+/**
+ * Get latest user message from database
+ */
+const latestUserMessage = (s: ChatStoreState) => {
+  const messages = activeDbMessages(s);
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+
+    if (message.role === 'user') return message;
+  }
+
+  return undefined;
+};
 
 // ============= DB Message Filtering ========== //
 
@@ -126,8 +144,100 @@ const isCurrentDbChatLoaded = (s: ChatStoreState) => !!s.dbMessagesMap[currentDb
  */
 const inboxActiveTopicDbMessages = (state: ChatStoreState) => {
   const activeTopicId = state.activeTopicId;
-  const key = messageMapKey('inbox', activeTopicId);
+  const key = messageMapKey({ agentId: 'inbox', topicId: activeTopicId });
   return state.dbMessagesMap[key] || [];
+};
+
+// ============= Activated Tools Selectors ========== //
+
+/**
+ * Accumulate activated tool identifiers from all lobe-tools messages.
+ *
+ * Unlike todos (which take the latest snapshot), activated tools are
+ * cumulative — once a tool is activated it stays active for the rest
+ * of the conversation.
+ *
+ * @param messages - Array of chat messages to scan
+ * @returns Deduplicated array of activated tool identifiers, or undefined if none
+ */
+export const selectActivatedToolIdsFromMessages = (
+  messages: UIChatMessage[],
+): string[] | undefined => {
+  const ids = new Set<string>();
+
+  for (const msg of messages) {
+    if (
+      msg.role === 'tool' &&
+      msg.plugin?.identifier === LobeToolIdentifier &&
+      msg.pluginState?.activatedTools
+    ) {
+      const activatedTools = msg.pluginState.activatedTools as Array<{ identifier?: string }>;
+      if (Array.isArray(activatedTools)) {
+        for (const tool of activatedTools) {
+          if (tool.identifier) {
+            ids.add(tool.identifier);
+          }
+        }
+      }
+    }
+  }
+
+  return ids.size > 0 ? [...ids] : undefined;
+};
+
+// ============= GTD Todos Selectors ========== //
+
+/**
+ * Select the latest todos state from messages array
+ *
+ * Searches messages in reverse order to find the most recent GTD tool message
+ * that contains todos state.
+ *
+ * This is a pure function that can be used for both:
+ * - UI display (showing current todos)
+ * - Agent runtime step context computation
+ *
+ * @param messages - Array of chat messages to search
+ * @returns The latest todos state or undefined if not found
+ */
+export const selectTodosFromMessages = (
+  messages: UIChatMessage[],
+): StepContextTodos | undefined => {
+  // Search from newest to oldest
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+
+    // Check if this is a GTD tool message with todos state
+    if (msg.role === 'tool' && msg.plugin?.identifier === GTDIdentifier && msg.pluginState?.todos) {
+      const todos = msg.pluginState.todos as { items?: unknown[]; updatedAt?: string };
+
+      // Handle the todos structure: { items: TodoItem[], updatedAt: string }
+      if (typeof todos === 'object' && 'items' in todos && Array.isArray(todos.items)) {
+        return {
+          items: todos.items as StepContextTodos['items'],
+          updatedAt: todos.updatedAt || new Date().toISOString(),
+        };
+      }
+
+      // Legacy format: direct array of TodoItem[]
+      if (Array.isArray(todos)) {
+        return {
+          items: todos as StepContextTodos['items'],
+          updatedAt: new Date().toISOString(),
+        };
+      }
+    }
+  }
+
+  return undefined;
+};
+
+/**
+ * Get current active chat's todos state from db messages
+ */
+const getActiveTodos = (s: ChatStoreState): StepContextTodos | undefined => {
+  const messages = activeDbMessages(s);
+  return selectTodosFromMessages(messages);
 };
 
 export const dbMessageSelectors = {
@@ -137,6 +247,7 @@ export const dbMessageSelectors = {
   dbToolMessages,
   dbUserFiles,
   dbUserMessages,
+  getActiveTodos,
   getDbMessageById,
   getDbMessageByToolCallId,
   getDbMessagesByKey,
@@ -144,4 +255,7 @@ export const dbMessageSelectors = {
   inboxActiveTopicDbMessages,
   isCurrentDbChatLoaded,
   latestDbMessage,
+  latestUserMessage,
+  selectActivatedToolIdsFromMessages,
+  selectTodosFromMessages,
 };

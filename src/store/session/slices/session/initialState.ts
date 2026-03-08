@@ -1,11 +1,16 @@
-import { LobeSessions } from '@/types/session';
+import { type LobeSessions } from '@/types/session';
 
 export interface SessionState {
+  activeAgentId?: string;
   /**
-   * @title 当前活动的会话
-   * @description 当前正在编辑或查看的会话
+   * @title Current active session
+   * @description The session currently being edited or viewed
    */
   activeId: string;
+  /**
+   * whether all agents drawer is open
+   */
+  allAgentsDrawerOpen: boolean;
   defaultSessions: LobeSessions;
   /**
    * @title Whether the agent panel is pinned
@@ -16,21 +21,33 @@ export interface SessionState {
   isSessionsFirstFetchFinished: boolean;
   pinnedSessions: LobeSessions;
   searchKeywords: string;
-  sessionSearchKeywords?: string;
+  /**
+   * @title Session ID being renamed
+   * @description Used to control the display state of the session rename modal
+   */
+  sessionRenamingId: string | null;
   /**
    * it means defaultSessions
    */
   sessions: LobeSessions;
-  signalSessionMeta?: AbortController;
+  sessionSearchKeywords?: string;
+  /**
+   * @title Session ID being updated
+   * @description Used to display loading state when session is being updated
+   */
+  sessionUpdatingId: string | null;
 }
 
 export const initialSessionState: SessionState = {
   activeId: 'inbox',
+  allAgentsDrawerOpen: false,
   defaultSessions: [],
   isAgentPinned: false,
   isSearching: false,
   isSessionsFirstFetchFinished: false,
   pinnedSessions: [],
   searchKeywords: '',
+  sessionRenamingId: null,
+  sessionUpdatingId: null,
   sessions: [],
 };

@@ -1,10 +1,11 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { LobeChatDatabase } from '../../type';
-import { NewInstalledPlugin, userInstalledPlugins, users } from '../../schemas';
+import { getTestDB } from '../../core/getTestDB';
+import type { NewInstalledPlugin } from '../../schemas';
+import { userInstalledPlugins, users } from '../../schemas';
+import type { LobeChatDatabase } from '../../type';
 import { PluginModel } from '../plugin';
-import { getTestDB } from './_util';
 
 const serverDB: LobeChatDatabase = await getTestDB();
 

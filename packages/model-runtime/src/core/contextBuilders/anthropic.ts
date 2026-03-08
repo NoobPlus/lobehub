@@ -1,9 +1,22 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import { imageUrlToBase64 } from '@lobechat/utils';
-import OpenAI from 'openai';
+import type OpenAI from 'openai';
 
-import { OpenAIChatMessage, UserMessageContentPart } from '../../types';
+import type { OpenAIChatMessage, UserMessageContentPart } from '../../types';
 import { parseDataUri } from '../../utils/uriParser';
+
+const ANTHROPIC_SUPPORTED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+]);
+
+const isImageTypeSupported = (mimeType: string | null): boolean => {
+  if (!mimeType) return true;
+  return ANTHROPIC_SUPPORTED_IMAGE_TYPES.has(mimeType.toLowerCase());
+};
 
 export const buildAnthropicBlock = async (
   content: UserMessageContentPart,
@@ -23,7 +36,9 @@ export const buildAnthropicBlock = async (
     case 'image_url': {
       const { mimeType, base64, type } = parseDataUri(content.image_url.url);
 
-      if (type === 'base64')
+      if (type === 'base64') {
+        if (!isImageTypeSupported(mimeType)) return undefined;
+
         return {
           source: {
             data: base64 as string,
@@ -32,9 +47,13 @@ export const buildAnthropicBlock = async (
           },
           type: 'image',
         };
+      }
 
       if (type === 'url') {
         const { base64, mimeType } = await imageUrlToBase64(content.image_url.url);
+
+        if (!isImageTypeSupported(mimeType)) return undefined;
+
         return {
           source: {
             data: base64 as string,
@@ -62,7 +81,7 @@ const buildArrayContent = async (content: UserMessageContentPart[]) => {
 
 export const buildAnthropicMessage = async (
   message: OpenAIChatMessage,
-): Promise<Anthropic.Messages.MessageParam> => {
+): Promise<Anthropic.Messages.MessageParam | undefined> => {
   const content = message.content as string | UserMessageContentPart[];
 
   switch (message.role) {
@@ -95,10 +114,13 @@ export const buildAnthropicMessage = async (
       // if there is tool_calls , we need to covert the tool_calls to tool_use content block
       // refs: https://docs.anthropic.com/claude/docs/tool-use#tool-use-and-tool-result-content-blocks
       if (message.tool_calls && message.tool_calls.length > 0) {
+        // Handle content: string with text, array, null/undefined/empty -> filter out
         const rawContent =
-          typeof content === 'string'
-            ? ([{ text: message.content, type: 'text' }] as UserMessageContentPart[])
-            : content;
+          typeof content === 'string' && content.trim()
+            ? ([{ text: content, type: 'text' }] as UserMessageContentPart[])
+            : Array.isArray(content)
+              ? content
+              : []; // null/undefined/empty string -> empty array (will be filtered)
 
         const messageContent = await buildArrayContent(rawContent);
 
@@ -118,7 +140,17 @@ export const buildAnthropicMessage = async (
       }
 
       // or it's a plain assistant message
-      return { content: content as string, role: 'assistant' };
+      // Handle array content (e.g., content with thinking blocks)
+      if (Array.isArray(content)) {
+        const messageContent = await buildArrayContent(content);
+        if (messageContent.length === 0) return undefined;
+        return { content: messageContent, role: 'assistant' };
+      }
+
+      // Anthropic API requires non-empty content, filter out empty/whitespace-only content
+      const textContent = content?.trim();
+      if (!textContent) return undefined;
+      return { content: textContent, role: 'assistant' };
     }
 
     case 'function': {
@@ -134,7 +166,7 @@ export const buildAnthropicMessages = async (
   const messages: Anthropic.Messages.MessageParam[] = [];
   let pendingToolResults: Anthropic.ToolResultBlockParam[] = [];
 
-  // 首先收集所有 assistant 消息中的 tool_call_id 以便后续查找
+  // First collect all tool_call_id from assistant messages for subsequent lookup
   const validToolCallIds = new Set<string>();
   for (const message of oaiMessages) {
     if (message.role === 'assistant' && message.tool_calls?.length) {
@@ -151,15 +183,22 @@ export const buildAnthropicMessages = async (
 
     // refs: https://docs.anthropic.com/claude/docs/tool-use#tool-use-and-tool-result-content-blocks
     if (message.role === 'tool') {
-      // 检查这个工具消息是否有对应的 assistant 工具调用
+      // Handle different content types in tool messages
+      const toolResultContent = Array.isArray(message.content)
+        ? await buildArrayContent(message.content)
+        : !message.content
+          ? [{ text: '<empty_content>', type: 'text' as const }]
+          : [{ text: message.content, type: 'text' as const }];
+
+      // Check if this tool message has a corresponding assistant tool call
       if (message.tool_call_id && validToolCallIds.has(message.tool_call_id)) {
         pendingToolResults.push({
-          content: [{ text: message.content as string, type: 'text' }],
+          content: toolResultContent as Anthropic.ToolResultBlockParam['content'],
           tool_use_id: message.tool_call_id,
           type: 'tool_result',
         });
 
-        // 如果这是最后一个消息或者下一个消息不是 'tool'，则添加累积的工具结果作为一个 'user' 消息
+        // If this is the last message or the next message is not 'tool', add accumulated tool results as a 'user' message
         if (index === oaiMessages.length - 1 || oaiMessages[index + 1].role !== 'tool') {
           messages.push({
             content: pendingToolResults,
@@ -168,15 +207,21 @@ export const buildAnthropicMessages = async (
           pendingToolResults = [];
         }
       } else {
-        // 如果工具消息没有对应的 assistant 工具调用，则作为普通文本处理
+        // If tool message has no corresponding assistant tool call, treat as plain text
+        const fallbackContent = Array.isArray(message.content)
+          ? JSON.stringify(message.content)
+          : message.content || '<empty_content>';
         messages.push({
-          content: message.content as string,
+          content: fallbackContent,
           role: 'user',
         });
       }
     } else {
       const anthropicMessage = await buildAnthropicMessage(message);
-      messages.push({ ...anthropicMessage, role: anthropicMessage.role });
+      // Filter out undefined messages (e.g., empty assistant messages)
+      if (anthropicMessage) {
+        messages.push(anthropicMessage);
+      }
     }
   }
 

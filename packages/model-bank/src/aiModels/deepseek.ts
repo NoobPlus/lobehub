@@ -1,4 +1,4 @@
-import { AIChatModelCard } from '../types/aiModel';
+import type { AIChatModelCard } from '../types/aiModel';
 
 // https://api-docs.deepseek.com/zh-cn/quick_start/pricing
 const deepseekChatModels: AIChatModelCard[] = [
@@ -9,8 +9,8 @@ const deepseekChatModels: AIChatModelCard[] = [
     },
     contextWindowTokens: 131_072,
     description:
-      'DeepSeek V3.2 是 DeepSeek 最新发布的通用大模型，支持混合推理架构，具备更强的 Agent 能力。',
-    displayName: 'DeepSeek V3.2 Exp',
+      'DeepSeek V3.2 is DeepSeek’s latest general model with a hybrid reasoning architecture and stronger agent capabilities.',
+    displayName: 'DeepSeek V3.2',
     enabled: true,
     id: 'deepseek-chat',
     maxOutput: 8192,
@@ -32,8 +32,8 @@ const deepseekChatModels: AIChatModelCard[] = [
     },
     contextWindowTokens: 131_072,
     description:
-      'DeepSeek V3.2 思考模式。在输出最终回答之前，模型会先输出一段思维链内容，以提升最终答案的准确性。',
-    displayName: 'DeepSeek V3.2 Exp Thinking',
+      'DeepSeek V3.2 thinking mode outputs a chain-of-thought before the final answer to improve accuracy.',
+    displayName: 'DeepSeek V3.2 Thinking',
     enabled: true,
     id: 'deepseek-reasoner',
     maxOutput: 65_536,

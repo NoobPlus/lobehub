@@ -1,28 +1,28 @@
-import { ActionIcon, Icon } from '@lobehub/ui';
-import { Button } from 'antd';
-import { createStyles } from 'antd-style';
+import { ActionIcon, Button, Flexbox, Icon } from '@lobehub/ui';
+import { createStaticStyles } from 'antd-style';
 import fastDeepEqual from 'fast-deep-equal';
 import { LucidePlus, LucideTrash } from 'lucide-react';
-import { CSSProperties, memo, useEffect, useRef, useState } from 'react';
+import { type CSSProperties } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Flexbox } from 'react-layout-kit';
 import { v4 as uuidv4 } from 'uuid';
 
 import { FormInput } from '@/components/FormInput';
 
-import { KeyValueItem, localListToRecord, recordToLocalList } from './utils';
+import { type KeyValueItem } from './utils';
+import { localListToRecord, recordToLocalList } from './utils';
 
-const useStyles = createStyles(({ css, token }) => ({
+const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
     position: relative;
 
     width: 100%;
     padding: 12px;
-    border: 1px solid ${token.colorBorderSecondary};
-    border-radius: ${token.borderRadiusLG}px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: ${cssVar.borderRadiusLG};
   `,
   input: css`
-    font-family: ${token.fontFamilyCode};
+    font-family: ${cssVar.fontFamilyCode};
     font-size: 12px;
   `,
   row: css`
@@ -34,7 +34,7 @@ const useStyles = createStyles(({ css, token }) => ({
   `,
   title: css`
     margin-block-end: 8px;
-    color: ${token.colorTextTertiary};
+    color: ${cssVar.colorTextTertiary};
   `,
 }));
 
@@ -60,7 +60,6 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
     deleteTooltip,
     style,
   }) => {
-    const { styles } = useStyles();
     const { t } = useTranslation('components');
     const [items, setItems] = useState<KeyValueItem[]>(() => recordToLocalList(value));
     const prevValueRef = useRef<Record<string, string> | undefined>(undefined);
@@ -128,7 +127,7 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
 
     return (
       <div className={styles.container} style={style}>
-        <Flexbox className={styles.title} gap={8} horizontal>
+        <Flexbox horizontal className={styles.title} gap={8}>
           <Flexbox flex={1}>{keyPlaceholder || t('KeyValueEditor.keyPlaceholder')}</Flexbox>
           <Flexbox flex={2}>{valuePlaceholder || t('KeyValueEditor.valuePlaceholder')}</Flexbox>
           <Flexbox style={{ width: 30 }} />
@@ -138,21 +137,21 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
             const isDuplicate = item.key.trim() && duplicateKeys.has(item.key.trim());
             return (
               <Flexbox
+                horizontal
                 align="flex-start"
                 className={styles.row}
                 gap={8}
-                horizontal
                 key={item.id}
                 width={'100%'}
               >
                 <Flexbox flex={1} style={{ position: 'relative' }}>
                   <FormInput
                     className={styles.input}
-                    onChange={(e) => handleKeyChange(item.id, e)}
                     placeholder={keyPlaceholder || t('KeyValueEditor.keyPlaceholder')}
                     status={isDuplicate ? 'error' : undefined}
                     value={item.key}
                     variant={'filled'}
+                    onChange={(e) => handleKeyChange(item.id, e)}
                   />
                   {isDuplicate && (
                     <div
@@ -170,18 +169,18 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
                 <Flexbox flex={2}>
                   <FormInput
                     className={styles.input}
-                    onChange={(value) => handleValueChange(item.id, value)}
                     placeholder={valuePlaceholder || t('KeyValueEditor.valuePlaceholder')}
                     value={item.value}
                     variant={'filled'}
+                    onChange={(value) => handleValueChange(item.id, value)}
                   />
                 </Flexbox>
                 <ActionIcon
                   icon={LucideTrash}
-                  onClick={() => handleRemove(item.id)}
                   size={'small'}
                   style={{ marginTop: 4 }}
                   title={deleteTooltip || t('KeyValueEditor.deleteTooltip')}
+                  onClick={() => handleRemove(item.id)}
                 />
               </Flexbox>
             );
@@ -189,10 +188,10 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
           <Button
             block
             icon={<Icon icon={LucidePlus} />}
-            onClick={handleAdd}
             size={'small'}
             style={{ marginTop: items.length > 0 ? 16 : 8 }}
             type="dashed"
+            onClick={handleAdd}
           >
             {addButtonText || t('KeyValueEditor.addButton')}
           </Button>

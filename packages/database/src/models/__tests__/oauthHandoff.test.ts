@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getTestDB } from '../../core/getTestDB';
 import { oauthHandoffs } from '../../schemas';
-import { LobeChatDatabase } from '../../type';
+import type { LobeChatDatabase } from '../../type';
 import { OAuthHandoffModel } from '../oauthHandoff';
-import { getTestDB } from './_util';
 
 const serverDB: LobeChatDatabase = await getTestDB();
 const oauthHandoffModel = new OAuthHandoffModel(serverDB);

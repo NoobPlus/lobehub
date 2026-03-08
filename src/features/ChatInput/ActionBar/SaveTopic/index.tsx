@@ -1,9 +1,8 @@
-import { ActionIcon, Hotkey } from '@lobehub/ui';
+import { ActionIcon, Flexbox, Hotkey } from '@lobehub/ui';
 import { Popconfirm } from 'antd';
 import { LucideGalleryVerticalEnd, LucideMessageSquarePlus } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Flexbox } from 'react-layout-kit';
 
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useActionSWR } from '@/libs/swr';
@@ -34,18 +33,18 @@ const SaveTopic = memo(() => {
       <Popconfirm
         arrow={false}
         okButtonProps={{ danger: false, type: 'primary' }}
-        onConfirm={() => mutate()}
-        onOpenChange={setConfirmOpened}
         open={confirmOpened}
         placement={'top'}
         title={
-          <Flexbox align={'center'} horizontal style={{ marginBottom: 8 }}>
+          <Flexbox horizontal align={'center'} style={{ marginBottom: 8 }}>
             <div style={{ marginRight: '16px', whiteSpace: 'pre-line', wordBreak: 'break-word' }}>
               {t(hasTopic ? 'topic.checkOpenNewTopic' : 'topic.checkSaveCurrentMessages')}
             </div>
             <Hotkey keys={hotkey} />
           </Flexbox>
         }
+        onConfirm={() => mutate()}
+        onOpenChange={setConfirmOpened}
       >
         <ActionIcon
           aria-label={desc}
@@ -61,13 +60,13 @@ const SaveTopic = memo(() => {
         aria-label={desc}
         icon={icon}
         loading={isValidating}
-        onClick={() => mutate()}
         size={{ blockSize: 32, size: 16, strokeWidth: 2.3 }}
         title={desc}
+        variant={'outlined'}
         tooltipProps={{
           hotkey,
         }}
-        variant={'outlined'}
+        onClick={() => mutate()}
       />
     );
   }

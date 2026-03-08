@@ -1,39 +1,40 @@
 import { useEffect, useState } from 'react';
 
 import { useMarketAuth } from '@/layout/AuthProvider/MarketAuth';
-import { MarketAuthContextType } from '@/layout/AuthProvider/MarketAuth/types';
+import { type MarketAuthContextType } from '@/layout/AuthProvider/MarketAuth/types';
 import { marketApiService } from '@/services/marketApi';
+import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 
 interface AgentOwnershipResult {
-  // null = loading, true = 是用户的, false = 不是用户的
+  // null = loading, true = user owns it, false = user doesn't own it
   error?: string;
   isOwnAgent: boolean | null;
 }
 
-// 简单的缓存机制避免重复 API 调用
+// Simple cache mechanism to avoid duplicate API calls
 const agentOwnershipCache = new Map<string, { result: boolean; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
+const CACHE_DURATION = 5 * 60 * 1000; // 5-minute cache
 
 const buildCacheKey = (marketIdentifier: string, accountId?: string | number | null) =>
   `${marketIdentifier}::${accountId ?? 'unknown'}`;
 
 /**
- * 获取当前用户 ID
+ * Get current user ID
  */
 function getCurrentAccountId(marketAuth: MarketAuthContextType): string | number | null {
   try {
-    // 首先尝试从 marketAuth 中获取用户信息
+    // First try to get user info from marketAuth
     const userInfo = marketAuth.getCurrentUserInfo?.();
     if (userInfo?.accountId !== null) {
-      console.log('[useAgentOwnershipCheck] User ID from userInfo:', userInfo?.accountId);
+      console.info('[useAgentOwnershipCheck] User ID from userInfo:', userInfo?.accountId);
       return userInfo?.accountId ?? null;
     }
 
-    // 如果没有，尝试从 sessionStorage 中获取
+    // If not available, try to get from sessionStorage
     const userInfoData = sessionStorage.getItem('market_user_info');
     if (userInfoData) {
       const parsedUserInfo = JSON.parse(userInfoData);
-      console.log(
+      console.info(
         '[useAgentOwnershipCheck] User ID from sessionStorage:',
         parsedUserInfo.accountId,
       );
@@ -51,23 +52,30 @@ function getCurrentAccountId(marketAuth: MarketAuthContextType): string | number
 interface CheckOwnershipParams {
   accessToken?: string;
   accountId?: string | number | null;
+  /**
+   * Whether trustedClient mode is enabled; when enabled, accessToken is not required
+   */
+  enableMarketTrustedClient?: boolean;
   marketIdentifier?: string;
   skipCache?: boolean;
 }
 
 /**
- * 校验当前账号是否为指定 agent 的 owner
+ * Verify if the current account is the owner of the specified agent
  */
 export const checkOwnership = async ({
   accountId,
   accessToken,
+  enableMarketTrustedClient = false,
   marketIdentifier,
   skipCache = false,
 }: CheckOwnershipParams): Promise<boolean> => {
-  if (!marketIdentifier || !accountId || !accessToken) {
+  // In trustedClient mode, accessToken is not required; otherwise it is required
+  if (!marketIdentifier || !accountId || (!enableMarketTrustedClient && !accessToken)) {
     console.warn('[checkOwnership] Missing required parameters', {
       accessToken: Boolean(accessToken),
       accountId,
+      enableMarketTrustedClient,
       marketIdentifier,
     });
     return false;
@@ -76,13 +84,17 @@ export const checkOwnership = async ({
   const cacheKey = buildCacheKey(marketIdentifier, accountId);
   const cached = agentOwnershipCache.get(cacheKey);
   if (!skipCache && cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log('[checkOwnership] Using cached result:', cached.result);
+    console.info('[checkOwnership] Using cached result:', cached.result);
     return cached.result;
   }
 
-  marketApiService.setAccessToken(accessToken);
+  // Only set accessToken when not in trustedClient mode
+  if (!enableMarketTrustedClient && accessToken) {
+    marketApiService.setAccessToken(accessToken);
+  }
+
   const agentDetail = await marketApiService.getAgentDetail(marketIdentifier);
-  console.log('[checkOwnership] Agent detail:', agentDetail);
+  console.info('[checkOwnership] Agent detail:', agentDetail);
 
   const isOwner = `${agentDetail?.ownerId ?? ''}` === `${accountId}`;
   agentOwnershipCache.set(cacheKey, {
@@ -94,12 +106,17 @@ export const checkOwnership = async ({
 };
 
 /**
- * 检查当前用户是否拥有指定的 agent
+ * Check if the current user owns the specified agent
  */
 export const useAgentOwnershipCheck = (marketIdentifier?: string): AgentOwnershipResult => {
   const [result, setResult] = useState<AgentOwnershipResult>({ isOwnAgent: null });
   const marketAuth = useMarketAuth();
   const { isAuthenticated } = marketAuth;
+
+  // Check if Market Trusted Client authentication is enabled
+  const enableMarketTrustedClient = useServerConfigStore(
+    serverConfigSelectors.enableMarketTrustedClient,
+  );
 
   useEffect(() => {
     if (!marketIdentifier || !isAuthenticated) {
@@ -109,11 +126,11 @@ export const useAgentOwnershipCheck = (marketIdentifier?: string): AgentOwnershi
 
     const runOwnershipCheck = async () => {
       try {
-        console.log('[useAgentOwnershipCheck] Checking ownership for:', marketIdentifier);
+        console.info('[useAgentOwnershipCheck] Checking ownership for:', marketIdentifier);
 
-        // 获取当前用户 ID
+        // Get current user ID
         const currentAccountId = getCurrentAccountId(marketAuth);
-        console.log('[useAgentOwnershipCheck] Current user ID:', currentAccountId);
+        console.info('[useAgentOwnershipCheck] Current user ID:', currentAccountId);
 
         if (!currentAccountId) {
           console.warn('[useAgentOwnershipCheck] Could not get current user ID');
@@ -121,17 +138,15 @@ export const useAgentOwnershipCheck = (marketIdentifier?: string): AgentOwnershi
           return;
         }
 
-        // 优先从 DB 获取 access token，如果没有则从 session 获取
-        const accessToken = marketAuth.getAccessToken();
-        if (!accessToken) {
-          console.warn('[useAgentOwnershipCheck] No access token available');
-          setResult({ isOwnAgent: false });
-          return;
-        }
+        // No need to get accessToken in trustedClient mode
+        const accessToken = enableMarketTrustedClient
+          ? undefined
+          : (marketAuth.getAccessToken() ?? undefined);
 
         const isOwner = await checkOwnership({
           accessToken,
           accountId: currentAccountId,
+          enableMarketTrustedClient,
           marketIdentifier,
         });
 
@@ -145,7 +160,7 @@ export const useAgentOwnershipCheck = (marketIdentifier?: string): AgentOwnershi
     };
 
     runOwnershipCheck();
-  }, [marketIdentifier, isAuthenticated, marketAuth]);
+  }, [marketIdentifier, isAuthenticated, marketAuth, enableMarketTrustedClient]);
 
   return result;
 };

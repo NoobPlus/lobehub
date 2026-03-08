@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
-import { Mock, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { type Mock } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { chatService } from '@/services/chat';
 import { messageService } from '@/services/message';
@@ -54,9 +55,9 @@ describe('ChatEnhanceAction', () => {
       // Setup initial state
       act(() => {
         useChatStore.setState({
-          activeId: 'session',
+          activeAgentId: 'session',
           dbMessagesMap: {
-            [messageMapKey('session')]: [
+            [messageMapKey({ agentId: 'session' })]: [
               {
                 id: messageId,
                 content: messageContent,
@@ -64,7 +65,6 @@ describe('ChatEnhanceAction', () => {
                 updatedAt: Date.now(),
                 role: 'assistant',
                 sessionId: 'session',
-                meta: {},
               },
             ],
           },

@@ -1,14 +1,16 @@
-import { Alert, FormItem, Input, InputPassword } from '@lobehub/ui';
-import { Button, Divider, Form, FormInstance, Radio } from 'antd';
+import { Alert, Button, Flexbox, FormItem, Input, InputPassword } from '@lobehub/ui';
+import { type FormInstance } from 'antd';
+import { Divider, Form, Radio } from 'antd';
 import isEqual from 'fast-deep-equal';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Flexbox } from 'react-layout-kit';
 
 import KeyValueEditor from '@/components/KeyValueEditor';
 import MCPStdioCommandInput from '@/components/MCPStdioCommandInput';
+import ErrorDetails from '@/features/MCP/MCPInstallProgress/InstallError/ErrorDetails';
 import { useToolStore } from '@/store/tool';
 import { mcpStoreSelectors, pluginSelectors } from '@/store/tool/selectors';
+import { type MCPErrorInfoMetadata } from '@/types/plugins';
 
 import ArgsInput from './ArgsInput';
 import CollapsibleSection from './CollapsibleSection';
@@ -47,10 +49,12 @@ const MCPManifestForm = ({ form, isEditMode }: MCPManifestFormProps) => {
   const testState = useToolStore(mcpStoreSelectors.getMCPConnectionTestState(identifier), isEqual);
 
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [errorMetadata, setErrorMetadata] = useState<MCPErrorInfoMetadata | null>(null);
 
   const handleTestConnection = async () => {
     setIsTesting(true);
     setConnectionError(null);
+    setErrorMetadata(null);
 
     // Manually trigger validation for fields needed for the test
     let isValid = false;
@@ -98,12 +102,29 @@ const MCPManifestForm = ({ form, isEditMode }: MCPManifestFormProps) => {
         // Be careful about overwriting user input if not desired
         form.setFieldsValue({ manifest: result.manifest });
         setConnectionError(null); // 清除本地错误状态
+        setErrorMetadata(null);
       } else if (result.error) {
         // Store 已经处理了错误状态，这里可以选择显示额外的用户友好提示
         const errorMessage = t('error.testConnectionFailed', {
           error: result.error,
         });
         setConnectionError(errorMessage);
+
+        // Build error metadata for detailed display
+        if (result.errorLog || mcpType === 'stdio') {
+          setErrorMetadata({
+            errorLog: result.errorLog,
+            params:
+              mcpType === 'stdio'
+                ? {
+                    args: mcp?.args,
+                    command: mcp?.command,
+                    type: 'stdio',
+                  }
+                : undefined,
+            timestamp: Date.now(),
+          });
+        }
       }
     } catch (error) {
       // Handle unexpected errors
@@ -122,7 +143,10 @@ const MCPManifestForm = ({ form, isEditMode }: MCPManifestFormProps) => {
       <QuickImportSection
         form={form}
         isEditMode={isEditMode}
-        onClearConnectionError={() => setConnectionError(null)}
+        onClearConnectionError={() => {
+          setConnectionError(null);
+          setErrorMetadata(null);
+        }}
       />
       <Form form={form} layout={'vertical'}>
         <Flexbox>
@@ -138,6 +162,7 @@ const MCPManifestForm = ({ form, isEditMode }: MCPManifestFormProps) => {
             desc={t('dev.mcp.identifier.desc')}
             label={t('dev.mcp.identifier.label')}
             name={'identifier'}
+            tag={'identifier'}
             rules={[
               { message: t('dev.mcp.identifier.required'), required: true },
               {
@@ -157,7 +182,6 @@ const MCPManifestForm = ({ form, isEditMode }: MCPManifestFormProps) => {
                     },
                   },
             ]}
-            tag={'identifier'}
           >
             <Input placeholder={t('dev.mcp.identifier.placeholder')} />
           </FormItem>
@@ -167,6 +191,7 @@ const MCPManifestForm = ({ form, isEditMode }: MCPManifestFormProps) => {
                 desc={t('dev.mcp.url.desc')}
                 label={t('dev.mcp.url.label')}
                 name={HTTP_URL_KEY}
+                tag={'url'}
                 rules={[
                   { message: t('dev.mcp.url.required'), required: true },
                   {
@@ -179,7 +204,6 @@ const MCPManifestForm = ({ form, isEditMode }: MCPManifestFormProps) => {
                     },
                   },
                 ]}
-                tag={'url'}
               >
                 <Input placeholder="https://mcp.higress.ai/mcp-github/xxxxx" />
               </FormItem>
@@ -190,6 +214,7 @@ const MCPManifestForm = ({ form, isEditMode }: MCPManifestFormProps) => {
                 name={AUTH_TYPE}
               >
                 <Radio.Group
+                  style={{ width: '100%' }}
                   options={[
                     {
                       label: t('dev.mcp.auth.none'),
@@ -200,7 +225,6 @@ const MCPManifestForm = ({ form, isEditMode }: MCPManifestFormProps) => {
                       value: 'bearer',
                     },
                   ]}
-                  style={{ width: '100%' }}
                 />
               </FormItem>
               {authType === 'bearer' && (
@@ -258,11 +282,11 @@ const MCPManifestForm = ({ form, isEditMode }: MCPManifestFormProps) => {
             </>
           )}
           <FormItem colon={false} label={t('dev.mcp.testConnectionTip')} layout={'horizontal'}>
-            <Flexbox align={'center'} gap={8} horizontal justify={'flex-end'}>
+            <Flexbox horizontal align={'center'} gap={8} justify={'flex-end'}>
               <Button
                 loading={isTesting}
-                onClick={handleTestConnection}
                 type={!!mcpType ? 'primary' : undefined}
+                onClick={handleTestConnection}
               >
                 {t('dev.mcp.testConnection')}
               </Button>
@@ -271,14 +295,17 @@ const MCPManifestForm = ({ form, isEditMode }: MCPManifestFormProps) => {
           {(connectionError || testState.error) && (
             <Alert
               closable
-              message={connectionError || testState.error}
-              onClose={() => setConnectionError(null)}
               showIcon
-              style={{ marginBottom: 16 }}
+              extra={errorMetadata ? <ErrorDetails errorInfo={errorMetadata} /> : undefined}
+              title={connectionError || testState.error}
               type="error"
+              onClose={() => {
+                setConnectionError(null);
+                setErrorMetadata(null);
+              }}
             />
           )}
-          <FormItem name={'manifest'} noStyle />
+          <FormItem noStyle name={'manifest'} />
           <Divider />
           <FormItem
             desc={t('dev.mcp.desc.desc')}

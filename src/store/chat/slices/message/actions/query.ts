@@ -1,17 +1,15 @@
 import { parse } from '@lobechat/conversation-flow';
-import { UIChatMessage } from '@lobechat/types';
+import { type ConversationContext, type UIChatMessage } from '@lobechat/types';
 import isEqual from 'fast-deep-equal';
-import { SWRResponse, mutate } from 'swr';
-import { StateCreator } from 'zustand/vanilla';
+import { type SWRResponse } from 'swr';
 
-import { useClientDataSWR } from '@/libs/swr';
+import { mutate, useClientDataSWRWithSync } from '@/libs/swr';
 import { messageService } from '@/services/message';
-import { ChatStore } from '@/store/chat/store';
-import { setNamespace } from '@/utils/storeDebug';
+import { type ChatStore } from '@/store/chat/store';
+import { type StoreSetter } from '@/store/types';
 
+import { type MessageMapKeyInput } from '../../../utils/messageMapKey';
 import { messageMapKey } from '../../../utils/messageMapKey';
-
-const n = setNamespace('m');
 
 const SWR_USE_FETCH_MESSAGES = 'SWR_USE_FETCH_MESSAGES';
 
@@ -19,117 +17,113 @@ const SWR_USE_FETCH_MESSAGES = 'SWR_USE_FETCH_MESSAGES';
  * Data query and synchronization actions
  * Handles fetching, refreshing, and replacing message data
  */
-export interface MessageQueryAction {
-  /**
-   * Manually refresh messages from server
-   */
-  refreshMessages: (sessionId?: string, topicId?: string | null) => Promise<void>;
 
-  /**
-   * Replace current messages with new data
-   */
-  replaceMessages: (
+type Setter = StoreSetter<ChatStore>;
+export const messageQuery = (set: Setter, get: () => ChatStore, _api?: unknown) =>
+  new MessageQueryActionImpl(set, get, _api);
+
+export class MessageQueryActionImpl {
+  readonly #get: () => ChatStore;
+  readonly #set: Setter;
+
+  constructor(set: Setter, get: () => ChatStore, _api?: unknown) {
+    void _api;
+    this.#set = set;
+    this.#get = get;
+  }
+
+  refreshMessages = async (context?: Partial<ConversationContext>): Promise<void> => {
+    const agentId = context?.agentId ?? this.#get().activeAgentId;
+    const topicId = context?.topicId !== undefined ? context.topicId : this.#get().activeTopicId;
+    // TODO: Support threadId refresh when needed
+    await mutate([SWR_USE_FETCH_MESSAGES, agentId, topicId, 'session']);
+    await mutate([SWR_USE_FETCH_MESSAGES, agentId, topicId, 'group']);
+  };
+
+  replaceMessages = (
     messages: UIChatMessage[],
     params?: {
       action?: any;
+
+      context?: Partial<ConversationContext>;
+
       operationId?: string;
-      sessionId?: string;
-      topicId?: string | null;
     },
-  ) => void;
+  ): void => {
+    let ctx: MessageMapKeyInput;
 
-  /**
-   * Fetch messages using SWR
-   * @param enable - whether to enable the fetch
-   * @param messageContextId - Can be sessionId or groupId
-   */
-  useFetchMessages: (
-    enable: boolean,
-    messageContextId: string,
-    activeTopicId?: string,
-    type?: 'session' | 'group',
-  ) => SWRResponse<UIChatMessage[]>;
-}
+    // Priority 1: Use explicit context if provided (preserving scope)
+    if (params?.context) {
+      ctx = {
+        agentId: params.context.agentId ?? this.#get().activeAgentId,
+        // Preserve groupId from context
+        groupId: params.context.groupId,
+        // Preserve scope from context
+        isNew: params.context.isNew,
 
-export const messageQuery: StateCreator<
-  ChatStore,
-  [['zustand/devtools', never]],
-  [],
-  MessageQueryAction
-> = (set, get) => ({
-  // TODO: The mutate should only be called once, but since we haven't merge session and group,
-  // we need to call it twice
-  refreshMessages: async (sessionId?: string, topicId?: string | null) => {
-    const sid = sessionId ?? get().activeId;
-    const tid = topicId !== undefined ? topicId : get().activeTopicId;
-    await mutate([SWR_USE_FETCH_MESSAGES, sid, tid, 'session']);
-    await mutate([SWR_USE_FETCH_MESSAGES, sid, tid, 'group']);
-  },
+        scope: params.context.scope,
 
-  replaceMessages: (messages, params) => {
-    let sessionId: string;
-    let topicId: string | null | undefined;
-
-    // Priority 1: Get context from operation if operationId is provided
-    if (params?.operationId) {
-      const { sessionId: opSessionId, topicId: opTopicId } =
-        get().internal_getSessionContext(params);
-      sessionId = opSessionId;
-      topicId = opTopicId;
-    } else {
-      // Priority 2: Use explicit sessionId/topicId or fallback to global state
-      sessionId = params?.sessionId ?? get().activeId;
-      topicId = params?.topicId ?? get().activeTopicId;
+        threadId: params.context.threadId,
+        topicId:
+          params.context.topicId !== undefined ? params.context.topicId : this.#get().activeTopicId,
+      };
+    }
+    // Priority 2: Get full context from operation if operationId is provided (deprecated)
+    else if (params?.operationId) {
+      ctx = this.#get().internal_getConversationContext(params);
+    }
+    // Priority 3: Fallback to global state
+    else {
+      ctx = {
+        agentId: this.#get().activeAgentId,
+        groupId: this.#get().activeGroupId,
+        threadId: this.#get().activeThreadId,
+        topicId: this.#get().activeTopicId,
+      };
     }
 
-    const messagesKey = messageMapKey(sessionId, topicId);
+    const messagesKey = messageMapKey(ctx);
 
     // Get raw messages from dbMessagesMap and apply reducer
-    const nextDbMap = { ...get().dbMessagesMap, [messagesKey]: messages };
+    const nextDbMap = { ...this.#get().dbMessagesMap, [messagesKey]: messages };
 
-    if (isEqual(nextDbMap, get().dbMessagesMap)) return;
+    if (isEqual(nextDbMap, this.#get().dbMessagesMap)) return;
 
     // Parse messages using conversation-flow
     const { flatList } = parse(messages);
 
-    set(
+    this.#set(
       {
         // Store raw messages from backend
         dbMessagesMap: nextDbMap,
         // Store parsed messages for display
-        messagesMap: { ...get().messagesMap, [messagesKey]: flatList },
+        messagesMap: { ...this.#get().messagesMap, [messagesKey]: flatList },
       },
       false,
       params?.action ?? 'replaceMessages',
     );
-  },
+  };
 
-  useFetchMessages: (enable, messageContextId, activeTopicId, type = 'session') =>
-    useClientDataSWR<UIChatMessage[]>(
-      enable ? [SWR_USE_FETCH_MESSAGES, messageContextId, activeTopicId, type] : null,
-      async ([, sessionId, topicId, type]: [string, string, string | undefined, string]) =>
-        type === 'session'
-          ? messageService.getMessages(sessionId, topicId)
-          : messageService.getGroupMessages(sessionId, topicId),
+  useFetchMessages = (
+    context: ConversationContext,
+    skipFetch?: boolean,
+  ): SWRResponse<UIChatMessage[]> => {
+    // Skip fetch when skipFetch is true or required fields are missing
+    const shouldFetch = !skipFetch && !!context.agentId && !!context.topicId;
+
+    return useClientDataSWRWithSync<UIChatMessage[]>(
+      shouldFetch ? ['CHAT_STORE_FETCH_MESSAGES', context] : null,
+      () => messageService.getMessages(context),
       {
-        onSuccess: (messages, key) => {
-          const nextMap = {
-            ...get().dbMessagesMap,
-            [messageMapKey(messageContextId || '', activeTopicId)]: messages,
-          };
+        onData: (data) => {
+          if (!data || !context.topicId) return;
 
-          // no need to update map if the messages have been init and the map is the same
-          if (get().messagesInit && isEqual(nextMap, get().dbMessagesMap)) return;
-
-          set(
-            { messagesInit: true },
-            false,
-            n('useFetchMessages(success)', { messages, queryKey: key }),
-          );
-          get().replaceMessages(messages, {
-            action: n('useFetchMessages/updateMessages'),
-          });
+          // Use replaceMessages to store the fetched messages
+          this.#get().replaceMessages(data, { action: 'useFetchMessages', context });
         },
       },
-    ),
-});
+    );
+  };
+}
+
+export type MessageQueryAction = Pick<MessageQueryActionImpl, keyof MessageQueryActionImpl>;

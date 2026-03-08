@@ -1,10 +1,14 @@
-import { SearchParams, UniformSearchResponse, UniformSearchResult } from '@lobechat/types';
+import {
+  type SearchParams,
+  type UniformSearchResponse,
+  type UniformSearchResult,
+} from '@lobechat/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import urlJoin from 'url-join';
 
-import { SearchServiceImpl } from '../type';
-import { KagiResponse, KagiSearchParameters } from './type';
+import { type SearchServiceImpl } from '../type';
+import { type KagiResponse, type KagiSearchParameters } from './type';
 
 const log = debug('lobe-search:Kagi');
 
@@ -40,7 +44,7 @@ export class KagiImpl implements SearchServiceImpl {
 
     let response: Response;
     const startAt = Date.now();
-    let costTime = 0;
+    let costTime: number;
     try {
       log('Sending request to endpoint: %s', endpoint);
       response = await fetch(`${endpoint}?${searchParams.toString()}`, {
@@ -94,7 +98,7 @@ export class KagiImpl implements SearchServiceImpl {
 
       return {
         costTime,
-        query: query,
+        query,
         resultNumbers: mappedResults.length,
         results: mappedResults,
       };

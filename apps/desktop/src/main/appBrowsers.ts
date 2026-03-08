@@ -1,21 +1,23 @@
+import { APP_WINDOW_MIN_SIZE } from '@lobechat/desktop-bridge';
+
 import type { BrowserWindowOpts } from './core/browser/Browser';
 
 export const BrowsersIdentifiers = {
-  chat: 'chat',
+  app: 'app',
   devtools: 'devtools',
 };
 
 export const appBrowsers = {
-  chat: {
+  app: {
     autoHideMenuBar: true,
     height: 800,
-    identifier: 'chat',
+    identifier: 'app',
     keepAlive: true,
-    minWidth: 400,
-    path: '/chat',
+    minHeight: APP_WINDOW_MIN_SIZE.height,
+    minWidth: APP_WINDOW_MIN_SIZE.width,
+    path: '/',
     showOnInit: true,
     titleBarStyle: 'hidden',
-    vibrancy: 'under-window',
     width: 1200,
   },
   devtools: {
@@ -25,10 +27,9 @@ export const appBrowsers = {
     identifier: 'devtools',
     maximizable: false,
     minWidth: 400,
-    parentIdentifier: 'chat',
+    parentIdentifier: 'app',
     path: '/desktop/devtools',
     titleBarStyle: 'hiddenInset',
-    vibrancy: 'under-window',
     width: 1000,
   },
 } satisfies Record<string, BrowserWindowOpts>;
@@ -36,7 +37,6 @@ export const appBrowsers = {
 // Window templates for multi-instance windows
 export interface WindowTemplate {
   allowMultipleInstances: boolean;
-  // Include common BrowserWindow options
   autoHideMenuBar?: boolean;
   baseIdentifier: string;
   basePath: string;
@@ -48,22 +48,8 @@ export interface WindowTemplate {
   showOnInit?: boolean;
   title?: string;
   titleBarStyle?: 'hidden' | 'default' | 'hiddenInset' | 'customButtonsOnHover';
-  vibrancy?:
-    | 'appearance-based'
-    | 'content'
-    | 'fullscreen-ui'
-    | 'header'
-    | 'hud'
-    | 'menu'
-    | 'popover'
-    | 'selection'
-    | 'sheet'
-    | 'sidebar'
-    | 'titlebar'
-    | 'tooltip'
-    | 'under-page'
-    | 'under-window'
-    | 'window';
+  // Note: vibrancy / visualEffectState / transparent are intentionally omitted.
+  // Platform visual effects are managed exclusively by WindowThemeManager.
   width?: number;
 }
 
@@ -72,13 +58,12 @@ export const windowTemplates = {
     allowMultipleInstances: true,
     autoHideMenuBar: true,
     baseIdentifier: 'chatSingle',
-    basePath: '/chat',
+    basePath: '/agent',
     height: 600,
     keepAlive: false, // Multi-instance windows don't need to stay alive
     minWidth: 400,
-    parentIdentifier: 'chat',
+    parentIdentifier: 'app',
     titleBarStyle: 'hidden',
-    vibrancy: 'under-window',
     width: 900,
   },
 } satisfies Record<string, WindowTemplate>;

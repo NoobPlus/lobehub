@@ -45,7 +45,6 @@ describe('FlatListBuilder', () => {
           content: 'Hello',
           createdAt: 0,
           id: 'msg-1',
-          meta: {},
           role: 'user',
           updatedAt: 0,
         },
@@ -53,7 +52,6 @@ describe('FlatListBuilder', () => {
           content: 'Hi',
           createdAt: 0,
           id: 'msg-2',
-          meta: {},
           parentId: 'msg-1',
           role: 'assistant',
           updatedAt: 0,
@@ -74,7 +72,6 @@ describe('FlatListBuilder', () => {
           content: 'Request',
           createdAt: 0,
           id: 'msg-1',
-          meta: {},
           role: 'user',
           updatedAt: 0,
         },
@@ -82,7 +79,6 @@ describe('FlatListBuilder', () => {
           content: 'Using tool',
           createdAt: 0,
           id: 'msg-2',
-          meta: {},
           metadata: { totalInputTokens: 10, totalOutputTokens: 20 },
           parentId: 'msg-1',
           role: 'assistant',
@@ -95,7 +91,6 @@ describe('FlatListBuilder', () => {
           content: 'Tool result',
           createdAt: 0,
           id: 'tool-1',
-          meta: {},
           parentId: 'msg-2',
           role: 'tool',
           tool_call_id: 'tool-1',
@@ -119,7 +114,6 @@ describe('FlatListBuilder', () => {
           content: 'User',
           createdAt: 0,
           id: 'msg-1',
-          meta: {},
           metadata: { activeBranchIndex: 0 },
           role: 'user',
           updatedAt: 0,
@@ -128,7 +122,6 @@ describe('FlatListBuilder', () => {
           content: 'Branch 1',
           createdAt: 0,
           id: 'msg-2',
-          meta: {},
           parentId: 'msg-1',
           role: 'assistant',
           updatedAt: 0,
@@ -137,7 +130,6 @@ describe('FlatListBuilder', () => {
           content: 'Branch 2',
           createdAt: 0,
           id: 'msg-3',
-          meta: {},
           parentId: 'msg-1',
           role: 'assistant',
           updatedAt: 0,
@@ -158,7 +150,6 @@ describe('FlatListBuilder', () => {
           content: 'User',
           createdAt: 0,
           id: 'msg-1',
-          meta: {},
           role: 'user',
           updatedAt: 0,
         },
@@ -166,7 +157,6 @@ describe('FlatListBuilder', () => {
           content: 'Assistant',
           createdAt: 0,
           id: 'msg-2',
-          meta: {},
           metadata: { activeBranchIndex: 1 },
           parentId: 'msg-1',
           role: 'assistant',
@@ -176,7 +166,6 @@ describe('FlatListBuilder', () => {
           content: 'Branch 1',
           createdAt: 0,
           id: 'msg-3',
-          meta: {},
           parentId: 'msg-2',
           role: 'user',
           updatedAt: 0,
@@ -185,7 +174,6 @@ describe('FlatListBuilder', () => {
           content: 'Branch 2',
           createdAt: 0,
           id: 'msg-4',
-          meta: {},
           parentId: 'msg-2',
           role: 'user',
           updatedAt: 0,
@@ -208,7 +196,6 @@ describe('FlatListBuilder', () => {
           createdAt: 0,
           groupId: 'group-1',
           id: 'msg-1',
-          meta: {},
           metadata: { activeColumn: true },
           role: 'assistant',
           updatedAt: 0,
@@ -218,7 +205,6 @@ describe('FlatListBuilder', () => {
           createdAt: 0,
           groupId: 'group-1',
           id: 'msg-2',
-          meta: {},
           role: 'assistant',
           updatedAt: 0,
         },
@@ -244,7 +230,6 @@ describe('FlatListBuilder', () => {
           content: 'User',
           createdAt: 0,
           id: 'msg-1',
-          meta: {},
           metadata: { compare: true },
           role: 'user',
           updatedAt: 0,
@@ -253,7 +238,6 @@ describe('FlatListBuilder', () => {
           content: 'Assistant 1',
           createdAt: 0,
           id: 'msg-2',
-          meta: {},
           metadata: { activeColumn: true },
           parentId: 'msg-1',
           role: 'assistant',
@@ -263,7 +247,6 @@ describe('FlatListBuilder', () => {
           content: 'Assistant 2',
           createdAt: 0,
           id: 'msg-3',
-          meta: {},
           parentId: 'msg-1',
           role: 'assistant',
           updatedAt: 0,
@@ -292,7 +275,6 @@ describe('FlatListBuilder', () => {
           content: 'User',
           createdAt: 0,
           id: 'msg-1',
-          meta: {},
           metadata: { activeBranchIndex: 0 },
           role: 'user',
           updatedAt: 0,
@@ -301,7 +283,6 @@ describe('FlatListBuilder', () => {
           content: 'Branch 1',
           createdAt: 0,
           id: 'msg-2',
-          meta: {},
           parentId: 'msg-1',
           role: 'assistant',
           updatedAt: 0,
@@ -310,7 +291,6 @@ describe('FlatListBuilder', () => {
           content: 'Branch 2',
           createdAt: 0,
           id: 'msg-3',
-          meta: {},
           parentId: 'msg-1',
           role: 'assistant',
           updatedAt: 0,
@@ -319,7 +299,6 @@ describe('FlatListBuilder', () => {
           content: 'Follow-up',
           createdAt: 0,
           id: 'msg-4',
-          meta: {},
           parentId: 'msg-2',
           role: 'user',
           updatedAt: 0,
@@ -341,7 +320,6 @@ describe('FlatListBuilder', () => {
           content: 'User',
           createdAt: 0,
           id: 'msg-1',
-          meta: {},
           metadata: { compare: true },
           role: 'user',
           updatedAt: 0,
@@ -350,7 +328,6 @@ describe('FlatListBuilder', () => {
           content: 'Assistant 1',
           createdAt: 0,
           id: 'msg-2',
-          meta: {},
           parentId: 'msg-1',
           role: 'assistant',
           tools: [
@@ -362,7 +339,6 @@ describe('FlatListBuilder', () => {
           content: 'Tool result',
           createdAt: 0,
           id: 'tool-1',
-          meta: {},
           parentId: 'msg-2',
           role: 'tool',
           tool_call_id: 'tool-1',
@@ -372,7 +348,6 @@ describe('FlatListBuilder', () => {
           content: 'Assistant 2',
           createdAt: 0,
           id: 'msg-3',
-          meta: {},
           parentId: 'msg-1',
           role: 'assistant',
           updatedAt: 0,
@@ -399,7 +374,6 @@ describe('FlatListBuilder', () => {
           content: 'User request',
           createdAt: 0,
           id: 'msg-1',
-          meta: {},
           role: 'user',
           updatedAt: 0,
         },
@@ -407,7 +381,6 @@ describe('FlatListBuilder', () => {
           content: 'Using tool',
           createdAt: 0,
           id: 'msg-2',
-          meta: {},
           parentId: 'msg-1',
           role: 'assistant',
           tools: [
@@ -419,7 +392,6 @@ describe('FlatListBuilder', () => {
           content: 'Tool result',
           createdAt: 0,
           id: 'tool-1',
-          meta: {},
           parentId: 'msg-2',
           role: 'tool',
           tool_call_id: 'tool-1',
@@ -429,7 +401,6 @@ describe('FlatListBuilder', () => {
           content: 'Response based on tool',
           createdAt: 0,
           id: 'msg-3',
-          meta: {},
           parentId: 'tool-1',
           role: 'assistant',
           updatedAt: 0,
@@ -438,7 +409,6 @@ describe('FlatListBuilder', () => {
           content: 'User follow-up',
           createdAt: 0,
           id: 'msg-4',
-          meta: {},
           parentId: 'msg-3',
           role: 'user',
           updatedAt: 0,
@@ -461,7 +431,6 @@ describe('FlatListBuilder', () => {
           content: 'User request',
           createdAt: 0,
           id: 'msg-1',
-          meta: {},
           role: 'user',
           updatedAt: 0,
         },
@@ -469,7 +438,6 @@ describe('FlatListBuilder', () => {
           content: 'Using tool',
           createdAt: 0,
           id: 'msg-2',
-          meta: {},
           parentId: 'msg-1',
           role: 'assistant',
           tools: [
@@ -481,7 +449,6 @@ describe('FlatListBuilder', () => {
           content: 'Tool result',
           createdAt: 0,
           id: 'tool-1',
-          meta: {},
           parentId: 'msg-2',
           role: 'tool',
           tool_call_id: 'tool-1',
@@ -491,7 +458,6 @@ describe('FlatListBuilder', () => {
           content: 'User reply to tool',
           createdAt: 0,
           id: 'msg-3',
-          meta: {},
           parentId: 'tool-1',
           role: 'user',
           updatedAt: 0,
@@ -516,7 +482,6 @@ describe('FlatListBuilder', () => {
           content: 'User',
           createdAt: 0,
           id: 'msg-1',
-          meta: {},
           // activeBranchIndex = 2 means pointing to a not-yet-created branch (optimistic update)
           // when there are only 2 existing children (msg-2, msg-3)
           metadata: { activeBranchIndex: 2 },
@@ -527,7 +492,6 @@ describe('FlatListBuilder', () => {
           content: 'Branch 1',
           createdAt: 0,
           id: 'msg-2',
-          meta: {},
           parentId: 'msg-1',
           role: 'assistant',
           updatedAt: 0,
@@ -536,7 +500,6 @@ describe('FlatListBuilder', () => {
           content: 'Branch 2',
           createdAt: 0,
           id: 'msg-3',
-          meta: {},
           parentId: 'msg-1',
           role: 'assistant',
           updatedAt: 0,
@@ -553,6 +516,193 @@ describe('FlatListBuilder', () => {
       expect(result[0].id).toBe('msg-1');
       // User message should not have branch info since we're in optimistic update mode
       expect((result[0] as any).siblingCount).toBeUndefined();
+    });
+
+    it('should handle orphan messages where all have parentId (thread mode)', () => {
+      // Scenario: Thread messages where the parent (source message) is not in the query result
+      // All messages have parentId pointing to a message not in the array
+      const messages: Message[] = [
+        {
+          content: 'Thread user message',
+          createdAt: 0,
+          id: 'msg-1',
+          parentId: 'source-msg-not-in-array',
+          role: 'user',
+          updatedAt: 0,
+        },
+        {
+          content: 'Thread assistant reply',
+          createdAt: 0,
+          id: 'msg-2',
+          parentId: 'msg-1',
+          role: 'assistant',
+          updatedAt: 0,
+        },
+        {
+          content: 'Thread user follow-up',
+          createdAt: 0,
+          id: 'msg-3',
+          parentId: 'msg-2',
+          role: 'user',
+          updatedAt: 0,
+        },
+      ];
+
+      const builder = createBuilder(messages);
+      const result = builder.flatten(messages);
+
+      // Should flatten all messages correctly using first message's parentId as virtual root
+      expect(result).toHaveLength(3);
+      expect(result[0].id).toBe('msg-1');
+      expect(result[1].id).toBe('msg-2');
+      expect(result[2].id).toBe('msg-3');
+    });
+
+    it('should create tasks message when multiple tasks have same agentId', () => {
+      const messages: Message[] = [
+        {
+          content: 'User request',
+          createdAt: 0,
+          id: 'msg-1',
+          role: 'user',
+          updatedAt: 0,
+        },
+        {
+          content: 'Tool message',
+          createdAt: 0,
+          id: 'tool-1',
+          parentId: 'msg-1',
+          role: 'tool',
+          updatedAt: 0,
+        },
+        {
+          agentId: 'agent-1',
+          content: 'Task 1 result',
+          createdAt: 1,
+          id: 'task-1',
+          parentId: 'tool-1',
+          role: 'task',
+          updatedAt: 1,
+        },
+        {
+          agentId: 'agent-1',
+          content: 'Task 2 result',
+          createdAt: 2,
+          id: 'task-2',
+          parentId: 'tool-1',
+          role: 'task',
+          updatedAt: 2,
+        },
+      ];
+
+      const builder = createBuilder(messages);
+      const result = builder.flatten(messages);
+
+      // Should create tasks (not groupTasks) since all tasks have same agentId
+      expect(result).toHaveLength(3);
+      expect(result[0].id).toBe('msg-1');
+      expect(result[1].id).toBe('tool-1');
+      expect(result[2].role).toBe('tasks');
+      expect((result[2] as any).tasks).toHaveLength(2);
+    });
+
+    it('should create groupTasks message when multiple tasks have different agentIds', () => {
+      const messages: Message[] = [
+        {
+          content: 'User request',
+          createdAt: 0,
+          id: 'msg-1',
+          role: 'user',
+          updatedAt: 0,
+        },
+        {
+          content: 'Tool message',
+          createdAt: 0,
+          id: 'tool-1',
+          parentId: 'msg-1',
+          role: 'tool',
+          updatedAt: 0,
+        },
+        {
+          agentId: 'agent-1',
+          content: 'Task 1 result',
+          createdAt: 1,
+          id: 'task-1',
+          parentId: 'tool-1',
+          role: 'task',
+          updatedAt: 1,
+        },
+        {
+          agentId: 'agent-2',
+          content: 'Task 2 result',
+          createdAt: 2,
+          id: 'task-2',
+          parentId: 'tool-1',
+          role: 'task',
+          updatedAt: 2,
+        },
+        {
+          agentId: 'agent-3',
+          content: 'Task 3 result',
+          createdAt: 3,
+          id: 'task-3',
+          parentId: 'tool-1',
+          role: 'task',
+          updatedAt: 3,
+        },
+      ];
+
+      const builder = createBuilder(messages);
+      const result = builder.flatten(messages);
+
+      // Should create groupTasks since tasks have different agentIds
+      expect(result).toHaveLength(3);
+      expect(result[0].id).toBe('msg-1');
+      expect(result[1].id).toBe('tool-1');
+      expect(result[2].role).toBe('groupTasks');
+      expect((result[2] as any).tasks).toHaveLength(3);
+      // Verify ID format
+      expect(result[2].id).toContain('groupTasks-');
+    });
+
+    it('should create groupTasks with correct timestamps from task messages', () => {
+      const messages: Message[] = [
+        {
+          content: 'Tool message',
+          createdAt: 0,
+          id: 'tool-1',
+          role: 'tool',
+          updatedAt: 0,
+        },
+        {
+          agentId: 'agent-1',
+          content: 'Task 1',
+          createdAt: 100,
+          id: 'task-1',
+          parentId: 'tool-1',
+          role: 'task',
+          updatedAt: 150,
+        },
+        {
+          agentId: 'agent-2',
+          content: 'Task 2',
+          createdAt: 200,
+          id: 'task-2',
+          parentId: 'tool-1',
+          role: 'task',
+          updatedAt: 300,
+        },
+      ];
+
+      const builder = createBuilder(messages);
+      const result = builder.flatten(messages);
+
+      const groupTasksMsg = result.find((m) => m.role === 'groupTasks');
+      expect(groupTasksMsg).toBeDefined();
+      // createdAt should be min of task createdAt
+      expect(groupTasksMsg!.createdAt).toBe(100);
+      // updatedAt should be max of task updatedAt
+      expect(groupTasksMsg!.updatedAt).toBe(300);
     });
   });
 });

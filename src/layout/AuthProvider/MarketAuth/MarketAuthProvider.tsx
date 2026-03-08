@@ -1,17 +1,30 @@
 'use client';
 
 import { App } from 'antd';
-import { ReactNode, createContext, useContext, useEffect, useState } from 'react';
+import { type ReactNode } from 'react';
+import { createContext, use, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { mutate as globalMutate } from 'swr';
 
+import { lambdaClient } from '@/libs/trpc/client';
 import { MARKET_OIDC_ENDPOINTS } from '@/services/_url';
+import { useServerConfigStore } from '@/store/serverConfig';
+import { serverConfigSelectors } from '@/store/serverConfig/selectors';
 import { useUserStore } from '@/store/user';
 import { settingsSelectors } from '@/store/user/slices/settings/selectors/settings';
 
-import MarketAuthConfirmModal from './MarketAuthConfirmModal';
 import { MarketAuthError } from './errors';
+import MarketAuthConfirmModal from './MarketAuthConfirmModal';
 import { MarketOIDC } from './oidc';
-import { MarketAuthContextType, MarketAuthSession, MarketUserInfo, OIDCConfig } from './types';
+import ProfileSetupModal from './ProfileSetupModal';
+import {
+  type MarketAuthContextType,
+  type MarketAuthSession,
+  type MarketUserInfo,
+  type MarketUserProfile,
+  type OIDCConfig,
+} from './types';
+import { useMarketUserProfile } from './useMarketUserProfile';
 
 const MarketAuthContext = createContext<MarketAuthContextType | null>(null);
 
@@ -21,70 +34,16 @@ interface MarketAuthProviderProps {
 }
 
 /**
- * 从 cookie 中获取 token
+ * Fetch user info (via tRPC OIDC endpoint)
+ * @param accessToken - Optional access token; if not provided, the backend will attempt to use trustedClientToken
  */
-const getTokenFromCookie = (): string | null => {
-  if (typeof document === 'undefined') return null;
-
-  // eslint-disable-next-line unicorn/no-document-cookie
-  const cookies = document.cookie.split(';');
-  for (const cookie of cookies) {
-    const [name, value] = cookie.trim().split('=');
-    if (name === 'market-bearertoken') {
-      console.log('[MarketAuth] Found market token in cookie');
-      return value;
-    }
-  }
-  return null;
-};
-
-/**
- * 将 token 存储到 cookie
- */
-const setTokenToCookie = (token: string, expiresIn: number) => {
-  console.log('[MarketAuth] Storing token to cookie');
-  const expiresAt = new Date(Date.now() + expiresIn * 1000);
-  // eslint-disable-next-line unicorn/no-document-cookie
-  document.cookie = `market-bearertoken=${token}; expires=${expiresAt.toUTCString()}; path=/; secure; samesite=strict`;
-};
-
-/**
- * 从 cookie 中删除 token
- */
-const removeTokenFromCookie = () => {
-  console.log('[MarketAuth] Removing token from cookie');
-  // eslint-disable-next-line unicorn/no-document-cookie
-  document.cookie = 'market-bearertoken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-};
-
-/**
- * 获取用户信息
- */
-const fetchUserInfo = async (accessToken: string): Promise<MarketUserInfo | null> => {
+const fetchUserInfo = async (accessToken?: string): Promise<MarketUserInfo | null> => {
   try {
-    const response = await fetch(MARKET_OIDC_ENDPOINTS.userinfo, {
-      body: JSON.stringify({ token: accessToken }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      method: 'POST',
+    const userInfo = await lambdaClient.market.oidc.getUserInfo.mutate({
+      token: accessToken,
     });
 
-    console.log('[MarketAuth] User info response:', response);
-
-    if (!response.ok) {
-      console.error(
-        '[MarketAuth] Failed to fetch user info:',
-        response.status,
-        response.statusText,
-      );
-      return null;
-    }
-
-    const userInfo = (await response.json()) as MarketUserInfo;
-    console.log('[MarketAuth] User info fetched successfully:', userInfo);
-
-    return userInfo;
+    return userInfo as MarketUserInfo;
   } catch (error) {
     console.error('[MarketAuth] Error fetching user info:', error);
     return null;
@@ -92,7 +51,7 @@ const fetchUserInfo = async (accessToken: string): Promise<MarketUserInfo | null
 };
 
 /**
- * 从 DB 获取 market tokens
+ * Get market tokens from DB
  */
 const getMarketTokensFromDB = () => {
   const settings = settingsSelectors.currentSettings(useUserStore.getState());
@@ -100,14 +59,13 @@ const getMarketTokensFromDB = () => {
 };
 
 /**
- * 存储 market tokens 到 DB
+ * Store market tokens to DB
  */
 const saveMarketTokensToDB = async (
   accessToken: string,
   refreshToken?: string,
   expiresAt?: number,
 ) => {
-  console.log('[MarketAuth] Saving tokens to DB');
   try {
     await useUserStore.getState().setSettings({
       market: {
@@ -116,56 +74,66 @@ const saveMarketTokensToDB = async (
         refreshToken,
       },
     });
-    console.log('[MarketAuth] Tokens saved to DB successfully');
   } catch (error) {
     console.error('[MarketAuth] Failed to save tokens to DB:', error);
   }
 };
 
 /**
- * 清除 DB 中的 market tokens
+ * Clear market tokens from DB
  */
 const clearMarketTokensFromDB = async () => {
-  console.log('[MarketAuth] Clearing tokens from DB');
+  // If there are no tokens, no need to call setSettings
+  const currentTokens = getMarketTokensFromDB();
+  if (!currentTokens?.accessToken && !currentTokens?.refreshToken && !currentTokens?.expiresAt) {
+    return;
+  }
+
   try {
     await useUserStore.getState().setSettings({
-      market: {
-        accessToken: undefined,
-        expiresAt: undefined,
-        refreshToken: undefined,
-      },
+      market: undefined,
     });
-    console.log('[MarketAuth] Tokens cleared from DB successfully');
   } catch (error) {
     console.error('[MarketAuth] Failed to clear tokens from DB:', error);
   }
 };
 
 /**
- * 获取 refresh token（优先从 DB 获取）
+ * Get refresh token (prioritize DB)
  */
 const getRefreshToken = (): string | null => {
-  // 优先从 DB 获取
+  // Prioritize fetching from DB
   const dbTokens = getMarketTokensFromDB();
   if (dbTokens?.refreshToken) {
-    console.log('[MarketAuth] Retrieved refresh token from DB');
     return dbTokens.refreshToken;
   }
 
-  console.log('[MarketAuth] No refresh token found');
   return null;
 };
 
 /**
- * 刷新令牌（暂时简化，后续可以实现 refresh token 逻辑）
+ * Refresh token (simplified for now; refresh token logic can be implemented later)
  */
 const refreshToken = async (): Promise<boolean> => {
-  console.log('[MarketAuth] Refresh token not implemented yet');
   return false;
 };
 
 /**
- * Market 授权上下文提供者
+ * Check if the user needs to set up a username (first-time login)
+ */
+const checkNeedsProfileSetup = async (username: string): Promise<boolean> => {
+  try {
+    const profile = await lambdaClient.market.user.getUserByUsername.query({ username });
+    // If userName is not set, user needs to complete profile setup
+    return !profile.userName;
+  } catch {
+    // Error fetching profile (e.g., NOT_FOUND), assume needs setup
+    return true;
+  }
+};
+
+/**
+ * Market authorization context provider
  */
 export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderProps) => {
   const { message } = App.useApp();
@@ -174,22 +142,34 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
   const [session, setSession] = useState<MarketAuthSession | null>(null);
   const [status, setStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
   const [oidcClient, setOidcClient] = useState<MarketOIDC | null>(null);
-  const [shouldReauthorize, setShouldReauthorize] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showProfileSetupModal, setShowProfileSetupModal] = useState(false);
+  const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false);
   const [pendingSignInResolve, setPendingSignInResolve] = useState<
-    ((value: number | null) => void) | null
+    ((_value: number | null) => void) | null
   >(null);
-  const [pendingSignInReject, setPendingSignInReject] = useState<((reason?: any) => void) | null>(
+  const [pendingSignInReject, setPendingSignInReject] = useState<((_reason?: any) => void) | null>(
     null,
   );
+  const [pendingProfileSuccessCallback, setPendingProfileSuccessCallback] = useState<
+    ((_profile: MarketUserProfile) => void) | null
+  >(null);
 
-  // 初始化 OIDC 客户端（仅在客户端）
+  // Subscribe to user store init state; when isUserStateInit is true, settings data is fully loaded
+  const isUserStateInit = useUserStore((s) => s.isUserStateInit);
+
+  // Check if Market Trusted Client authentication is enabled
+  const enableMarketTrustedClient = useServerConfigStore(
+    serverConfigSelectors.enableMarketTrustedClient,
+  );
+
+  // Initialize OIDC client (client-side only)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const baseUrl = process.env.NEXT_PUBLIC_MARKET_BASE_URL || 'https://market.lobehub.com';
       const desktopRedirectUri = new URL(MARKET_OIDC_ENDPOINTS.desktopCallback, baseUrl).toString();
 
-      // 桌面端使用 Market 手动维护的 Web 回调，Web 端使用当前域名
+      // Desktop uses Market's manually maintained Web callback; Web uses the current domain
       const redirectUri = isDesktop
         ? desktopRedirectUri
         : `${window.location.origin}/market-auth-callback`;
@@ -205,117 +185,80 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
   }, [isDesktop]);
 
   /**
-   * 检查并恢复会话
+   * Initialize: check and restore session, fetch user info
    */
-  const restoreSession = () => {
-    console.log('[MarketAuth] Attempting to restore session');
+  const initializeSession = async () => {
+    setStatus('loading');
 
-    // 优先级 1: 从 DB 中获取 token（优先级最高）
-    const dbTokens = getMarketTokensFromDB();
-    if (dbTokens?.accessToken && dbTokens?.expiresAt) {
-      // 检查 DB 中的 token 是否过期
-      if (dbTokens.expiresAt > Date.now()) {
-        console.log('[MarketAuth] Session restored from DB');
+    // If Trusted Client authentication is enabled, fetch user info directly from backend (without token)
+    if (enableMarketTrustedClient) {
+      const userInfo = await fetchUserInfo();
 
-        // 尝试从 sessionStorage 获取用户信息（如果有的话）
-        let userInfo: MarketUserInfo | undefined;
-        const userInfoData = sessionStorage.getItem('market_user_info');
-        if (userInfoData) {
-          try {
-            userInfo = JSON.parse(userInfoData);
-          } catch (error) {
-            console.error('[MarketAuth] Failed to parse stored user info:', error);
-          }
-        }
-
-        // 创建会话对象
-        const restoredSession: MarketAuthSession = {
-          accessToken: dbTokens.accessToken,
-          expiresAt: dbTokens.expiresAt,
-          expiresIn: Math.floor((dbTokens.expiresAt - Date.now()) / 1000),
+      if (userInfo) {
+        // When using Trusted Client, create a virtual session (no real token needed)
+        const trustedSession: MarketAuthSession = {
+          accessToken: '', // Trusted Client does not require a frontend token
+          expiresAt: Number.MAX_SAFE_INTEGER, // never expires
+          expiresIn: Number.MAX_SAFE_INTEGER,
           scope: 'openid profile email',
           tokenType: 'Bearer',
           userInfo,
         };
 
-        // 同步到 cookie 和 sessionStorage
-        setTokenToCookie(dbTokens.accessToken, restoredSession.expiresIn);
-        sessionStorage.setItem('market_auth_session', JSON.stringify(restoredSession));
-
-        setSession(restoredSession);
+        setSession(trustedSession);
         setStatus('authenticated');
         return;
-      } else {
-        console.log('[MarketAuth] DB token has expired, will trigger re-authorization');
-        // 清理过期的 DB tokens
-        clearMarketTokensFromDB();
-        sessionStorage.removeItem('market_auth_session');
-        removeTokenFromCookie();
-        // 标记需要重新授权，等待 oidcClient 准备好
-        setShouldReauthorize(true);
-        return;
       }
+
+      // If fetch fails, set to unauthenticated
+      setStatus('unauthenticated');
+      return;
     }
 
-    // 优先级 2: 从 cookie 和 sessionStorage 中获取（DB 中没有时的备选方案）
-    const token = getTokenFromCookie();
-    if (token) {
-      // 从 sessionStorage 中获取完整的会话信息
-      const sessionData = sessionStorage.getItem('market_auth_session');
-      if (sessionData) {
-        try {
-          const parsedSession = JSON.parse(sessionData) as MarketAuthSession;
+    // Original OIDC token authentication flow
+    const dbTokens = getMarketTokensFromDB();
 
-          // 检查 token 是否过期
-          if (parsedSession.expiresAt > Date.now()) {
-            console.log('[MarketAuth] Session restored from cookie/sessionStorage');
-
-            // 如果 session 中没有 userInfo，尝试从单独的存储中获取
-            if (!parsedSession.userInfo) {
-              const userInfoData = sessionStorage.getItem('market_user_info');
-              if (userInfoData) {
-                try {
-                  parsedSession.userInfo = JSON.parse(userInfoData);
-                } catch (error) {
-                  console.error('[MarketAuth] Failed to parse stored user info:', error);
-                }
-              } else {
-                setShouldReauthorize(true);
-              }
-            }
-
-            // 同步到 DB
-            saveMarketTokensToDB(parsedSession.accessToken, undefined, parsedSession.expiresAt);
-
-            setSession(parsedSession);
-            setStatus('authenticated');
-            return;
-          } else {
-            console.log('[MarketAuth] Stored session has expired, will trigger re-authorization');
-            sessionStorage.removeItem('market_auth_session');
-            removeTokenFromCookie();
-            // 标记需要重新授权，等待 oidcClient 准备好
-            setShouldReauthorize(true);
-            return;
-          }
-        } catch (error) {
-          console.error('[MarketAuth] Failed to parse stored session:', error);
-          sessionStorage.removeItem('market_auth_session');
-          removeTokenFromCookie();
-        }
-      }
+    // Check if token exists in DB
+    if (!dbTokens?.accessToken) {
+      setStatus('unauthenticated');
+      return;
     }
 
-    console.log('[MarketAuth] No valid session found');
-    setStatus('unauthenticated');
+    // Check if token is expired
+    if (!dbTokens.expiresAt || dbTokens.expiresAt <= Date.now()) {
+      // Clear expired DB tokens
+      await clearMarketTokensFromDB();
+      setStatus('unauthenticated');
+      return;
+    }
+
+    // Fetch user info
+    const userInfo = await fetchUserInfo(dbTokens.accessToken);
+
+    if (!userInfo) {
+      // Clear invalid token
+      await clearMarketTokensFromDB();
+      setStatus('unauthenticated');
+      return;
+    }
+
+    const restoredSession: MarketAuthSession = {
+      accessToken: dbTokens.accessToken,
+      expiresAt: dbTokens.expiresAt,
+      expiresIn: Math.floor((dbTokens.expiresAt - Date.now()) / 1000),
+      scope: 'openid profile email',
+      tokenType: 'Bearer',
+      userInfo,
+    };
+
+    setSession(restoredSession);
+    setStatus('authenticated');
   };
 
   /**
-   * 实际执行登录的方法（内部使用）
+   * The actual sign-in method (internal use)
    */
   const handleActualSignIn = async (): Promise<number | null> => {
-    console.log('[MarketAuth] Starting sign in process');
-
     if (!oidcClient) {
       console.error('[MarketAuth] OIDC client not initialized');
       throw new MarketAuthError('oidcNotReady', { message: 'OIDC client not initialized' });
@@ -324,55 +267,53 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
     try {
       setStatus('loading');
 
-      // 启动 OIDC 授权流程并获取授权码
+      // Start OIDC authorization flow and get authorization code
       const authResult = await oidcClient.startAuthorization();
-      console.log('[MarketAuth] Authorization successful, exchanging code for token', authResult);
 
-      // 用授权码换取访问令牌
+      // Exchange authorization code for access token
       const tokenResponse = await oidcClient.exchangeCodeForToken(
         authResult.code,
         authResult.state,
       );
 
-      console.log('[MarketAuth] Token response:', tokenResponse);
-
-      // 获取用户信息
+      // Fetch user info
       const userInfo = await fetchUserInfo(tokenResponse.accessToken);
 
-      // 创建会话对象
+      // Create session object
+      const expiresAt = Date.now() + tokenResponse.expiresIn * 1000;
       const newSession: MarketAuthSession = {
         accessToken: tokenResponse.accessToken,
-        expiresAt: Date.now() + tokenResponse.expiresIn * 1000,
+        expiresAt,
         expiresIn: tokenResponse.expiresIn,
         scope: tokenResponse.scope,
         tokenType: tokenResponse.tokenType as 'Bearer',
         userInfo: userInfo || undefined,
       };
 
-      // 存储 token 到 cookie 和 sessionStorage
-      setTokenToCookie(tokenResponse.accessToken, tokenResponse.expiresIn);
-      sessionStorage.setItem('market_auth_session', JSON.stringify(newSession));
-
-      // 单独存储用户信息到 sessionStorage 供其他地方使用
-      if (userInfo) {
-        sessionStorage.setItem('market_user_info', JSON.stringify(userInfo));
-      }
-
-      // 存储 tokens 到 DB
-      await saveMarketTokensToDB(
-        tokenResponse.accessToken,
-        tokenResponse.refreshToken,
-        newSession.expiresAt,
-      );
+      // Store tokens to DB
+      await saveMarketTokensToDB(tokenResponse.accessToken, tokenResponse.refreshToken, expiresAt);
 
       setSession(newSession);
       setStatus('authenticated');
+
+      // Check if user needs to set up profile (first-time login)
+      if (userInfo?.sub) {
+        const needsSetup = await checkNeedsProfileSetup(userInfo.sub);
+        if (needsSetup) {
+          // Wait for next tick to ensure session state is updated before opening modal
+          // This prevents the edge case where accessToken is null when modal opens
+          setTimeout(() => {
+            setIsFirstTimeSetup(true);
+            setShowProfileSetupModal(true);
+          }, 0);
+        }
+      }
 
       return userInfo?.accountId ?? null;
     } catch (error) {
       setStatus('unauthenticated');
 
-      // 根据错误类型显示不同的错误消息
+      // Display different error messages based on error type
       if (error instanceof MarketAuthError) {
         message.error(t(`errors.${error.code}`) || t('errors.general'));
       } else {
@@ -384,7 +325,7 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
   };
 
   /**
-   * 登录方法（会先弹出确认对话框）
+   * Sign-in method (shows confirmation dialog first)
    */
   const signIn = async (): Promise<number | null> => {
     return new Promise<number | null>((resolve, reject) => {
@@ -395,10 +336,24 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
   };
 
   /**
-   * 处理确认授权
+   * Handle authorization confirmation
    */
   const handleConfirmAuth = async () => {
     setShowConfirmModal(false);
+
+    // If in trustedClient mode, open ProfileSetupModal directly to complete profile
+    if (enableMarketTrustedClient) {
+      setIsFirstTimeSetup(true);
+      setShowProfileSetupModal(true);
+      if (pendingSignInResolve) {
+        pendingSignInResolve(session?.userInfo?.accountId ?? null);
+        setPendingSignInResolve(null);
+        setPendingSignInReject(null);
+      }
+      return;
+    }
+
+    // Original OIDC flow
     try {
       const result = await handleActualSignIn();
       if (pendingSignInResolve) {
@@ -416,7 +371,7 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
   };
 
   /**
-   * 处理取消授权
+   * Handle authorization cancellation
    */
   const handleCancelAuth = () => {
     setShowConfirmModal(false);
@@ -428,146 +383,78 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
   };
 
   /**
-   * 登出方法
+   * Sign-out method
    */
   const signOut = async () => {
     setSession(null);
     setStatus('unauthenticated');
-    removeTokenFromCookie();
-    sessionStorage.removeItem('market_auth_session');
-    sessionStorage.removeItem('market_user_info');
-    // 清除 DB 中的 tokens
     await clearMarketTokensFromDB();
   };
 
   /**
-   * 获取当前用户信息
+   * Get current user info
    */
   const getCurrentUserInfo = (): MarketUserInfo | null => {
-    console.log('getCurrentUserInfo-session', session, session?.userInfo);
-    if (session?.userInfo) {
-      return session.userInfo;
-    }
-
-    // 如果 session 中没有，尝试从 sessionStorage 中获取
-    try {
-      const userInfoData = sessionStorage.getItem('market_user_info');
-      if (userInfoData) {
-        return JSON.parse(userInfoData) as MarketUserInfo;
-      }
-    } catch (error) {
-      console.error('[MarketAuth] Failed to get user info from storage:', error);
-    }
-
-    return null;
+    return session?.userInfo ?? null;
   };
 
   /**
-   * 获取 access token（优先从 DB 获取，否则从 session 获取）
+   * Get access token (prioritize session, fallback to DB)
    */
   const getAccessToken = (): string | null => {
-    // 优先从 DB 获取
-    const dbTokens = getMarketTokensFromDB();
-    if (dbTokens?.accessToken) {
-      console.log('[MarketAuth] Retrieved access token from DB');
-      return dbTokens.accessToken;
-    }
-
-    // 如果 DB 中没有，从 session 获取
+    // Prioritize fetching from session (in-memory state)
     if (session?.accessToken) {
-      console.log('[MarketAuth] Retrieved access token from session');
       return session.accessToken;
     }
 
-    // 如果 session 中也没有，尝试从 sessionStorage 获取
-    try {
-      const sessionData = sessionStorage.getItem('market_auth_session');
-      if (sessionData) {
-        const parsedSession = JSON.parse(sessionData) as MarketAuthSession;
-        if (parsedSession.accessToken) {
-          console.log('[MarketAuth] Retrieved access token from sessionStorage');
-          return parsedSession.accessToken;
-        }
-      }
-    } catch (error) {
-      console.error('[MarketAuth] Failed to get access token from sessionStorage:', error);
-    }
-
-    return null;
+    // Fallback to fetching from DB
+    const dbTokens = getMarketTokensFromDB();
+    return dbTokens?.accessToken ?? null;
   };
 
   /**
-   * 初始化时恢复会话
+   * Open profile setup modal (for manual user editing)
    */
-  useEffect(() => {
-    restoreSession();
+  const openProfileSetup = useCallback((onSuccess?: (profile: MarketUserProfile) => void) => {
+    setIsFirstTimeSetup(false);
+    setPendingProfileSuccessCallback(() => onSuccess || null);
+    setShowProfileSetupModal(true);
   }, []);
 
   /**
-   * 当需要重新授权且 OIDC 客户端准备好时，自动触发重新授权
+   * Close profile setup modal
+   */
+  const handleCloseProfileSetup = useCallback(() => {
+    setShowProfileSetupModal(false);
+    setIsFirstTimeSetup(false);
+    setPendingProfileSuccessCallback(null);
+  }, []);
+
+  /**
+   * Profile update success callback
+   */
+  const handleProfileUpdateSuccess = useCallback(() => {
+    // Profile is updated, modal will close automatically
+  }, []);
+
+  /**
+   * Restore session and fetch user info on initialization
+   * Wait for isUserStateInit to be true, at which point the SWR request from useInitUserState is complete and settings data is loaded
    */
   useEffect(() => {
-    const handleAutoReauthorization = async () => {
-      if (shouldReauthorize && oidcClient) {
-        setShouldReauthorize(false); // 重置标识，避免重复触发
-        try {
-          setStatus('loading');
-          // 启动 OIDC 授权流程并获取授权码
-          const authResult = await oidcClient.startAuthorization();
-          // 用授权码换取访问令牌
-          const tokenResponse = await oidcClient.exchangeCodeForToken(
-            authResult.code,
-            authResult.state,
-          );
-
-          // 获取用户信息
-          const userInfo = await fetchUserInfo(tokenResponse.accessToken);
-          // 创建会话对象
-          const newSession: MarketAuthSession = {
-            accessToken: tokenResponse.accessToken,
-            expiresAt: Date.now() + tokenResponse.expiresIn * 1000,
-            expiresIn: tokenResponse.expiresIn,
-            scope: tokenResponse.scope,
-            tokenType: tokenResponse.tokenType as 'Bearer',
-            userInfo: userInfo || undefined,
-          };
-
-          // 存储 token 到 cookie 和 sessionStorage
-          setTokenToCookie(tokenResponse.accessToken, tokenResponse.expiresIn);
-          sessionStorage.setItem('market_auth_session', JSON.stringify(newSession));
-
-          // 单独存储用户信息到 sessionStorage 供其他地方使用
-          if (userInfo) {
-            sessionStorage.setItem('market_user_info', JSON.stringify(userInfo));
-          }
-
-          // 存储 tokens 到 DB
-          await saveMarketTokensToDB(
-            tokenResponse.accessToken,
-            tokenResponse.refreshToken,
-            newSession.expiresAt,
-          );
-
-          setSession(newSession);
-          setStatus('authenticated');
-
-          console.log('[MarketAuth] Auto re-authorization completed successfully');
-        } catch (error) {
-          console.error('[MarketAuth] Auto re-authorization failed:', error);
-          setStatus('unauthenticated');
-        }
-      }
-    };
-
-    handleAutoReauthorization();
-  }, [shouldReauthorize, oidcClient]);
+    if (isUserStateInit) {
+      initializeSession();
+    }
+  }, [isUserStateInit, enableMarketTrustedClient]);
 
   const contextValue: MarketAuthContextType = {
     getAccessToken,
     getCurrentUserInfo,
     getRefreshToken,
-    isAuthenticated: status === 'authenticated',
+    // When Trusted Client authentication is enabled, automatically treat as authenticated (backend uses trustedClientToken)
+    isAuthenticated: enableMarketTrustedClient || status === 'authenticated',
     isLoading: status === 'loading',
+    openProfileSetup,
     refreshToken,
     session,
     signIn,
@@ -575,23 +462,66 @@ export const MarketAuthProvider = ({ children, isDesktop }: MarketAuthProviderPr
     status,
   };
 
+  // Get current user's profile for the edit modal
+  const userInfo = session?.userInfo;
+  const username = userInfo?.sub;
+  const { data: userProfile, mutate: mutateUserProfile } = useMarketUserProfile(username);
+
+  // Handle profile update success - also refresh the cached profile
+  const handleProfileSuccess = useCallback(
+    (profile: MarketUserProfile) => {
+      handleProfileUpdateSuccess();
+      // Update the SWR cache with the new profile
+      mutateUserProfile(profile, false);
+
+      // Also refresh the discover store's user profile cache
+      // The discover store uses keys like 'user-profile-{locale}-{username}'
+      if (profile.userName) {
+        globalMutate(
+          (key) =>
+            typeof key === 'string' &&
+            key.includes(`user-profile`) &&
+            key.includes(profile.userName!),
+          undefined,
+          { revalidate: true },
+        );
+      }
+
+      // Call the external success callback if provided
+      if (pendingProfileSuccessCallback) {
+        pendingProfileSuccessCallback(profile);
+        setPendingProfileSuccessCallback(null);
+      }
+    },
+    [handleProfileUpdateSuccess, mutateUserProfile, pendingProfileSuccessCallback],
+  );
+
   return (
-    <MarketAuthContext.Provider value={contextValue}>
+    <MarketAuthContext value={contextValue}>
       {children}
       <MarketAuthConfirmModal
+        open={showConfirmModal}
         onCancel={handleCancelAuth}
         onConfirm={handleConfirmAuth}
-        open={showConfirmModal}
       />
-    </MarketAuthContext.Provider>
+      <ProfileSetupModal
+        accessToken={session?.accessToken ?? null}
+        defaultDisplayName={userProfile?.displayName || ''}
+        isFirstTimeSetup={isFirstTimeSetup}
+        open={showProfileSetupModal}
+        userProfile={userProfile}
+        onClose={handleCloseProfileSetup}
+        onSuccess={handleProfileSuccess}
+      />
+    </MarketAuthContext>
   );
 };
 
 /**
- * 使用 Market 授权的 Hook
+ * Hook for using Market authorization
  */
 export const useMarketAuth = (): MarketAuthContextType => {
-  const context = useContext(MarketAuthContext);
+  const context = use(MarketAuthContext);
   if (!context) {
     throw new Error('useMarketAuth must be used within a MarketAuthProvider');
   }

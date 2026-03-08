@@ -1,9 +1,10 @@
 import { act } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_FEATURE_FLAGS, mapFeatureFlagsEnvToState } from '@/config/featureFlags';
 
-import { ServerConfigStore, createServerConfigStore, initServerConfigStore } from './store';
+import { type ServerConfigStore } from './store';
+import { createServerConfigStore, initServerConfigStore } from './store';
 
 describe('createServerConfigStore', () => {
   beforeEach(() => {
@@ -21,7 +22,7 @@ describe('createServerConfigStore', () => {
   it('should initialize store with default state', () => {
     const store = createServerConfigStore();
 
-    expect(store.getState().featureFlags).toHaveProperty('enablePlugins');
+    expect(store.getState().featureFlags).toHaveProperty('showMarket');
     expect(store.getState()).toMatchObject({
       serverConfig: { telemetry: {}, aiProvider: {} },
     });
@@ -52,11 +53,11 @@ describe('createServerConfigStore', () => {
       store.setState({
         featureFlags: {
           ...store.getState().featureFlags,
-          showDalle: false,
+          showMarket: false,
         },
       });
     });
 
-    expect(store.getState().featureFlags.showDalle).toBeFalsy();
+    expect(store.getState().featureFlags.showMarket).toBeFalsy();
   });
 });

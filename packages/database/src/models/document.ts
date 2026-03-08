@@ -1,7 +1,8 @@
 import { and, count, desc, eq, inArray } from 'drizzle-orm';
 
-import { DocumentItem, NewDocument, documents } from '../schemas';
-import { LobeChatDatabase } from '../type';
+import type { DocumentItem, NewDocument } from '../schemas';
+import { documents } from '../schemas';
+import type { LobeChatDatabase } from '../type';
 
 export interface QueryDocumentParams {
   current?: number;
@@ -115,6 +116,12 @@ export class DocumentModel {
   findByFileId = async (fileId: string) => {
     return this.db.query.documents.findFirst({
       where: and(eq(documents.userId, this.userId), eq(documents.fileId, fileId)),
+    });
+  };
+
+  findBySlug = async (slug: string): Promise<DocumentItem | undefined> => {
+    return this.db.query.documents.findFirst({
+      where: and(eq(documents.userId, this.userId), eq(documents.slug, slug)),
     });
   };
 

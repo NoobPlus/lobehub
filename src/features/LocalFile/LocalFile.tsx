@@ -1,15 +1,14 @@
-import { Button } from '@lobehub/ui';
-import { Popover, Space } from 'antd';
-import { createStyles } from 'antd-style';
+import { Button, Flexbox, Popover } from '@lobehub/ui';
+import { Space } from 'antd';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { ExternalLink, FolderOpen } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Flexbox } from 'react-layout-kit';
 
 import FileIcon from '@/components/FileIcon';
 import { localFileService } from '@/services/electron/localFileService';
 
-const useStyles = createStyles(({ css, token }) => ({
+const styles = createStaticStyles(({ css }) => ({
   container: css`
     cursor: pointer;
 
@@ -17,11 +16,11 @@ const useStyles = createStyles(({ css, token }) => ({
     padding-inline: 4px 8px;
     border-radius: 4px;
 
-    color: ${token.colorText};
+    color: ${cssVar.colorText};
 
     :hover {
-      color: ${token.colorText};
-      background: ${token.colorFillTertiary};
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillTertiary};
     }
   `,
   title: css`
@@ -42,7 +41,6 @@ interface LocalFileProps {
 }
 
 export const LocalFile = ({ name, path, isDirectory = false }: LocalFileProps) => {
-  const { styles } = useStyles();
   const { t } = useTranslation('components');
 
   const handleOpenFile = () => {
@@ -57,15 +55,15 @@ export const LocalFile = ({ name, path, isDirectory = false }: LocalFileProps) =
 
   const fileContent = (
     <Flexbox
+      horizontal
       align={'center'}
       className={styles.container}
       gap={4}
-      horizontal
-      onClick={isDirectory ? handleOpenFile : undefined}
       style={{ display: 'inline-flex', verticalAlign: 'middle' }}
+      onClick={isDirectory ? handleOpenFile : undefined}
     >
       <FileIcon fileName={name} isDirectory={isDirectory} size={22} variant={'raw'} />
-      <Flexbox align={'baseline'} gap={4} horizontal style={{ overflow: 'hidden', width: '100%' }}>
+      <Flexbox horizontal align={'baseline'} gap={4} style={{ overflow: 'hidden', width: '100%' }}>
         <div className={styles.title}>{name}</div>
       </Flexbox>
     </Flexbox>
@@ -81,17 +79,17 @@ export const LocalFile = ({ name, path, isDirectory = false }: LocalFileProps) =
     <Space.Compact>
       <Button
         icon={ExternalLink}
-        onClick={handleOpenFile}
         size="small"
         title={t('LocalFile.action.open')}
+        onClick={handleOpenFile}
       >
         {t('LocalFile.action.open')}
       </Button>
       <Button
         icon={FolderOpen}
-        onClick={handleOpenFolder}
         size="small"
         title={t('LocalFile.action.showInFolder')}
+        onClick={handleOpenFolder}
       >
         {t('LocalFile.action.showInFolder')}
       </Button>
@@ -100,12 +98,11 @@ export const LocalFile = ({ name, path, isDirectory = false }: LocalFileProps) =
 
   return (
     <Popover
-      arrow={false}
       content={popoverContent}
+      trigger="hover"
       styles={{
-        body: { padding: 0 },
+        content: { padding: 0 },
       }}
-      trigger={['hover']}
     >
       {fileContent}
     </Popover>

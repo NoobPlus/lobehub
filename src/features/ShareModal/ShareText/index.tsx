@@ -1,12 +1,12 @@
 import { FORM_STYLE } from '@lobechat/const';
 import { exportFile } from '@lobechat/utils/client';
-import { Button, Form, type FormItemProps, copyToClipboard } from '@lobehub/ui';
+import { type FormItemProps } from '@lobehub/ui';
+import { Button, copyToClipboard, Flexbox, Form } from '@lobehub/ui';
 import { App, Switch } from 'antd';
 import isEqual from 'fast-deep-equal';
 import { CopyIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Flexbox } from 'react-layout-kit';
 
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useAgentStore } from '@/store/agent';
@@ -14,10 +14,10 @@ import { agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { displayMessageSelectors, topicSelectors } from '@/store/chat/selectors';
 
-import { useStyles } from '../style';
+import { styles } from '../style';
 import Preview from './Preview';
 import { generateMarkdown } from './template';
-import { FieldType } from './type';
+import { type FieldType } from './type';
 
 const DEFAULT_FIELD_VALUE: FieldType = {
   includeTool: true,
@@ -29,7 +29,6 @@ const DEFAULT_FIELD_VALUE: FieldType = {
 const ShareText = memo(() => {
   const [fieldValue, setFieldValue] = useState(DEFAULT_FIELD_VALUE);
   const { t } = useTranslation(['chat', 'common']);
-  const { styles } = useStyles();
   const { message } = App.useApp();
   const settings: FormItemProps[] = [
     {
@@ -85,21 +84,21 @@ const ShareText = memo(() => {
       <Button
         block
         icon={CopyIcon}
-        onClick={async () => {
-          await copyToClipboard(content);
-          message.success(t('copySuccess', { defaultValue: 'Copy Success', ns: 'common' }));
-        }}
         size={isMobile ? undefined : 'large'}
         type={'primary'}
+        onClick={async () => {
+          await copyToClipboard(content);
+          message.success(t('copySuccess', { ns: 'common' }));
+        }}
       >
         {t('copy', { ns: 'common' })}
       </Button>
       <Button
         block
+        size={isMobile ? undefined : 'large'}
         onClick={() => {
           exportFile(content, `${title}.md`);
         }}
-        size={isMobile ? undefined : 'large'}
       >
         {t('shareModal.downloadFile')}
       </Button>
@@ -122,7 +121,7 @@ const ShareText = memo(() => {
         </Flexbox>
       </Flexbox>
       {isMobile && (
-        <Flexbox className={styles.footer} gap={8} horizontal>
+        <Flexbox horizontal className={styles.footer} gap={8}>
           {button}
         </Flexbox>
       )}

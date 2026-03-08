@@ -1,11 +1,12 @@
-import { UIChatMessage } from '@lobechat/types';
-import { Button, Form, type FormItemProps } from '@lobehub/ui';
+import { type UIChatMessage } from '@lobechat/types';
+import { type FormItemProps } from '@lobehub/ui';
+import { Button, Flexbox, Form } from '@lobehub/ui';
 import { App, Switch } from 'antd';
+import { cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { DownloadIcon, FileText } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Flexbox } from 'react-layout-kit';
 
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -15,8 +16,8 @@ import { useChatStore } from '@/store/chat';
 import { chatSelectors, topicSelectors } from '@/store/chat/selectors';
 
 import { generateMarkdown } from '../ShareText/template';
-import { FieldType } from '../ShareText/type';
-import { useContainerStyles, useStyles } from '../style';
+import { type FieldType } from '../ShareText/type';
+import { containerStyles, styles } from '../style';
 import PdfPreview from './PdfPreview';
 import { usePdfGeneration } from './usePdfGeneration';
 
@@ -30,8 +31,6 @@ const DEFAULT_FIELD_VALUE: FieldType = {
 const SharePdf = memo((props: { message?: UIChatMessage }) => {
   const [fieldValue, setFieldValue] = useState(DEFAULT_FIELD_VALUE);
   const { t } = useTranslation(['chat', 'common']);
-  const { styles } = useStyles();
-  const { styles: containerStyles } = useContainerStyles();
   const { message } = App.useApp();
 
   const { message: outerMessage } = props;
@@ -76,7 +75,7 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
   const [systemRole] = useAgentStore((s) => [agentSelectors.currentAgentSystemRole(s)]);
   const messages = useChatStore(chatSelectors.activeBaseChats, isEqual);
   const topic = useChatStore(topicSelectors.currentActiveTopic, isEqual);
-  const activeId = useChatStore((s) => s.activeId);
+  const activeId = useChatStore((s) => s.activeAgentId);
   const topicId = useChatStore((s) => s.activeTopicId);
 
   const title = topic?.title || t('shareModal.exportTitle');
@@ -126,15 +125,15 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
       disabled={loading}
       icon={loading ? undefined : FileText}
       loading={loading}
-      onClick={handleGeneratePdf}
       size={isMobile ? undefined : 'large'}
       type="primary"
+      onClick={handleGeneratePdf}
     >
       {loading
         ? t('shareModal.generatingPdf')
         : pdfData
-          ? t('shareModal.regeneratePdf', { defaultValue: '重新生成 PDF' })
-          : t('shareModal.generatePdf', { defaultValue: '生成 PDF' })}
+          ? t('shareModal.regeneratePdf')
+          : t('shareModal.generatePdf')}
     </Button>
   );
 
@@ -142,9 +141,9 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
     <Button
       block
       icon={DownloadIcon}
-      onClick={handleDownload}
       size={isMobile ? undefined : 'large'}
       type="default"
+      onClick={handleDownload}
     >
       {t('shareModal.downloadPdf')}
     </Button>
@@ -153,7 +152,10 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
   if (error) {
     return (
       <Flexbox className={styles.body} gap={16} horizontal={!isMobile}>
-        <div className={containerStyles.preview} style={{ padding: 12 }}>
+        <div
+          className={cx(containerStyles.preview, containerStyles.previewWide)}
+          style={{ padding: 12 }}
+        >
           <div style={{ color: 'red', textAlign: 'center' }}>
             {t('shareModal.pdfGenerationError')}: {error}
           </div>
@@ -175,7 +177,7 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
 
   return (
     <Flexbox className={styles.body} gap={16} horizontal={!isMobile}>
-      <PdfPreview loading={loading} onGeneratePdf={handleGeneratePdf} pdfData={pdfData} />
+      <PdfPreview loading={loading} pdfData={pdfData} onGeneratePdf={handleGeneratePdf} />
       <Flexbox className={styles.sidebar} gap={12}>
         <Form
           initialValues={DEFAULT_FIELD_VALUE}

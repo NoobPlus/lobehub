@@ -1,49 +1,19 @@
 import { act, renderHook } from '@testing-library/react';
-import { mutate } from 'swr';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { mutate } from '@/libs/swr';
 import { useUserStore } from '@/store/user';
 
 vi.mock('zustand/traditional');
 
-vi.mock('swr', async (importOriginal) => {
-  const modules = await importOriginal();
+// Mock @/libs/swr mutate
+vi.mock('@/libs/swr', async () => {
+  const actual = await vi.importActual('@/libs/swr');
   return {
-    ...(modules as any),
+    ...actual,
     mutate: vi.fn(),
   };
 });
-
-// Use vi.hoisted to ensure variables exist before vi.mock factory executes
-const { enableClerk, enableNextAuth, enableBetterAuth, enableAuth } = vi.hoisted(() => ({
-  enableClerk: { value: false },
-  enableNextAuth: { value: false },
-  enableBetterAuth: { value: false },
-  enableAuth: { value: true },
-}));
-
-vi.mock('@/const/auth', () => ({
-  get enableClerk() {
-    return enableClerk.value;
-  },
-  get enableNextAuth() {
-    return enableNextAuth.value;
-  },
-  get enableBetterAuth() {
-    return enableBetterAuth.value;
-  },
-  get enableAuth() {
-    return enableAuth.value;
-  },
-}));
-
-const mockUserService = vi.hoisted(() => ({
-  getUserSSOProviders: vi.fn().mockResolvedValue([]),
-}));
-
-vi.mock('@/services/user', () => ({
-  userService: mockUserService,
-}));
 
 const mockBetterAuthClient = vi.hoisted(() => ({
   listAccounts: vi.fn().mockResolvedValue({ data: [] }),
@@ -57,27 +27,12 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
 
-  enableNextAuth.value = false;
-  enableClerk.value = false;
-  enableBetterAuth.value = false;
-  enableAuth.value = true;
-
   // Reset store state
   useUserStore.setState({
     isLoadedAuthProviders: false,
     authProviders: [],
     hasPasswordAccount: false,
   });
-});
-
-/**
- * Mock nextauth 库相关方法
- */
-vi.mock('next-auth/react', async () => {
-  return {
-    signIn: vi.fn(),
-    signOut: vi.fn(),
-  };
 });
 
 describe('createAuthSlice', () => {
@@ -94,122 +49,28 @@ describe('createAuthSlice', () => {
   });
 
   describe('logout', () => {
-    it('should call clerkSignOut when Clerk is enabled', async () => {
-      enableClerk.value = true;
-
-      const clerkSignOutMock = vi.fn();
-      useUserStore.setState({ clerkSignOut: clerkSignOutMock });
-
+    it('should call better-auth signOut', async () => {
       const { result } = renderHook(() => useUserStore());
 
       await act(async () => {
         await result.current.logout();
       });
 
-      expect(clerkSignOutMock).toHaveBeenCalled();
-    });
-
-    it('should not call clerkSignOut when Clerk is disabled', async () => {
-      const clerkSignOutMock = vi.fn();
-      useUserStore.setState({ clerkSignOut: clerkSignOutMock });
-
-      const { result } = renderHook(() => useUserStore());
-
-      await act(async () => {
-        await result.current.logout();
-      });
-
-      expect(clerkSignOutMock).not.toHaveBeenCalled();
-    });
-
-    it('should call next-auth signOut when NextAuth is enabled', async () => {
-      enableNextAuth.value = true;
-
-      const { result } = renderHook(() => useUserStore());
-
-      await act(async () => {
-        await result.current.logout();
-      });
-
-      const { signOut } = await import('next-auth/react');
-
-      expect(signOut).toHaveBeenCalled();
-      enableNextAuth.value = false;
-    });
-
-    it('should not call next-auth signOut when NextAuth is disabled', async () => {
-      const { result } = renderHook(() => useUserStore());
-
-      await act(async () => {
-        await result.current.logout();
-      });
-
-      const { signOut } = await import('next-auth/react');
-
-      expect(signOut).not.toHaveBeenCalled();
+      expect(mockBetterAuthClient.signOut).toHaveBeenCalled();
     });
   });
 
   describe('openLogin', () => {
-    it('should call clerkSignIn when Clerk is enabled', async () => {
-      enableClerk.value = true;
-      const clerkSignInMock = vi.fn();
-      useUserStore.setState({ clerkSignIn: clerkSignInMock });
-
-      const { result } = renderHook(() => useUserStore());
-
-      await act(async () => {
-        await result.current.openLogin();
-      });
-
-      expect(clerkSignInMock).toHaveBeenCalled();
-    });
-    it('should not call clerkSignIn when Clerk is disabled', async () => {
-      const clerkSignInMock = vi.fn();
-      useUserStore.setState({ clerkSignIn: clerkSignInMock });
-
-      const { result } = renderHook(() => useUserStore());
-
-      await act(async () => {
-        await result.current.openLogin();
-      });
-
-      expect(clerkSignInMock).not.toHaveBeenCalled();
-    });
-
-    it('should call next-auth signIn when NextAuth is enabled', async () => {
-      enableNextAuth.value = true;
-
-      const { result } = renderHook(() => useUserStore());
-
-      await act(async () => {
-        await result.current.openLogin();
-      });
-
-      const { signIn } = await import('next-auth/react');
-
-      expect(signIn).toHaveBeenCalled();
-      enableNextAuth.value = false;
-    });
-    it('should not call next-auth signIn when NextAuth is disabled', async () => {
-      const { result } = renderHook(() => useUserStore());
-
-      await act(async () => {
-        await result.current.openLogin();
-      });
-
-      const { signIn } = await import('next-auth/react');
-
-      expect(signIn).not.toHaveBeenCalled();
-    });
-
-    it('should redirect to signin page when BetterAuth is enabled', async () => {
-      enableBetterAuth.value = true;
-
+    it('should redirect to signin page', async () => {
       const originalLocation = window.location;
       Object.defineProperty(window, 'location', {
         configurable: true,
-        value: { ...originalLocation, href: '', toString: () => 'http://localhost/chat' },
+        value: {
+          ...originalLocation,
+          href: '',
+          pathname: '/chat',
+          toString: () => 'http://localhost/chat',
+        },
         writable: true,
       });
 
@@ -229,9 +90,18 @@ describe('createAuthSlice', () => {
       });
     });
 
-    it('should call signIn with single provider when only one OAuth provider available', async () => {
-      enableNextAuth.value = true;
-      useUserStore.setState({ oAuthSSOProviders: ['github'] });
+    it('should not redirect when already on signin page', async () => {
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: {
+          ...originalLocation,
+          href: '',
+          pathname: '/signin',
+          toString: () => 'http://localhost/signin',
+        },
+        writable: true,
+      });
 
       const { result } = renderHook(() => useUserStore());
 
@@ -239,25 +109,13 @@ describe('createAuthSlice', () => {
         await result.current.openLogin();
       });
 
-      const { signIn } = await import('next-auth/react');
+      expect(window.location.href).toBe('');
 
-      expect(signIn).toHaveBeenCalledWith('github');
-    });
-  });
-
-  describe('enableAuth', () => {
-    it('should return true when auth is enabled', () => {
-      enableAuth.value = true;
-      const { result } = renderHook(() => useUserStore());
-
-      expect(result.current.enableAuth()).toBe(true);
-    });
-
-    it('should return false when auth is disabled', () => {
-      enableAuth.value = false;
-      const { result } = renderHook(() => useUserStore());
-
-      expect(result.current.enableAuth()).toBe(false);
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+        writable: true,
+      });
     });
   });
 
@@ -271,29 +129,10 @@ describe('createAuthSlice', () => {
         await result.current.fetchAuthProviders();
       });
 
-      expect(mockUserService.getUserSSOProviders).not.toHaveBeenCalled();
+      expect(mockBetterAuthClient.listAccounts).not.toHaveBeenCalled();
     });
 
-    it('should fetch providers from NextAuth when BetterAuth is disabled', async () => {
-      enableBetterAuth.value = false;
-      const mockProviders = [
-        { provider: 'github', email: 'test@example.com', providerAccountId: '123' },
-      ];
-      mockUserService.getUserSSOProviders.mockResolvedValueOnce(mockProviders);
-
-      const { result } = renderHook(() => useUserStore());
-
-      await act(async () => {
-        await result.current.fetchAuthProviders();
-      });
-
-      expect(mockUserService.getUserSSOProviders).toHaveBeenCalled();
-      expect(result.current.isLoadedAuthProviders).toBe(true);
-      expect(result.current.authProviders).toEqual(mockProviders);
-    });
-
-    it('should fetch providers from BetterAuth when enabled', async () => {
-      enableBetterAuth.value = true;
+    it('should fetch providers from BetterAuth', async () => {
       mockBetterAuthClient.listAccounts.mockResolvedValueOnce({
         data: [
           { providerId: 'github', accountId: 'gh-123' },
@@ -316,8 +155,7 @@ describe('createAuthSlice', () => {
     });
 
     it('should handle fetch error gracefully', async () => {
-      enableBetterAuth.value = false;
-      mockUserService.getUserSSOProviders.mockRejectedValueOnce(new Error('Network error'));
+      mockBetterAuthClient.listAccounts.mockRejectedValueOnce(new Error('Network error'));
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -333,12 +171,13 @@ describe('createAuthSlice', () => {
   });
 
   describe('refreshAuthProviders', () => {
-    it('should refresh providers from NextAuth', async () => {
-      enableBetterAuth.value = false;
-      const mockProviders = [
-        { provider: 'google', email: 'user@gmail.com', providerAccountId: 'g-1' },
-      ];
-      mockUserService.getUserSSOProviders.mockResolvedValueOnce(mockProviders);
+    it('should refresh providers from BetterAuth', async () => {
+      mockBetterAuthClient.listAccounts.mockResolvedValueOnce({
+        data: [{ providerId: 'google', accountId: 'g-1' }],
+      });
+      mockBetterAuthClient.accountInfo.mockResolvedValueOnce({
+        data: { user: { email: 'user@gmail.com' } },
+      });
 
       const { result } = renderHook(() => useUserStore());
 
@@ -346,13 +185,14 @@ describe('createAuthSlice', () => {
         await result.current.refreshAuthProviders();
       });
 
-      expect(mockUserService.getUserSSOProviders).toHaveBeenCalled();
-      expect(result.current.authProviders).toEqual(mockProviders);
+      expect(mockBetterAuthClient.listAccounts).toHaveBeenCalled();
+      expect(result.current.authProviders).toEqual([
+        { provider: 'google', email: 'user@gmail.com', providerAccountId: 'g-1' },
+      ]);
     });
 
     it('should handle refresh error gracefully', async () => {
-      enableBetterAuth.value = false;
-      mockUserService.getUserSSOProviders.mockRejectedValueOnce(new Error('Refresh failed'));
+      mockBetterAuthClient.listAccounts.mockRejectedValueOnce(new Error('Refresh failed'));
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 

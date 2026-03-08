@@ -1,8 +1,8 @@
-import { IPluginErrorType } from '@lobehub/chat-plugin-sdk';
+import type { IPluginErrorType } from '@lobehub/chat-plugin-sdk';
 import type { PartialDeep } from 'type-fest';
 import { z } from 'zod';
 
-import { LobeToolRenderType } from '../../tool';
+import type { LobeToolRenderType } from '../../tool';
 
 // ToolIntervention must be defined first to avoid circular dependency
 export interface ToolIntervention {
@@ -26,7 +26,7 @@ export interface ChatPluginPayload {
 /**
  * Tool source indicates where the tool comes from
  */
-export type ToolSource = 'builtin' | 'plugin' | 'mcp' | 'klavis';
+export type ToolSource = 'builtin' | 'plugin' | 'mcp' | 'klavis' | 'lobehubSkill';
 
 export interface ChatToolPayload {
   apiName: string;

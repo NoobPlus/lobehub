@@ -1,8 +1,15 @@
 import {
-  DataSyncConfig,
-  ElectronAppState,
-  NetworkProxySettings,
+  type DataSyncConfig,
+  type ElectronAppState,
+  type NetworkProxySettings,
 } from '@lobechat/electron-client-ipc';
+
+import { type NavigationHistoryState } from './actions/navigationHistory';
+import { navigationHistoryInitialState } from './actions/navigationHistory';
+import { type RecentPagesState } from './actions/recentPages';
+import { recentPagesInitialState } from './actions/recentPages';
+import { type TabPagesState } from './actions/tabPages';
+import { tabPagesInitialState } from './actions/tabPages';
 
 export type RemoteServerError = 'CONFIG_ERROR' | 'AUTH_ERROR' | 'DISCONNECT_ERROR';
 
@@ -15,12 +22,13 @@ export const defaultProxySettings: NetworkProxySettings = {
   proxyType: 'http',
 };
 
-export interface ElectronState {
+export interface ElectronState extends NavigationHistoryState, RecentPagesState, TabPagesState {
   appState: ElectronAppState;
   dataSyncConfig: DataSyncConfig;
   desktopHotkeys: Record<string, string>;
   isAppStateInit?: boolean;
   isConnectingServer?: boolean;
+  isConnectionDrawerOpen?: boolean;
   isDesktopHotkeysInit: boolean;
   isInitRemoteServerConfig: boolean;
   isSyncActive?: boolean;
@@ -29,11 +37,15 @@ export interface ElectronState {
 }
 
 export const initialState: ElectronState = {
+  ...navigationHistoryInitialState,
+  ...recentPagesInitialState,
+  ...tabPagesInitialState,
   appState: {},
-  dataSyncConfig: { storageMode: 'local' },
+  dataSyncConfig: { storageMode: 'cloud' },
   desktopHotkeys: {},
   isAppStateInit: false,
   isConnectingServer: false,
+  isConnectionDrawerOpen: false,
   isDesktopHotkeysInit: false,
   isInitRemoteServerConfig: false,
   isSyncActive: false,

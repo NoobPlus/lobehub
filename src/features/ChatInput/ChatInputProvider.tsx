@@ -1,8 +1,10 @@
 import { useEditor } from '@lobehub/editor/react';
-import { ReactNode, memo, useRef } from 'react';
+import { type ReactNode } from 'react';
+import { memo, useRef } from 'react';
 
-import StoreUpdater, { StoreUpdaterProps } from './StoreUpdater';
-import { Provider, createStore } from './store';
+import { createStore, Provider } from './store';
+import { type StoreUpdaterProps } from './StoreUpdater';
+import StoreUpdater from './StoreUpdater';
 
 interface ChatInputProviderProps extends StoreUpdaterProps {
   children: ReactNode;
@@ -10,6 +12,7 @@ interface ChatInputProviderProps extends StoreUpdaterProps {
 
 export const ChatInputProvider = memo<ChatInputProviderProps>(
   ({
+    agentId,
     children,
     leftActions,
     rightActions,
@@ -20,6 +23,7 @@ export const ChatInputProvider = memo<ChatInputProviderProps>(
     chatInputEditorRef,
     onMarkdownContentChange,
     mentionItems,
+    allowExpand = true,
   }) => {
     const editor = useEditor();
     const slashMenuRef = useRef<HTMLDivElement>(null);
@@ -28,6 +32,7 @@ export const ChatInputProvider = memo<ChatInputProviderProps>(
       <Provider
         createStore={() =>
           createStore({
+            allowExpand,
             editor,
             leftActions,
             mentionItems,
@@ -40,15 +45,17 @@ export const ChatInputProvider = memo<ChatInputProviderProps>(
         }
       >
         <StoreUpdater
+          agentId={agentId}
+          allowExpand={allowExpand}
           chatInputEditorRef={chatInputEditorRef}
           leftActions={leftActions}
           mentionItems={mentionItems}
           mobile={mobile}
-          onMarkdownContentChange={onMarkdownContentChange}
-          onSend={onSend}
           rightActions={rightActions}
           sendButtonProps={sendButtonProps}
           sendMenu={sendMenu}
+          onMarkdownContentChange={onMarkdownContentChange}
+          onSend={onSend}
         />
         {children}
       </Provider>

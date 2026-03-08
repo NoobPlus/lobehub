@@ -1,40 +1,19 @@
-import { Hotkey, Icon } from '@lobehub/ui';
-import { DiscordIcon } from '@lobehub/ui/icons';
-import { Badge } from 'antd';
-import { ItemType } from 'antd/es/menu/interface';
-import {
-  Book,
-  CircleUserRound,
-  Cloudy,
-  Download,
-  Feather,
-  FileClockIcon,
-  HardDriveDownload,
-  LifeBuoy,
-  LogOut,
-  Mail,
-  Settings2,
-} from 'lucide-react';
-import { PropsWithChildren, memo } from 'react';
+import { LOBE_CHAT_CLOUD, UTM_SOURCE } from '@lobechat/business-const';
+import { DOWNLOAD_URL, isDesktop } from '@lobechat/const';
+import { Flexbox, Hotkey, Icon, Tag } from '@lobehub/ui';
+import { type ItemType } from 'antd/es/menu/interface';
+import { Cloudy, Download, HardDriveDownload, LogOut, Settings2 } from 'lucide-react';
+import { type PropsWithChildren } from 'react';
+import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Flexbox } from 'react-layout-kit';
 import { Link } from 'react-router-dom';
 
-import type { MenuProps } from '@/components/Menu';
-import { enableAuth } from '@/const/auth';
-import { BRANDING_EMAIL, LOBE_CHAT_CLOUD, SOCIAL_URL } from '@/const/branding';
+import useBusinessMenuItems from '@/business/client/features/User/useBusinessMenuItems';
+import { type MenuProps } from '@/components/Menu';
 import { DEFAULT_DESKTOP_HOTKEY_CONFIG } from '@/const/desktop';
-import {
-  CHANGELOG,
-  DOCUMENTS_REFER_URL,
-  GITHUB_ISSUES,
-  OFFICIAL_URL,
-  UTM_SOURCE,
-  mailTo,
-} from '@/const/url';
-import { isDesktop } from '@/const/version';
+import { OFFICIAL_URL } from '@/const/url';
 import DataImporter from '@/features/DataImporter';
-import { usePWAInstall } from '@/hooks/usePWAInstall';
+import { usePlatform } from '@/hooks/usePlatform';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
@@ -55,16 +34,17 @@ const NewVersionBadge = memo(
         </Flexbox>
       );
     return (
-      <Flexbox align={'center'} flex={1} gap={8} horizontal onClick={onClick} width={'100%'}>
-        <span>{children}</span>
-        <Badge count={t('upgradeVersion.hasNew')} />
+      <Flexbox horizontal align={'center'} flex={1} gap={8} width={'100%'} onClick={onClick}>
+        {children}
+        <Tag color={'info'} size={'small'} style={{ borderRadius: 16, paddingInline: 8 }}>
+          {t('upgradeVersion.hasNew')}
+        </Tag>
       </Flexbox>
     );
   },
 );
 
 export const useMenu = () => {
-  const { canInstall, install } = usePWAInstall();
   const hasNewVersion = useNewVersion();
   const { t } = useTranslation(['common', 'setting', 'auth']);
   const { showCloudPromotion, hideDocs } = useServerConfigStore(featureFlagsSelectors);
@@ -72,14 +52,14 @@ export const useMenu = () => {
     authSelectors.isLogin(s),
     authSelectors.isLoginWithAuth(s),
   ]);
+  const businessMenuItems = useBusinessMenuItems(isLogin);
+  const { isIOS, isAndroid } = usePlatform();
 
-  const profile: MenuProps['items'] = [
-    {
-      icon: <Icon icon={CircleUserRound} />,
-      key: 'profile',
-      label: <Link to="/profile">{t('userPanel.profile')}</Link>,
-    },
-  ];
+  const downloadUrl = useMemo(() => {
+    if (isIOS) return DOWNLOAD_URL.ios;
+    if (isAndroid) return DOWNLOAD_URL.android;
+    return DOWNLOAD_URL.default;
+  }, [isIOS, isAndroid]);
 
   const settings: MenuProps['items'] = [
     {
@@ -96,21 +76,17 @@ export const useMenu = () => {
         </Link>
       ),
     },
-    {
-      type: 'divider',
-    },
   ];
 
-  /* ↓ cloud slot ↓ */
-
-  /* ↑ cloud slot ↑ */
-
-  const pwa: MenuProps['items'] = [
+  const getDesktopApp: MenuProps['items'] = [
     {
       icon: <Icon icon={Download} />,
-      key: 'pwa',
-      label: t('installPWA'),
-      onClick: () => install(),
+      key: 'get-desktop-app',
+      label: (
+        <a href={downloadUrl} rel="noopener noreferrer" target="_blank">
+          {t('getDesktopApp')}
+        </a>
+      ),
     },
     {
       type: 'divider',
@@ -144,75 +120,16 @@ export const useMenu = () => {
         </a>
       ),
     },
-    {
-      icon: <Icon icon={FileClockIcon} />,
-      key: 'changelog',
-      label: isDesktop ? (
-        <a href={CHANGELOG} rel="noopener noreferrer" target="_blank">
-          {t('changelog')}
-        </a>
-      ) : (
-        <Link to="/changelog">{t('changelog')}</Link>
-      ),
-    },
-    {
-      children: [
-        {
-          icon: <Icon icon={Book} />,
-          key: 'docs',
-          label: (
-            <a href={DOCUMENTS_REFER_URL} rel="noopener noreferrer" target="_blank">
-              {t('userPanel.docs')}
-            </a>
-          ),
-        },
-        {
-          icon: <Icon icon={Feather} />,
-          key: 'feedback',
-          label: (
-            <a href={GITHUB_ISSUES} rel="noopener noreferrer" target="_blank">
-              {t('userPanel.feedback')}
-            </a>
-          ),
-        },
-        {
-          icon: <Icon icon={DiscordIcon} />,
-          key: 'discord',
-          label: (
-            <a href={SOCIAL_URL.discord} rel="noopener noreferrer" target="_blank">
-              {t('userPanel.discord')}
-            </a>
-          ),
-        },
-        {
-          icon: <Icon icon={Mail} />,
-          key: 'email',
-          label: (
-            <a href={mailTo(BRANDING_EMAIL.support)} rel="noopener noreferrer" target="_blank">
-              {t('userPanel.email')}
-            </a>
-          ),
-        },
-      ],
-      icon: <Icon icon={LifeBuoy} />,
-      key: 'help',
-      label: t('userPanel.help'),
-    },
-    {
-      type: 'divider',
-    },
   ].filter(Boolean) as ItemType[];
 
   const mainItems = [
     {
       type: 'divider',
     },
-    ...(!enableAuth || (enableAuth && isLoginWithAuth) ? profile : []),
-    ...(isLogin ? settings : []),
-    /* ↓ cloud slot ↓ */
 
-    /* ↑ cloud slot ↑ */
-    ...(canInstall ? pwa : []),
+    ...(isLogin ? settings : []),
+    ...businessMenuItems,
+    ...(!isDesktop ? getDesktopApp : []),
     ...data,
     ...(!hideDocs ? helps : []),
   ].filter(Boolean) as MenuProps['items'];
@@ -223,6 +140,9 @@ export const useMenu = () => {
           icon: <Icon icon={LogOut} />,
           key: 'logout',
           label: <span>{t('signout', { ns: 'auth' })}</span>,
+        },
+        {
+          type: 'divider',
         },
       ]
     : [];

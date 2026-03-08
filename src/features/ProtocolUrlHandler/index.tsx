@@ -3,7 +3,7 @@
 import { useWatchBroadcast } from '@lobechat/electron-client-ipc';
 import { useCallback, useState } from 'react';
 
-import { McpInstallRequest } from '@/features/ProtocolUrlHandler/InstallPlugin/types';
+import { type McpInstallRequest } from '@/features/ProtocolUrlHandler/InstallPlugin/types';
 
 import PluginInstallConfirmModal from './InstallPlugin';
 
@@ -12,7 +12,7 @@ const ProtocolUrlHandler = () => {
 
   const handleMcpInstallRequest = useCallback(
     (data: { marketId?: string; pluginId: string; schema: any }) => {
-      // 将原始数据传递给子组件处理
+      // Pass raw data to child component for processing
       setInstallRequest(data as McpInstallRequest);
     },
     [],

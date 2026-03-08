@@ -1,12 +1,13 @@
+import { DEFAULT_PROVIDER } from '@lobechat/business-const';
 import {
-  LobeAgentChatConfig,
-  LobeAgentConfig,
-  LobeAgentTTSConfig,
-  UserDefaultAgent,
+  type LobeAgentChatConfig,
+  type LobeAgentConfig,
+  type LobeAgentTTSConfig,
+  type UserDefaultAgent,
 } from '@lobechat/types';
 
 import { DEFAULT_AGENT_META } from '../meta';
-import { DEFAULT_MODEL, DEFAULT_PROVIDER } from './llm';
+import { DEFAULT_MODEL } from './llm';
 
 export const DEFAUTT_AGENT_TTS_CONFIG: LobeAgentTTSConfig = {
   showAllLocaleVoice: false,
@@ -24,16 +25,16 @@ export const DEFAULT_AGENT_SEARCH_FC_MODEL = {
 
 export const DEFAULT_AGENT_CHAT_CONFIG: LobeAgentChatConfig = {
   autoCreateTopicThreshold: 2,
-  displayMode: 'chat',
   enableAutoCreateTopic: true,
   enableCompressHistory: true,
+  enableContextCompression: true,
   enableHistoryCount: true,
   enableReasoning: false,
   enableStreaming: true,
   historyCount: 20,
   reasoningBudgetToken: 1024,
   searchFCModel: DEFAULT_AGENT_SEARCH_FC_MODEL,
-  searchMode: 'off',
+  searchMode: 'auto',
 };
 
 export const DEFAULT_AGENT_CONFIG: LobeAgentConfig = {

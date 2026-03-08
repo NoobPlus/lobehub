@@ -1,37 +1,36 @@
 'use client';
 
-import { McpInstallSchema } from '@lobechat/electron-client-ipc';
-import { Block, Text } from '@lobehub/ui';
-import { createStyles } from 'antd-style';
+import { type McpInstallSchema } from '@lobechat/electron-client-ipc';
+import { Block, Flexbox, Text } from '@lobehub/ui';
+import { createStaticStyles } from 'antd-style';
 import { LinkIcon, Settings2Icon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Flexbox } from 'react-layout-kit';
 
 import KeyValueEditor from '@/components/KeyValueEditor';
 
-const useStyles = createStyles(({ css, token }) => ({
+const styles = createStaticStyles(({ css, cssVar }) => ({
   configEditor: css`
-    margin-block-start: ${token.marginSM}px;
+    margin-block-start: ${cssVar.marginSM};
   `,
   configSection: css`
-    margin-block-end: ${token.marginLG}px;
-    padding: ${token.paddingSM}px;
-    border-radius: ${token.borderRadius}px;
+    margin-block-end: ${cssVar.marginLG};
+    padding: ${cssVar.paddingSM};
+    border-radius: ${cssVar.borderRadius};
   `,
   configTitle: css`
     display: flex;
-    gap: ${token.marginXS}px;
+    gap: ${cssVar.marginXS};
     align-items: center;
 
     height: 24px;
 
     font-weight: 600;
-    color: ${token.colorTextHeading};
+    color: ${cssVar.colorTextHeading};
   `,
 
   previewContainer: css`
-    padding-inline: ${token.paddingXS}px;
+    padding-inline: ${cssVar.paddingXS};
   `,
 
   previewItem: css`
@@ -39,56 +38,56 @@ const useStyles = createStyles(({ css, token }) => ({
     align-items: center;
     justify-content: space-between;
 
-    padding-block: ${token.paddingXS}px;
+    padding-block: ${cssVar.paddingXS};
     padding-inline: 0;
 
     &:not(:last-child) {
-      border-block-end: 1px solid ${token.colorBorderSecondary};
+      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
     }
   `,
 
   previewLabel: css`
     display: flex;
-    gap: ${token.marginXS}px;
+    gap: ${cssVar.marginXS};
     align-items: center;
 
-    font-size: ${token.fontSizeSM}px;
+    font-size: ${cssVar.fontSizeSM};
     font-weight: 500;
-    color: ${token.colorTextSecondary};
+    color: ${cssVar.colorTextSecondary};
   `,
 
   previewValue: css`
-    padding-block: ${token.paddingXXS}px;
-    padding-inline: ${token.paddingXS}px;
-    border-radius: ${token.borderRadiusSM}px;
+    padding-block: ${cssVar.paddingXXS};
+    padding-inline: ${cssVar.paddingXS};
+    border-radius: ${cssVar.borderRadiusSM};
 
-    font-family: ${token.fontFamilyCode};
-    font-size: ${token.fontSizeSM}px;
+    font-family: ${cssVar.fontFamilyCode};
+    font-size: ${cssVar.fontSizeSM};
     font-weight: 600;
-    color: ${token.colorText};
+    color: ${cssVar.colorText};
 
-    background: ${token.colorFillQuaternary};
+    background: ${cssVar.colorFillQuaternary};
   `,
 
   typeValue: css`
     display: flex;
-    gap: ${token.marginXS}px;
+    gap: ${cssVar.marginXS};
     align-items: center;
   `,
 
   urlValue: css`
     max-width: 300px;
-    padding-block: ${token.paddingXS}px;
-    padding-inline: ${token.paddingSM}px;
-    border: 1px solid ${token.colorBorder};
-    border-radius: ${token.borderRadius}px;
+    padding-block: ${cssVar.paddingXS};
+    padding-inline: ${cssVar.paddingSM};
+    border: 1px solid ${cssVar.colorBorder};
+    border-radius: ${cssVar.borderRadius};
 
-    font-family: ${token.fontFamilyCode};
-    font-size: ${token.fontSizeSM}px;
+    font-family: ${cssVar.fontFamilyCode};
+    font-size: ${cssVar.fontSizeSM};
     font-weight: 500;
     word-break: auto-phrase;
 
-    background: ${token.colorBgElevated};
+    background: ${cssVar.colorBgElevated};
   `,
 }));
 
@@ -102,21 +101,20 @@ interface ConfigDisplayProps {
 
 const ConfigDisplay = memo<ConfigDisplayProps>(({ schema, onConfigUpdate }) => {
   const { t } = useTranslation('plugin');
-  const { styles } = useStyles();
 
-  // 本地状态管理配置数据
+  // Local state management for config data
   const [currentEnv, setCurrentEnv] = useState<Record<string, string>>(schema.config.env || {});
   const [currentHeaders, setCurrentHeaders] = useState<Record<string, string>>(
     schema.config.headers || {},
   );
 
-  // 处理环境变量更新
+  // Handle environment variable updates
   const handleEnvUpdate = (newEnv: Record<string, string>) => {
     setCurrentEnv(newEnv);
     onConfigUpdate?.({ env: newEnv, headers: currentHeaders });
   };
 
-  // 处理 Headers 更新
+  // Handle Headers updates
   const handleHeadersUpdate = (newHeaders: Record<string, string>) => {
     setCurrentHeaders(newHeaders);
     onConfigUpdate?.({ env: currentEnv, headers: newHeaders });
@@ -124,15 +122,15 @@ const ConfigDisplay = memo<ConfigDisplayProps>(({ schema, onConfigUpdate }) => {
 
   return (
     <Flexbox gap={16}>
-      {/* 安装信息 */}
+      {/* Installation info */}
       <Block className={styles.configSection} variant={'outlined'}>
         <div className={styles.configTitle}>
           <LinkIcon size={14} />
-          {t('protocolInstall.install.title', { defaultValue: '安装信息' })}
+          {t('protocolInstall.install.title')}
         </div>
 
         <div className={styles.previewContainer}>
-          {/* 连接类型 */}
+          {/* Connection type */}
           <div className={styles.previewItem}>
             <span className={styles.previewLabel}>{t('protocolInstall.config.type.label')}</span>
             <div className={styles.typeValue}>
@@ -142,7 +140,7 @@ const ConfigDisplay = memo<ConfigDisplayProps>(({ schema, onConfigUpdate }) => {
             </div>
           </div>
 
-          {/* HTTP 类型显示 URL */}
+          {/* HTTP type shows URL */}
           {schema.config.type === 'http' && schema.config.url && (
             <div className={styles.previewItem}>
               <span className={styles.previewLabel}>{t('protocolInstall.config.url')}</span>
@@ -150,7 +148,7 @@ const ConfigDisplay = memo<ConfigDisplayProps>(({ schema, onConfigUpdate }) => {
             </div>
           )}
 
-          {/* STDIO 类型显示命令和参数 */}
+          {/* STDIO type shows command and args */}
           {schema.config.type === 'stdio' && (
             <>
               {schema.config.command && (
@@ -171,33 +169,33 @@ const ConfigDisplay = memo<ConfigDisplayProps>(({ schema, onConfigUpdate }) => {
         </div>
       </Block>
 
-      {/* 配置信息 - 直接使用 KeyValueEditor */}
+      {/* Config info - directly use KeyValueEditor */}
       <Block className={styles.configSection} variant={'outlined'}>
         <div className={styles.configTitle}>
           <Settings2Icon size={14} />
           {schema.config.type === 'stdio'
-            ? t('protocolInstall.config.env', { defaultValue: '环境变量' })
-            : t('protocolInstall.config.headers', { defaultValue: '请求头' })}
+            ? t('protocolInstall.config.env')
+            : t('protocolInstall.config.headers')}
         </div>
 
         <div className={styles.configEditor}>
-          {/* HTTP 类型显示 Headers */}
+          {/* HTTP type shows Headers */}
           {schema.config.type === 'http' && (
             <KeyValueEditor
-              addButtonText={t('protocolInstall.config.addHeaders', { defaultValue: '添加请求头' })}
-              onChange={handleHeadersUpdate}
+              addButtonText={t('protocolInstall.config.addHeaders')}
               style={{ border: 'none' }}
               value={currentHeaders}
+              onChange={handleHeadersUpdate}
             />
           )}
 
-          {/* STDIO 类型显示环境变量 */}
+          {/* STDIO type shows environment variables */}
           {schema.config.type === 'stdio' && (
             <KeyValueEditor
-              addButtonText={t('protocolInstall.config.addEnv', { defaultValue: '添加环境变量' })}
-              onChange={handleEnvUpdate}
+              addButtonText={t('protocolInstall.config.addEnv')}
               style={{ border: 'none' }}
               value={currentEnv}
+              onChange={handleEnvUpdate}
             />
           )}
         </div>

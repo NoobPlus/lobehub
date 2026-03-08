@@ -7,12 +7,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 
-import { getTestDBInstance } from '../../../core/dbForTest';
+import { getTestDB } from '../../../core/getTestDB';
 import { SessionModel } from '../../../models/session';
 import { UserModel, UserNotFoundError } from '../../../models/user';
-import { UserSettingsItem, nextauthAccounts, userSettings, users } from '../../../schemas';
+import type { UserSettingsItem } from '../../../schemas';
+import { nextauthAccounts, users, userSettings } from '../../../schemas';
 
-let serverDB = await getTestDBInstance();
+const serverDB = await getTestDB();
 
 const userId = 'user-db';
 const userEmail = 'user@example.com';

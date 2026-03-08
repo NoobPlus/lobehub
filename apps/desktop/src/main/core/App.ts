@@ -1,25 +1,32 @@
 import { ElectronIPCEventHandler, ElectronIPCServer } from '@lobechat/electron-server-ipc';
-import { Session, app, protocol } from 'electron';
+import { app, nativeTheme, protocol } from 'electron';
+import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { macOS, windows } from 'electron-is';
-import { pathExistsSync, remove } from 'fs-extra';
 import os from 'node:os';
 import { join } from 'node:path';
 
 import { name } from '@/../../package.json';
-import { LOCAL_DATABASE_DIR, buildDir, nextStandaloneDir } from '@/const/dir';
+import { buildDir } from '@/const/dir';
 import { isDev } from '@/const/env';
+import { ELECTRON_BE_PROTOCOL_SCHEME } from '@/const/protocol';
 import { IControlModule } from '@/controllers';
+import AuthCtr from '@/controllers/AuthCtr';
+import {
+  astSearchDetectors,
+  contentSearchDetectors,
+  fileSearchDetectors,
+} from '@/modules/toolDetectors';
 import { IServiceModule } from '@/services';
-import { getServerMethodMetadata } from '@/utils/ipc';
 import { createLogger } from '@/utils/logger';
-import { CustomRequestHandler, createHandler } from '@/utils/next-electron-rsc';
 
 import { BrowserManager } from './browser/BrowserManager';
 import { I18nManager } from './infrastructure/I18nManager';
 import { IoCContainer } from './infrastructure/IoCContainer';
 import { ProtocolManager } from './infrastructure/ProtocolManager';
+import { RendererUrlManager } from './infrastructure/RendererUrlManager';
 import { StaticFileServerManager } from './infrastructure/StaticFileServerManager';
 import { StoreManager } from './infrastructure/StoreManager';
+import { ToolDetectorManager } from './infrastructure/ToolDetectorManager';
 import { UpdaterManager } from './infrastructure/UpdaterManager';
 import { MenuManager } from './ui/MenuManager';
 import { ShortcutManager } from './ui/ShortcutManager';
@@ -36,8 +43,6 @@ type Class<T> = new (...args: any[]) => T;
 const importAll = (r: any) => Object.values(r).map((v: any) => v.default);
 
 export class App {
-  nextServerUrl = 'http://localhost:3015';
-
   browserManager: BrowserManager;
   menuManager: MenuManager;
   i18n: I18nManager;
@@ -47,6 +52,8 @@ export class App {
   trayManager: TrayManager;
   staticFileServerManager: StaticFileServerManager;
   protocolManager: ProtocolManager;
+  rendererUrlManager: RendererUrlManager;
+  toolDetectorManager: ToolDetectorManager;
   chromeFlags: string[] = ['OverlayScrollbar', 'FluentOverlayScrollbar', 'FluentScrollbar'];
 
   /**
@@ -79,6 +86,21 @@ export class App {
     // Initialize store manager
     this.storeManager = new StoreManager(this);
 
+    this.rendererUrlManager = new RendererUrlManager();
+    protocol.registerSchemesAsPrivileged([
+      {
+        privileges: {
+          allowServiceWorkers: true,
+          corsEnabled: true,
+          secure: true,
+          standard: true,
+          supportFetchAPI: true,
+        },
+        scheme: ELECTRON_BE_PROTOCOL_SCHEME,
+      },
+      this.rendererUrlManager.protocolScheme,
+    ]);
+
     // load controllers
     const controllers: IControlModule[] = importAll(
       import.meta.glob('@/controllers/*Ctr.ts', { eager: true }),
@@ -105,18 +127,73 @@ export class App {
     this.trayManager = new TrayManager(this);
     this.staticFileServerManager = new StaticFileServerManager(this);
     this.protocolManager = new ProtocolManager(this);
+    this.toolDetectorManager = new ToolDetectorManager(this);
 
-    // register the schema to interceptor url
-    // it should register before app ready
-    this.registerNextHandler();
+    // Register built-in tool detectors
+    this.registerBuiltinToolDetectors();
+
+    // Configure renderer loading strategy (dev server vs static export)
+    // should register before app ready
+    this.rendererUrlManager.configureRendererLoader();
 
     // initialize protocol handlers
     this.protocolManager.initialize();
 
-    // 统一处理 before-quit 事件
+    // Unified handling of before-quit event
     app.on('before-quit', this.handleBeforeQuit);
 
+    // Initialize theme mode from store
+    this.initializeThemeMode();
+
     logger.info('App initialization completed');
+  }
+
+  /**
+   * Initialize nativeTheme.themeSource from stored themeMode preference
+   * This allows nativeTheme.shouldUseDarkColors to be used consistently everywhere
+   */
+  private initializeThemeMode() {
+    let themeMode = this.storeManager.get('themeMode');
+
+    // Migrate legacy 'auto' value to 'system' (nativeTheme.themeSource doesn't accept 'auto')
+    if (Object.is(themeMode, 'auto')) {
+      themeMode = 'system';
+      this.storeManager.set('themeMode', themeMode);
+      logger.info(`Migrated legacy theme mode 'auto' to 'system'`);
+    }
+
+    if (themeMode) {
+      nativeTheme.themeSource = themeMode;
+      logger.debug(
+        `Theme mode initialized to: ${themeMode} (themeSource: ${nativeTheme.themeSource})`,
+      );
+    }
+  }
+
+  /**
+   * Register built-in tool detectors for content search and file search
+   */
+  private registerBuiltinToolDetectors() {
+    logger.debug('Registering built-in tool detectors');
+
+    // Register content search tools (rg, ag, grep)
+    for (const detector of contentSearchDetectors) {
+      this.toolDetectorManager.register(detector, 'content-search');
+    }
+
+    // Register AST-based code search tools (ast-grep)
+    for (const detector of astSearchDetectors) {
+      this.toolDetectorManager.register(detector, 'ast-search');
+    }
+
+    // Register file search tools (mdfind, fd, find)
+    for (const detector of fileSearchDetectors) {
+      this.toolDetectorManager.register(detector, 'file-search');
+    }
+
+    logger.info(
+      `Registered ${this.toolDetectorManager.getRegisteredTools().length} tool detectors`,
+    );
   }
 
   bootstrap = async () => {
@@ -129,9 +206,6 @@ export class App {
     }
 
     this.initDevBranding();
-
-    // Clean up stale database lock file before starting IPC server
-    await this.cleanupDatabaseLock();
 
     //  ==============
     await this.ipcServer.start();
@@ -188,10 +262,10 @@ export class App {
 
   /**
    * Handle protocol request by dispatching to registered handlers
-   * @param urlType 协议URL类型 (如: 'plugin')
-   * @param action 操作类型 (如: 'install')
-   * @param data 解析后的协议数据
-   * @returns 是否成功处理
+   * @param urlType Protocol URL type (e.g., 'plugin')
+   * @param action Action type (e.g., 'install')
+   * @param data Parsed protocol data
+   * @returns Whether successfully handled
    */
   async handleProtocolRequest(urlType: string, action: string, data: any): Promise<boolean> {
     const key = `${urlType}:${action}`;
@@ -205,7 +279,7 @@ export class App {
     try {
       logger.debug(`Dispatching protocol request ${key} to controller`);
       const result = await handler.controller[handler.methodName](data);
-      return result !== false; // 假设控制器返回 false 表示处理失败
+      return result !== false; // Assume controller returning false indicates handling failure
     } catch (error) {
       logger.error(`Error handling protocol request ${key}:`, error);
       return false;
@@ -215,6 +289,14 @@ export class App {
   private onActivate = () => {
     logger.debug('Application activated');
     this.browserManager.showMainWindow();
+
+    // Trigger proactive token refresh on app activation (respects 6-hour interval)
+    const authCtr = this.getController(AuthCtr);
+    if (authCtr) {
+      authCtr.onAppActivate().catch((error) => {
+        logger.error('Error during app activation token refresh:', error);
+      });
+    }
   };
 
   /**
@@ -243,6 +325,8 @@ export class App {
     await app.whenReady();
     logger.debug('Application ready');
 
+    await this.installReactDevtools();
+
     this.controllers.forEach((controller) => {
       if (typeof controller.afterAppReady === 'function') {
         try {
@@ -254,6 +338,21 @@ export class App {
       }
     });
     logger.info('Application ready state completed');
+  };
+
+  /**
+   * Development only: install React DevTools extension into Electron's devtools.
+   */
+  private installReactDevtools = async () => {
+    if (!isDev) return;
+
+    try {
+      const name = await installExtension(REACT_DEVELOPER_TOOLS);
+
+      logger.info(`Installed DevTools extension: ${name}`);
+    } catch (error) {
+      logger.warn('Failed to install React DevTools extension', error);
+    }
   };
 
   // ============= helper ============= //
@@ -272,65 +371,9 @@ export class App {
   shortcutMethodMap: ShortcutMethodMap = new Map();
   protocolHandlerMap: ProtocolHandlerMap = new Map();
 
-  /**
-   * use in next router interceptor in prod browser render
-   */
-  nextInterceptor: (params: { session: Session }) => () => void;
-
-  /**
-   * Collection of unregister functions for custom request handlers
-   */
-  private customHandlerUnregisterFns: Array<() => void> = [];
-
-  /**
-   * Function to register custom request handler
-   */
-  private registerCustomHandlerFn?: (handler: CustomRequestHandler) => () => void;
-
-  /**
-   * Register custom request handler
-   * @param handler Custom request handler function
-   * @returns Function to unregister the handler
-   */
-  registerRequestHandler = (handler: CustomRequestHandler): (() => void) => {
-    if (!this.registerCustomHandlerFn) {
-      logger.warn('Custom request handler registration is not available');
-      return () => {};
-    }
-
-    logger.debug('Registering custom request handler');
-    const unregisterFn = this.registerCustomHandlerFn(handler);
-    this.customHandlerUnregisterFns.push(unregisterFn);
-
-    return () => {
-      unregisterFn();
-      const index = this.customHandlerUnregisterFns.indexOf(unregisterFn);
-      if (index !== -1) {
-        this.customHandlerUnregisterFns.splice(index, 1);
-      }
-    };
-  };
-
-  /**
-   * Unregister all custom request handlers
-   */
-  unregisterAllRequestHandlers = () => {
-    this.customHandlerUnregisterFns.forEach((unregister) => unregister());
-    this.customHandlerUnregisterFns = [];
-  };
-
   private addController = (ControllerClass: IControlModule) => {
     const controller = new ControllerClass(this);
     this.controllers.set(ControllerClass, controller);
-
-    const serverMethods = getServerMethodMetadata(ControllerClass);
-    serverMethods?.forEach((methodName, propertyKey) => {
-      const channel = `${ControllerClass.groupName}.${methodName}`;
-      this.ipcServerEventMap.set(channel, {
-        controller,
-        methodName: propertyKey,
-      });
-    });
 
     IoCContainer.shortcuts.get(ControllerClass)?.forEach((shortcut) => {
       this.shortcutMethodMap.set(shortcut.name, async () => {
@@ -363,55 +406,10 @@ export class App {
   };
 
   /**
-   * Clean up stale database lock file from previous crashes or abnormal exits
+   * Build renderer URL for dev/prod.
    */
-  private cleanupDatabaseLock = async () => {
-    try {
-      const dbPath = join(this.appStoragePath, LOCAL_DATABASE_DIR);
-      const lockPath = `${dbPath}.lock`;
-
-      if (pathExistsSync(lockPath)) {
-        logger.info(`Cleaning up stale database lock file: ${lockPath}`);
-        await remove(lockPath);
-        logger.info('Database lock file removed successfully');
-      } else {
-        logger.debug('No database lock file found, skipping cleanup');
-      }
-    } catch (error) {
-      logger.error('Failed to cleanup database lock file:', error);
-      // Non-fatal error, allow application to continue
-    }
-  };
-
-  private registerNextHandler() {
-    logger.debug('Registering Next.js handler');
-    const handler = createHandler({
-      debug: true,
-      localhostUrl: this.nextServerUrl,
-      protocol,
-      standaloneDir: nextStandaloneDir,
-    });
-
-    // Log output based on development or production mode
-    if (isDev) {
-      logger.info(
-        `Development mode: Custom request handler enabled, but Next.js interception disabled`,
-      );
-    } else {
-      logger.info(
-        `Production mode: ${this.nextServerUrl} will be intercepted to ${nextStandaloneDir}`,
-      );
-    }
-
-    this.nextInterceptor = handler.createInterceptor;
-
-    // Save custom handler registration function
-    if (handler.registerCustomHandler) {
-      this.registerCustomHandlerFn = handler.registerCustomHandler;
-      logger.debug('Custom request handler registration is available');
-    } else {
-      logger.warn('Custom request handler registration is not available');
-    }
+  async buildRendererUrl(path: string): Promise<string> {
+    return this.rendererUrlManager.buildRendererUrl(path);
   }
 
   private initializeServerIpcEvents() {
@@ -433,18 +431,17 @@ export class App {
     this.ipcServer = new ElectronIPCServer(name, ipcServerEvents);
   }
 
-  // 新增 before-quit 处理函数
+  // Add before-quit handler function
   private handleBeforeQuit = () => {
     logger.info('Application is preparing to quit');
     this.isQuiting = true;
 
-    // 销毁托盘
+    // Destroy tray
     if (process.platform === 'win32') {
       this.trayManager.destroyAll();
     }
 
-    // 执行清理操作
+    // Execute cleanup operations
     this.staticFileServerManager.destroy();
-    this.unregisterAllRequestHandlers();
   };
 }

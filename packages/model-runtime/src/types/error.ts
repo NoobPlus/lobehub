@@ -1,55 +1,8 @@
-/* eslint-disable sort-keys-fix/sort-keys-fix */
-// ******* Runtime Biz Error ******* //
-export const AgentRuntimeErrorType = {
-  AgentRuntimeError: 'AgentRuntimeError', // Agent Runtime 模块运行时错误
-  LocationNotSupportError: 'LocationNotSupportError',
-
-  QuotaLimitReached: 'QuotaLimitReached',
-  InsufficientQuota: 'InsufficientQuota',
-
-  ModelNotFound: 'ModelNotFound',
-
-  PermissionDenied: 'PermissionDenied',
-  ExceededContextWindow: 'ExceededContextWindow',
-
-  InvalidProviderAPIKey: 'InvalidProviderAPIKey',
-  ProviderBizError: 'ProviderBizError',
-
-  InvalidOllamaArgs: 'InvalidOllamaArgs',
-  OllamaBizError: 'OllamaBizError',
-  OllamaServiceUnavailable: 'OllamaServiceUnavailable',
-
-  InvalidBedrockCredentials: 'InvalidBedrockCredentials',
-  InvalidVertexCredentials: 'InvalidVertexCredentials',
-  StreamChunkError: 'StreamChunkError',
-
-  InvalidGithubToken: 'InvalidGithubToken',
-
-  ConnectionCheckFailed: 'ConnectionCheckFailed',
-
-  // ******* Image Generation Error ******* //
-  ProviderNoImageGenerated: 'ProviderNoImageGenerated',
-
-  InvalidComfyUIArgs: 'InvalidComfyUIArgs',
-  ComfyUIBizError: 'ComfyUIBizError',
-  ComfyUIServiceUnavailable: 'ComfyUIServiceUnavailable',
-  ComfyUIEmptyResult: 'ComfyUIEmptyResult',
-  ComfyUIUploadFailed: 'ComfyUIUploadFailed',
-  ComfyUIWorkflowError: 'ComfyUIWorkflowError',
-  ComfyUIModelError: 'ComfyUIModelError',
-
-  /**
-   * @deprecated
-   */
-  NoOpenAIAPIKey: 'NoOpenAIAPIKey',
-} as const;
+import type { ILobeAgentRuntimeErrorType } from '@lobechat/types';
+import { AgentRuntimeErrorType } from '@lobechat/types';
 
 export const AGENT_RUNTIME_ERROR_SET = new Set<string>(Object.values(AgentRuntimeErrorType));
 
-export type ILobeAgentRuntimeErrorType =
-  (typeof AgentRuntimeErrorType)[keyof typeof AgentRuntimeErrorType];
-
-/* eslint-disable sort-keys-fix/sort-keys-fix */
 export const StandardErrorType = {
   // ******* Client Error ******* //
   BadRequest: 400,
@@ -65,15 +18,17 @@ export const StandardErrorType = {
   ServiceUnavailable: 503,
   GatewayTimeout: 504,
 } as const;
-/* eslint-enable */
 
 export type ErrorType = (typeof StandardErrorType)[keyof typeof StandardErrorType];
 
 /**
- * 聊天消息错误对象
+ * Chat message error object
  */
 export interface ChatMessageError {
   body?: any;
   message: string;
   type: ErrorType | ILobeAgentRuntimeErrorType;
 }
+
+export type { ILobeAgentRuntimeErrorType } from '@lobechat/types';
+export { AgentRuntimeErrorType } from '@lobechat/types';

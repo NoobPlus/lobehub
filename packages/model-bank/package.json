@@ -4,6 +4,8 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
+    "./modelProviders": "./src/modelProviders/index.ts",
+    "./modelProviders/lobehub": "./src/modelProviders/lobehub.ts",
     "./ai21": "./src/aiModels/ai21.ts",
     "./ai302": "./src/aiModels/ai302.ts",
     "./ai360": "./src/aiModels/ai360.ts",
@@ -25,9 +27,10 @@
     "./fireworksai": "./src/aiModels/fireworksai.ts",
     "./giteeai": "./src/aiModels/giteeai.ts",
     "./github": "./src/aiModels/github.ts",
+    "./githubCopilot": "./src/aiModels/githubCopilot.ts",
     "./google": "./src/aiModels/google.ts",
     "./groq": "./src/aiModels/groq.ts",
-    "./lobehub": "./src/aiModels/lobehub.ts",
+    "./lobehub": "./src/aiModels/lobehub/index.ts",
     "./higress": "./src/aiModels/higress.ts",
     "./huggingface": "./src/aiModels/huggingface.ts",
     "./hunyuan": "./src/aiModels/hunyuan.ts",
@@ -58,6 +61,7 @@
     "./siliconcloud": "./src/aiModels/siliconcloud.ts",
     "./spark": "./src/aiModels/spark.ts",
     "./stepfun": "./src/aiModels/stepfun.ts",
+    "./straico": "./src/aiModels/straico.ts",
     "./taichu": "./src/aiModels/taichu.ts",
     "./tencentcloud": "./src/aiModels/tencentcloud.ts",
     "./togetherai": "./src/aiModels/togetherai.ts",
@@ -69,6 +73,7 @@
     "./volcengine": "./src/aiModels/volcengine.ts",
     "./wenxin": "./src/aiModels/wenxin.ts",
     "./xai": "./src/aiModels/xai.ts",
+    "./xiaomimimo": "./src/aiModels/xiaomimimo.ts",
     "./xinference": "./src/aiModels/xinference.ts",
     "./zenmux": "./src/aiModels/zenmux.ts",
     "./zeroone": "./src/aiModels/zeroone.ts",
@@ -80,6 +85,10 @@
     "test:coverage": "vitest --coverage --silent='passed-only'"
   },
   "dependencies": {
+    "@lobechat/business-const": "workspace:*",
+    "type-fest": "^5.2.0"
+  },
+  "peerDependencies": {
     "zod": "^3.25.76"
   }
 }

@@ -1,4 +1,5 @@
-import { ChatInputActions, type ChatInputActionsProps } from '@lobehub/editor/react';
+import { type ChatInputActionsProps } from '@lobehub/editor/react';
+import { ChatInputActions } from '@lobehub/editor/react';
 import { memo, useMemo } from 'react';
 
 import { useGlobalStore } from '@/store/global';
@@ -6,8 +7,11 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/slices/preference/selectors';
 
-import { ActionKeys, actionMap } from '../ActionBar/config';
+import { type ActionKeys } from '../ActionBar/config';
+import { actionMap } from '../ActionBar/config';
 import { useChatInputStore } from '../store';
+import { type DropdownPlacement } from './context';
+import { ActionBarContext } from './context';
 
 const mapActionsToItems = (keys: ActionKeys[]): ChatInputActionsProps['items'] =>
   keys.map((actionKey, index) => {
@@ -39,32 +43,50 @@ const mapActionsToItems = (keys: ActionKeys[]): ChatInputActionsProps['items'] =
     }
   });
 
-const ActionToolbar = memo(() => {
-  const [expandInputActionbar, toggleExpandInputActionbar] = useGlobalStore((s) => [
-    systemStatusSelectors.expandInputActionbar(s),
-    s.toggleExpandInputActionbar,
-  ]);
-  const enableRichRender = useUserStore(labPreferSelectors.enableInputMarkdown);
+export interface ActionToolbarProps {
+  borderRadius?: number;
+  dropdownPlacement?: DropdownPlacement;
+  extraActionItems?: ChatInputActionsProps['items'];
+}
 
-  const leftActions = useChatInputStore((s) =>
-    s.leftActions.filter((item) => (enableRichRender ? true : item !== 'typo')),
-  );
+const ActionToolbar = memo<ActionToolbarProps>(
+  ({ borderRadius, dropdownPlacement, extraActionItems = [] }) => {
+    const [expandInputActionbar, toggleExpandInputActionbar] = useGlobalStore((s) => [
+      systemStatusSelectors.expandInputActionbar(s),
+      s.toggleExpandInputActionbar,
+    ]);
+    const enableRichRender = useUserStore(labPreferSelectors.enableInputMarkdown);
 
-  const mobile = useChatInputStore((s) => s.mobile);
+    const leftActions = useChatInputStore((s) =>
+      s.leftActions.filter((item) => (enableRichRender ? true : item !== 'typo')),
+    );
 
-  const items = useMemo(() => mapActionsToItems(leftActions), [leftActions]);
+    const mobile = useChatInputStore((s) => s.mobile);
 
-  return (
-    <ChatInputActions
-      collapseOffset={mobile ? 48 : 80}
-      defaultGroupCollapse={true}
-      groupCollapse={!expandInputActionbar}
-      items={items}
-      onGroupCollapseChange={(v) => {
-        toggleExpandInputActionbar(!v);
-      }}
-    />
-  );
-});
+    const items = useMemo(
+      () => (mapActionsToItems(leftActions) ?? []).concat(extraActionItems),
+      [extraActionItems, leftActions],
+    );
+
+    const contextValue = useMemo(
+      () => ({ borderRadius, dropdownPlacement }),
+      [borderRadius, dropdownPlacement],
+    );
+
+    return (
+      <ActionBarContext value={contextValue}>
+        <ChatInputActions
+          collapseOffset={mobile ? 48 : 80}
+          defaultGroupCollapse={true}
+          groupCollapse={!expandInputActionbar}
+          items={items}
+          onGroupCollapseChange={(v) => {
+            toggleExpandInputActionbar(!v);
+          }}
+        />
+      </ActionBarContext>
+    );
+  },
+);
 
 export default ActionToolbar;

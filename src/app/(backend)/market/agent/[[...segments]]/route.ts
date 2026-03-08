@@ -1,22 +1,12 @@
-import { MarketSDK } from '@lobehub/market-sdk';
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
+import { MarketService } from '@/server/services/market';
 
 type RouteContext = {
   params: Promise<{
     segments?: string[];
   }>;
-};
-
-const MARKET_BASE_URL = process.env.NEXT_PUBLIC_MARKET_BASE_URL || 'https://market.lobehub.com';
-
-const extractAccessToken = (req: NextRequest) => {
-  const authorization = req.headers.get('authorization');
-  if (!authorization) return undefined;
-
-  const [scheme, token] = authorization.split(' ');
-  if (scheme?.toLowerCase() !== 'bearer' || !token) return undefined;
-
-  return token;
 };
 
 const methodNotAllowed = (methods: string[]) =>
@@ -53,11 +43,8 @@ const notFound = (reason: string) =>
   );
 
 const handleAgent = async (req: NextRequest, segments: string[]) => {
-  const accessToken = extractAccessToken(req);
-  const market = new MarketSDK({
-    accessToken,
-    baseURL: MARKET_BASE_URL,
-  });
+  const marketService = await MarketService.createFromRequest(req);
+  const market = marketService.market;
 
   if (segments.length === 0) {
     return notFound('Missing agent action.');
@@ -77,6 +64,35 @@ const handleAgent = async (req: NextRequest, segments: string[]) => {
       return NextResponse.json(
         {
           error: 'create_agent_failed',
+          message: error instanceof Error ? error.message : 'Unknown error',
+          status: 'error',
+        },
+        { status: 500 },
+      );
+    }
+  }
+
+  // Get own agents (requires authentication)
+  if (action === 'own') {
+    if (req.method !== 'GET') return methodNotAllowed(['GET']);
+
+    try {
+      // Parse query parameters from the request URL
+      const url = new URL(req.url);
+      const page = url.searchParams.get('page');
+      const pageSize = url.searchParams.get('pageSize');
+
+      const response = await market.agents.getOwnAgents({
+        page: page ? parseInt(page, 10) : undefined,
+        pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
+      });
+
+      return NextResponse.json(response);
+    } catch (error) {
+      console.error('[Market] Failed to get own agents:', error);
+      return NextResponse.json(
+        {
+          error: 'get_own_agents_failed',
           message: error instanceof Error ? error.message : 'Unknown error',
           status: 'error',
         },
@@ -110,6 +126,47 @@ const handleAgent = async (req: NextRequest, segments: string[]) => {
       return NextResponse.json(
         {
           error: 'create_agent_version_failed',
+          message: error instanceof Error ? error.message : 'Unknown error',
+          status: 'error',
+        },
+        { status: 500 },
+      );
+    }
+  }
+
+  // Handle agent status actions: /agent/{identifier}/{action}
+  // Actions: publish, unpublish, deprecate
+  if (segments.length === 2) {
+    const [identifier, statusAction] = segments;
+
+    if (!['publish', 'unpublish', 'deprecate'].includes(statusAction)) {
+      return notFound(`Unknown agent action: ${statusAction}`);
+    }
+
+    if (req.method !== 'POST') return methodNotAllowed(['POST']);
+
+    try {
+      let response;
+      switch (statusAction) {
+        case 'publish': {
+          response = await market.agents.publish(identifier);
+          break;
+        }
+        case 'unpublish': {
+          response = await market.agents.unpublish(identifier);
+          break;
+        }
+        case 'deprecate': {
+          response = await market.agents.deprecate(identifier);
+          break;
+        }
+      }
+      return NextResponse.json(response ?? { success: true });
+    } catch (error) {
+      console.error(`[Market] Failed to ${statusAction} agent:`, error);
+      return NextResponse.json(
+        {
+          error: `${statusAction}_agent_failed`,
           message: error instanceof Error ? error.message : 'Unknown error',
           status: 'error',
         },

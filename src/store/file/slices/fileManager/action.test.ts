@@ -1,15 +1,15 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { mutate } from 'swr';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { message } from '@/components/AntdStaticMethods';
 import { FILE_UPLOAD_BLACKLIST, MAX_UPLOAD_FILE_COUNT } from '@/const/file';
+import { mutate } from '@/libs/swr';
 import { lambdaClient } from '@/libs/trpc/client';
 import { fileService } from '@/services/file';
 import { ragService } from '@/services/rag';
-import { FileListItem } from '@/types/files';
-import { UploadFileItem } from '@/types/files/upload';
+import { type FileListItem } from '@/types/files';
+import { type UploadFileItem } from '@/types/files/upload';
 import { unzipFile } from '@/utils/unzipFile';
+import { withSWR } from '~test-utils';
 
 import { useFileStore as useStore } from '../../store';
 
@@ -46,9 +46,9 @@ vi.mock('p-map', () => ({
   }),
 }));
 
-// Mock SWR
-vi.mock('swr', async () => {
-  const actual = await vi.importActual('swr');
+// Mock @/libs/swr mutate
+vi.mock('@/libs/swr', async () => {
+  const actual = await vi.importActual('@/libs/swr');
   return {
     ...actual,
     mutate: vi.fn(),
@@ -277,11 +277,14 @@ describe('FileManagerActions', () => {
       // Should only dispatch for the valid file
       expect(dispatchSpy).toHaveBeenCalledWith({
         atStart: true,
-        files: [{ file: validFile, id: validFile.name, status: 'pending' }],
+        files: [
+          expect.objectContaining({ file: validFile, id: validFile.name, status: 'pending' }),
+        ],
         type: 'addFiles',
       });
       expect(uploadSpy).toHaveBeenCalledTimes(1);
       expect(uploadSpy).toHaveBeenCalledWith({
+        abortController: expect.any(AbortController),
         file: validFile,
         knowledgeBaseId: undefined,
         onStatusUpdate: expect.any(Function),
@@ -307,6 +310,7 @@ describe('FileManagerActions', () => {
       });
 
       expect(uploadSpy).toHaveBeenCalledWith({
+        abortController: expect.any(AbortController),
         file,
         knowledgeBaseId: 'kb-123',
         onStatusUpdate: expect.any(Function),
@@ -340,7 +344,7 @@ describe('FileManagerActions', () => {
       const { result } = renderHook(() => useStore());
 
       const uploadSpy = vi.spyOn(result.current, 'uploadWithProgress');
-      const refreshSpy = vi.spyOn(result.current, 'refreshFileList');
+      const refreshSpy = vi.spyOn(result.current, 'refreshFileList').mockResolvedValue();
       const parseSpy = vi.spyOn(result.current, 'parseFilesToChunks');
 
       await act(async () => {
@@ -348,7 +352,8 @@ describe('FileManagerActions', () => {
       });
 
       expect(uploadSpy).not.toHaveBeenCalled();
-      expect(refreshSpy).not.toHaveBeenCalled();
+      // refreshFileList is always called after uploads complete, even for empty list
+      expect(refreshSpy).toHaveBeenCalled();
       expect(parseSpy).not.toHaveBeenCalled();
     });
 
@@ -500,7 +505,9 @@ describe('FileManagerActions', () => {
       // Should upload extracted files
       expect(dispatchSpy).toHaveBeenCalledWith({
         atStart: true,
-        files: extractedFiles.map((file) => ({ file, id: file.name, status: 'pending' })),
+        files: extractedFiles.map((file) =>
+          expect.objectContaining({ file, id: file.name, status: 'pending' }),
+        ),
         type: 'addFiles',
       });
     });
@@ -530,7 +537,7 @@ describe('FileManagerActions', () => {
       // Should fallback to uploading the ZIP file itself
       expect(dispatchSpy).toHaveBeenCalledWith({
         atStart: true,
-        files: [{ file: zipFile, id: zipFile.name, status: 'pending' }],
+        files: [expect.objectContaining({ file: zipFile, id: zipFile.name, status: 'pending' })],
         type: 'addFiles',
       });
     });
@@ -599,29 +606,17 @@ describe('FileManagerActions', () => {
   });
 
   describe('refreshFileList', () => {
-    it('should call mutate with correct key', async () => {
-      const { result } = renderHook(() => useStore());
-
-      const params = { category: 'all' };
-      act(() => {
-        useStore.setState({ queryListParams: params });
-      });
-
-      await act(async () => {
-        await result.current.refreshFileList();
-      });
-
-      expect(mutate).toHaveBeenCalledWith(['useFetchKnowledgeItems', params]);
-    });
-
-    it('should call mutate with undefined params', async () => {
+    it('should call mutate with key matcher function and revalidate option', async () => {
       const { result } = renderHook(() => useStore());
 
       await act(async () => {
         await result.current.refreshFileList();
       });
 
-      expect(mutate).toHaveBeenCalledWith(['useFetchKnowledgeItems', undefined]);
+      // The implementation now uses a key matcher function
+      expect(mutate).toHaveBeenCalledWith(expect.any(Function), expect.any(Function), {
+        revalidate: true,
+      });
     });
   });
 
@@ -828,8 +823,9 @@ describe('FileManagerActions', () => {
 
       vi.mocked(lambdaClient.file.getFileItemById.query).mockResolvedValue(mockFile);
 
-      const { result: swrResult } = renderHook(() =>
-        result.current.useFetchKnowledgeItem('file-1'),
+      const { result: swrResult } = renderHook(
+        () => result.current.useFetchKnowledgeItem('file-1'),
+        { wrapper: withSWR },
       );
 
       await waitFor(() => {
@@ -873,10 +869,16 @@ describe('FileManagerActions', () => {
         },
       ];
 
-      vi.mocked(lambdaClient.file.getKnowledgeItems.query).mockResolvedValue(mockFiles);
+      vi.mocked(lambdaClient.file.getKnowledgeItems.query).mockResolvedValue({
+        hasMore: false,
+        items: mockFiles,
+      });
 
       const params = { category: 'all' as any };
-      const { result: swrResult } = renderHook(() => result.current.useFetchKnowledgeItems(params));
+      const { result: swrResult } = renderHook(
+        () => result.current.useFetchKnowledgeItems(params),
+        { wrapper: withSWR },
+      );
 
       await waitFor(() => {
         expect(swrResult.current.data).toEqual(mockFiles);
@@ -903,10 +905,13 @@ describe('FileManagerActions', () => {
         },
       ];
 
-      vi.mocked(lambdaClient.file.getKnowledgeItems.query).mockResolvedValue(mockFiles);
+      vi.mocked(lambdaClient.file.getKnowledgeItems.query).mockResolvedValue({
+        hasMore: false,
+        items: mockFiles,
+      });
 
       const params = { category: 'all' as any };
-      renderHook(() => result.current.useFetchKnowledgeItems(params));
+      renderHook(() => result.current.useFetchKnowledgeItems(params), { wrapper: withSWR });
 
       await waitFor(() => {
         expect(result.current.fileList).toEqual(mockFiles);

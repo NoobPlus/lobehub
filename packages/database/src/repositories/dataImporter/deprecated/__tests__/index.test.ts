@@ -1,9 +1,8 @@
 // @vitest-environment node
 import type { ImporterEntryData } from '@lobechat/types';
 import { eq, inArray } from 'drizzle-orm';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { getTestDBInstance } from '@/database/core/dbForTest';
 import {
   agents,
   agentsToSessions,
@@ -14,12 +13,13 @@ import {
   users,
 } from '@/database/schemas';
 
+import { getTestDB } from '../../../../core/getTestDB';
 import { DeprecatedDataImporterRepos as DataImporterRepos } from '../index';
 import mockImportData from './fixtures/messages.json';
 
 const CURRENT_CONFIG_VERSION = 7;
 
-const serverDB = await getTestDBInstance();
+const serverDB = await getTestDB();
 
 const userId = 'test-user-id';
 let importer: DataImporterRepos;
@@ -886,7 +886,6 @@ describe('DataImporter', () => {
                 },
                 chatConfig: {
                   autoCreateTopicThreshold: 2,
-                  displayMode: 'chat',
                   enableAutoCreateTopic: true,
                   historyCount: 1,
                 },

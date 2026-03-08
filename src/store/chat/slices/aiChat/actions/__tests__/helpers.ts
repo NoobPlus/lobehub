@@ -3,11 +3,10 @@ import { vi } from 'vitest';
 import { chatService } from '@/services/chat';
 import { messageService } from '@/services/message';
 import { agentChatConfigSelectors, agentSelectors } from '@/store/agent/selectors';
-import { sessionMetaSelectors } from '@/store/session/selectors';
 
 import { useChatStore } from '../../../../store';
 import { messageMapKey } from '../../../../utils/messageMapKey';
-import { TEST_IDS, createMockAgentConfig, createMockChatConfig } from './fixtures';
+import { createMockAgentConfig, createMockChatConfig,TEST_IDS } from './fixtures';
 
 /**
  * Setup mock selectors with default or custom values
@@ -23,11 +22,15 @@ export const setupMockSelectors = (
     createMockAgentConfig(options.agentConfig),
   );
 
+  // Mock getAgentConfigById to return config for any agentId
+  const getAgentConfig = () => createMockAgentConfig(options.agentConfig);
+  vi.spyOn(agentSelectors, 'getAgentConfigById').mockImplementation(() => getAgentConfig);
+
   vi.spyOn(agentChatConfigSelectors, 'currentChatConfig').mockImplementation(() =>
     createMockChatConfig(options.chatConfig),
   );
 
-  vi.spyOn(sessionMetaSelectors, 'currentAgentMeta').mockImplementation(
+  vi.spyOn(agentSelectors, 'currentAgentMeta').mockImplementation(
     () => options.agentMeta || { tags: [] },
   );
 };
@@ -37,14 +40,14 @@ export const setupMockSelectors = (
  */
 export const setupStoreWithMessages = (
   messages: any[],
-  sessionId = TEST_IDS.SESSION_ID,
+  sessionId: any = TEST_IDS.SESSION_ID,
   topicId: string | null | undefined = TEST_IDS.TOPIC_ID,
 ) => {
   useChatStore.setState({
-    activeId: sessionId,
+    activeAgentId: sessionId,
     activeTopicId: topicId ?? undefined,
     messagesMap: {
-      [messageMapKey(sessionId, topicId ?? undefined)]: messages,
+      [messageMapKey({ agentId: sessionId, topicId: topicId ?? undefined })]: messages,
     },
   });
 };
@@ -107,7 +110,7 @@ export const resetTestEnvironment = () => {
   vi.clearAllMocks();
   useChatStore.setState(
     {
-      activeId: TEST_IDS.SESSION_ID,
+      activeAgentId: TEST_IDS.SESSION_ID,
       activeTopicId: TEST_IDS.TOPIC_ID,
       messagesMap: {},
       toolCallingStreamIds: {},

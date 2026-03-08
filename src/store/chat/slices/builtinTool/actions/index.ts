@@ -1,26 +1,26 @@
-import { StateCreator } from 'zustand/vanilla';
+import { type StateCreator } from 'zustand/vanilla';
 
-import { ChatStore } from '@/store/chat/store';
+import { type ChatStore } from '@/store/chat/store';
+import { flattenActions } from '@/store/utils/flattenActions';
 
-import { ChatCodeInterpreterAction, codeInterpreterSlice } from './interpreter';
-import { KnowledgeBaseAction, knowledgeBaseSlice } from './knowledgeBase';
-import { LocalFileAction, localSystemSlice } from './localSystem';
-import { SearchAction, searchSlice } from './search';
+import { type ChatCodeInterpreterAction } from './interpreter';
+import { ChatCodeInterpreterActionImpl } from './interpreter';
+import { type SearchAction } from './search';
+import { SearchActionImpl } from './search';
 
-export interface ChatBuiltinToolAction
-  extends SearchAction,
-    LocalFileAction,
-    ChatCodeInterpreterAction,
-    KnowledgeBaseAction {}
+export type ChatBuiltinToolAction = SearchAction & ChatCodeInterpreterAction;
 
 export const chatToolSlice: StateCreator<
   ChatStore,
   [['zustand/devtools', never]],
   [],
   ChatBuiltinToolAction
-> = (...params) => ({
-  ...searchSlice(...params),
-  ...localSystemSlice(...params),
-  ...codeInterpreterSlice(...params),
-  ...knowledgeBaseSlice(...params),
-});
+> = (
+  ...params: Parameters<
+    StateCreator<ChatStore, [['zustand/devtools', never]], [], ChatBuiltinToolAction>
+  >
+) =>
+  flattenActions<ChatBuiltinToolAction>([
+    new SearchActionImpl(...params),
+    new ChatCodeInterpreterActionImpl(...params),
+  ]);

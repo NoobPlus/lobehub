@@ -1,21 +1,15 @@
-import { AuthObject } from '@clerk/backend';
-import {
-  AgentRuntimeError,
-  ChatCompletionErrorPayload,
-  ModelRuntime,
-} from '@lobechat/model-runtime';
-import { ChatErrorType, ClientSecretPayload } from '@lobechat/types';
+import { type ChatCompletionErrorPayload, type ModelRuntime } from '@lobechat/model-runtime';
+import { AgentRuntimeError } from '@lobechat/model-runtime';
+import { context as otContext } from '@lobechat/observability-otel/api';
+import { type ClientSecretPayload } from '@lobechat/types';
+import { ChatErrorType } from '@lobechat/types';
 import { getXorPayload } from '@lobechat/utils/server';
-import { NextRequest } from 'next/server';
 
-import {
-  LOBE_CHAT_AUTH_HEADER,
-  LOBE_CHAT_OIDC_AUTH_HEADER,
-  OAUTH_AUTHORIZED,
-  enableBetterAuth,
-  enableClerk,
-} from '@/const/auth';
-import { ClerkAuth } from '@/libs/clerk-auth';
+import { auth } from '@/auth';
+import { getServerDB } from '@/database/core/db-adaptor';
+import { type LobeChatDatabase } from '@/database/type';
+import { LOBE_CHAT_AUTH_HEADER, LOBE_CHAT_OIDC_AUTH_HEADER, OAUTH_AUTHORIZED } from '@/envs/auth';
+import { extractTraceContext, injectActiveTraceHeaders } from '@/libs/observability/traceparent';
 import { validateOIDCJWT } from '@/libs/oidc-provider/jwt';
 import { createErrorResponse } from '@/utils/errorResponse';
 
@@ -28,6 +22,8 @@ export type RequestHandler = (
   req: Request,
   options: RequestOptions & {
     jwtPayload: ClientSecretPayload;
+    serverDB: LobeChatDatabase;
+    userId: string;
   },
 ) => Promise<Response>;
 
@@ -38,10 +34,18 @@ export const checkAuth =
     // This ensures the handler can safely read the request body
     const clonedReq = req.clone();
 
+    // Get serverDB for database access
+    const serverDB = await getServerDB();
+
     // we have a special header to debug the api endpoint in development mode
     const isDebugApi = req.headers.get('lobe-auth-dev-backend-api') === '1';
     if (process.env.NODE_ENV === 'development' && isDebugApi) {
-      return handler(clonedReq, { ...options, jwtPayload: { userId: 'DEV_USER' } });
+      return handler(clonedReq, {
+        ...options,
+        jwtPayload: { userId: 'DEV_USER' },
+        serverDB,
+        userId: 'DEV_USER',
+      });
     }
 
     let jwtPayload: ClientSecretPayload;
@@ -50,30 +54,15 @@ export const checkAuth =
       // get Authorization from header
       const authorization = req.headers.get(LOBE_CHAT_AUTH_HEADER);
       const oauthAuthorized = !!req.headers.get(OAUTH_AUTHORIZED);
-      let betterAuthAuthorized = false;
 
       // better auth handler
-      if (enableBetterAuth) {
-        const { auth: betterAuth } = await import('@/auth');
+      const session = await auth.api.getSession({
+        headers: req.headers,
+      });
 
-        const session = await betterAuth.api.getSession({
-          headers: req.headers,
-        });
-
-        betterAuthAuthorized = !!session?.user?.id;
-      }
+      const betterAuthAuthorized = !!session?.user?.id;
 
       if (!authorization) throw AgentRuntimeError.createError(ChatErrorType.Unauthorized);
-
-      // check the Auth With payload and clerk auth
-      let clerkAuth = {} as AuthObject;
-
-      // TODO: V2 完整移除 client 模式下的 clerk 集成代码
-      if (enableClerk) {
-        const auth = new ClerkAuth();
-        const data = auth.getAuthFromRequest(req as NextRequest);
-        clerkAuth = data.clerkAuth;
-      }
 
       jwtPayload = getXorPayload(authorization);
 
@@ -92,10 +81,8 @@ export const checkAuth =
 
       if (!isUseOidcAuth)
         checkAuthMethod({
-          accessCode: jwtPayload.accessCode,
           apiKey: jwtPayload.apiKey,
           betterAuthAuthorized,
-          clerkAuth,
           nextAuthAuthorized: oauthAuthorized,
         });
     } catch (e) {
@@ -125,5 +112,33 @@ export const checkAuth =
       return createErrorResponse(errorType, { error, ...res, provider: params?.provider });
     }
 
-    return handler(clonedReq, { ...options, jwtPayload });
+    const userId = jwtPayload.userId || '';
+
+    const extractedContext = extractTraceContext(req.headers);
+
+    const res = await otContext.with(extractedContext, () =>
+      handler(clonedReq, { ...options, jwtPayload, serverDB, userId }),
+    );
+
+    // Only inject trace headers when the handler returns a Response
+    // NOTICE: this is related to src/app/(backend)/webapi/chat/[provider]/route.test.ts
+    if (!(res instanceof Response)) {
+      console.warn(
+        'Response is not an instance of Response, skipping trace header injection. Possibly bug or mocked response in tests, please check and make sure this is intended behavior.',
+      );
+      return res;
+    }
+
+    try {
+      const headers = new Headers(res.headers);
+      const traceparent = injectActiveTraceHeaders(headers);
+      if (!traceparent) {
+        return res;
+      }
+
+      return new Response(res.body, { headers, status: res.status, statusText: res.statusText });
+    } catch (err) {
+      console.error('Failed to inject trace headers:', err);
+      return res;
+    }
   };

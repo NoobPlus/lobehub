@@ -1,4 +1,6 @@
-import { AiFullModelCard, LobeDefaultAiModelListItem } from '../types/aiModel';
+import { ENABLE_BUSINESS_FEATURES } from '@lobechat/business-const';
+
+import { type AiFullModelCard, type LobeDefaultAiModelListItem } from '../types/aiModel';
 import { default as ai21 } from './ai21';
 import { default as ai302 } from './ai302';
 import { default as ai360 } from './ai360';
@@ -20,6 +22,7 @@ import { default as fal } from './fal';
 import { default as fireworksai } from './fireworksai';
 import { default as giteeai } from './giteeai';
 import { default as github } from './github';
+import { default as githubcopilot } from './githubCopilot';
 import { default as google } from './google';
 import { default as groq } from './groq';
 import { default as higress } from './higress';
@@ -29,6 +32,7 @@ import { default as infiniai } from './infiniai';
 import { default as internlm } from './internlm';
 import { default as jina } from './jina';
 import { default as lmstudio } from './lmstudio';
+import { default as lobehub } from './lobehub/index';
 import { default as minimax } from './minimax';
 import { default as mistral } from './mistral';
 import { default as modelscope } from './modelscope';
@@ -52,6 +56,7 @@ import { default as sensenova } from './sensenova';
 import { default as siliconcloud } from './siliconcloud';
 import { default as spark } from './spark';
 import { default as stepfun } from './stepfun';
+import { default as straico } from './straico';
 import { default as taichu } from './taichu';
 import { default as tencentcloud } from './tencentcloud';
 import { default as togetherai } from './togetherai';
@@ -63,6 +68,7 @@ import { default as vllm } from './vllm';
 import { default as volcengine } from './volcengine';
 import { default as wenxin } from './wenxin';
 import { default as xai } from './xai';
+import { default as xiaomimimo } from './xiaomimimo';
 import { default as xinference } from './xinference';
 import { default as zenmux } from './zenmux';
 import { default as zeroone } from './zeroone';
@@ -109,6 +115,7 @@ export const LOBE_DEFAULT_MODEL_LIST = buildDefaultModelList({
   fireworksai,
   giteeai,
   github,
+  githubcopilot,
   google,
   groq,
   higress,
@@ -118,6 +125,7 @@ export const LOBE_DEFAULT_MODEL_LIST = buildDefaultModelList({
   internlm,
   jina,
   lmstudio,
+  ...(ENABLE_BUSINESS_FEATURES ? { lobehub } : {}),
   minimax,
   mistral,
   modelscope,
@@ -141,6 +149,7 @@ export const LOBE_DEFAULT_MODEL_LIST = buildDefaultModelList({
   siliconcloud,
   spark,
   stepfun,
+  straico,
   taichu,
   tencentcloud,
   togetherai,
@@ -152,6 +161,7 @@ export const LOBE_DEFAULT_MODEL_LIST = buildDefaultModelList({
   volcengine,
   wenxin,
   xai,
+  xiaomimimo,
   xinference,
   zenmux,
   zeroone,
@@ -179,6 +189,7 @@ export { default as fal, fluxSchnellParamsSchema } from './fal';
 export { default as fireworksai } from './fireworksai';
 export { default as giteeai } from './giteeai';
 export { default as github } from './github';
+export { default as githubcopilot } from './githubCopilot';
 export { default as google } from './google';
 export { default as groq } from './groq';
 export { default as higress } from './higress';
@@ -188,7 +199,7 @@ export { default as infiniai } from './infiniai';
 export { default as internlm } from './internlm';
 export { default as jina } from './jina';
 export { default as lmstudio } from './lmstudio';
-export { default as lobehub } from './lobehub';
+export { default as lobehub } from './lobehub/index';
 export { default as minimax } from './minimax';
 export { default as mistral } from './mistral';
 export { default as modelscope } from './modelscope';
@@ -212,6 +223,7 @@ export { default as sensenova } from './sensenova';
 export { default as siliconcloud } from './siliconcloud';
 export { default as spark } from './spark';
 export { default as stepfun } from './stepfun';
+export { default as straico } from './straico';
 export { default as taichu } from './taichu';
 export { default as tencentcloud } from './tencentcloud';
 export { default as togetherai } from './togetherai';
@@ -223,6 +235,7 @@ export { default as vllm } from './vllm';
 export { default as volcengine } from './volcengine';
 export { default as wenxin } from './wenxin';
 export { default as xai } from './xai';
+export { default as xiaomimimo } from './xiaomimimo';
 export { default as xinference } from './xinference';
 export { default as zenmux } from './zenmux';
 export { default as zeroone } from './zeroone';

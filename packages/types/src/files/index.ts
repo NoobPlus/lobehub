@@ -11,6 +11,8 @@ export enum FilesTabs {
 
 export enum FileSource {
   ImageGeneration = 'image_generation',
+  PageEditor = 'page-editor',
+  VideoGeneration = 'video_generation',
 }
 
 export interface FileItem {

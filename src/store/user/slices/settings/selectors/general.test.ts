@@ -1,5 +1,6 @@
-import { UserStore } from '@/store/user';
-import { UserState, initialState } from '@/store/user/initialState';
+import { type UserStore } from '@/store/user';
+import { type UserState } from '@/store/user/initialState';
+import { initialState } from '@/store/user/initialState';
 import { merge } from '@/utils/merge';
 
 import { userGeneralSettingsSelectors } from './general';
@@ -19,7 +20,10 @@ describe('settingsSelectors', () => {
         animationMode: 'agile',
         fontSize: 12,
         highlighterTheme: 'lobe-theme',
+        isDevMode: false,
+        isLiteMode: false,
         mermaidTheme: 'lobe-theme',
+        telemetry: true,
         transitionMode: 'fadeIn',
       });
     });

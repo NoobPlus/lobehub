@@ -1,4 +1,4 @@
-import { UIChatMessage } from '@lobechat/types';
+import type { UIChatMessage } from '@lobechat/types';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -15,7 +15,6 @@ const createMessage = (
   id: overrides.id ?? `msg-${++messageCounter}`,
   createdAt: overrides.createdAt ?? 0,
   updatedAt: overrides.updatedAt ?? 0,
-  meta: overrides.meta ?? {},
   ...overrides,
 });
 

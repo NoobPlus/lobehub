@@ -8,7 +8,6 @@ import { FileModel } from '@/database/models/file';
 import { KnowledgeBaseModel } from '@/database/models/knowledgeBase';
 import { SessionModel } from '@/database/models/session';
 import { UserModel } from '@/database/models/user';
-import { serverDB } from '@/database/server';
 import { AgentService } from '@/server/services/agent';
 import { KnowledgeType } from '@/types/knowledgeBase';
 
@@ -61,6 +60,7 @@ describe('agentRouter', () => {
       getAgentAssignedKnowledge: vi.fn(),
       toggleFile: vi.fn(),
       toggleKnowledgeBase: vi.fn(),
+      update: vi.fn(),
     };
     vi.mocked(AgentModel).mockImplementation(() => agentModelMock);
 
@@ -301,6 +301,32 @@ describe('agentRouter', () => {
         mockInput.knowledgeBaseId,
         mockInput.enabled,
       );
+    });
+  });
+
+  describe('updateAgentPinned', () => {
+    it('should pin an agent', async () => {
+      const mockInput = {
+        id: 'agent1',
+        pinned: true,
+      };
+
+      const caller = agentRouter.createCaller(mockCtx);
+      await caller.updateAgentPinned(mockInput);
+
+      expect(agentModelMock.update).toHaveBeenCalledWith(mockInput.id, { pinned: true });
+    });
+
+    it('should unpin an agent', async () => {
+      const mockInput = {
+        id: 'agent1',
+        pinned: false,
+      };
+
+      const caller = agentRouter.createCaller(mockCtx);
+      await caller.updateAgentPinned(mockInput);
+
+      expect(agentModelMock.update).toHaveBeenCalledWith(mockInput.id, { pinned: false });
     });
   });
 });

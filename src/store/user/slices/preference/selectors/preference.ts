@@ -1,12 +1,10 @@
 import { DEFAULT_PREFERENCE } from '@lobechat/const';
 
-import type { UserStore } from '@/store/user';
+import { type UserStore } from '@/store/user';
 
 const useCmdEnterToSend = (s: UserStore): boolean => s.preference.useCmdEnterToSend || false;
 const topicDisplayMode = (s: UserStore) =>
   s.preference.topicDisplayMode || DEFAULT_PREFERENCE.topicDisplayMode;
-
-const userAllowTrace = (s: UserStore) => s.preference.telemetry;
 
 const hideSyncAlert = (s: UserStore) => s.preference.hideSyncAlert;
 
@@ -28,5 +26,4 @@ export const preferenceSelectors = {
   showUploadFileInKnowledgeBaseTip,
   topicDisplayMode,
   useCmdEnterToSend,
-  userAllowTrace,
 };

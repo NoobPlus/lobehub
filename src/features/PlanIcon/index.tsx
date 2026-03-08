@@ -1,12 +1,10 @@
-import { Icon } from '@lobehub/ui';
-import { Tag } from 'antd';
-import { createStyles } from 'antd-style';
+import { Plans } from '@lobechat/types';
+import { Center, Flexbox, Icon, Tag } from '@lobehub/ui';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { Atom, Box, CircleSlash, Sparkle, Zap } from 'lucide-react';
-import { CSSProperties, MouseEvent, memo } from 'react';
+import { type CSSProperties, type MouseEvent } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Center, Flexbox } from 'react-layout-kit';
-
-import { Plans } from '@/types/subscription';
 
 export const themes = {
   [Plans.Free]: {
@@ -46,11 +44,11 @@ export const themes = {
   },
 };
 
-const useStyles = createStyles(({ css, token }) => ({
+const styles = createStaticStyles(({ css }) => ({
   icon: css`
     flex: none;
-    border-radius: ${token.borderRadiusLG}px;
-    box-shadow: 0 0 0 1px ${token.colorFillSecondary};
+    border-radius: ${cssVar.borderRadiusLG};
+    box-shadow: 0 0 0 1px ${cssVar.colorFillSecondary};
   `,
 }));
 
@@ -67,7 +65,6 @@ interface PlanIconProps {
 const PlanIcon = memo<PlanIconProps>(
   ({ type = 'icon', plan, size = 36, mono, style, className, onClick }) => {
     const { icon, theme } = themes[plan];
-    const { cx, styles, theme: token } = useStyles();
     const { t } = useTranslation('subscription');
     const isTag = type === 'tag';
     const isCombine = type === 'combine';
@@ -76,11 +73,10 @@ const PlanIcon = memo<PlanIconProps>(
     if (isTag) {
       return (
         <Tag
-          bordered={false}
           className={className}
-          onClick={onClick}
+          variant={'filled'}
           style={{
-            ...(theme || { background: token.colorFillSecondary, color: token.colorText }),
+            ...(theme || { background: cssVar.colorFillSecondary, color: cssVar.colorText }),
             border: 'none',
             borderRadius: 12,
             cursor: 'pointer',
@@ -88,6 +84,7 @@ const PlanIcon = memo<PlanIconProps>(
             margin: 0,
             ...style,
           }}
+          onClick={onClick}
         >
           {t(`plans.plan.${plan}.title`)}
         </Tag>
@@ -96,15 +93,15 @@ const PlanIcon = memo<PlanIconProps>(
 
     const iconContent = (
       <Center
-        className={cx(styles.icon, className)}
+        className={styles.icon}
         height={size}
-        onClick={onClick}
+        width={size}
         style={
           mono
             ? style
             : { ...theme, border: isFree ? undefined : `2px solid ${theme.color}`, ...style }
         }
-        width={size}
+        onClick={onClick}
       >
         <Icon color={mono ? undefined : theme.color} icon={icon} size={size / 2} />
       </Center>
@@ -112,7 +109,7 @@ const PlanIcon = memo<PlanIconProps>(
 
     if (isCombine) {
       return (
-        <Flexbox align={'center'} gap={8} horizontal>
+        <Flexbox horizontal align={'center'} gap={8}>
           {iconContent}
           <span>{t(`plans.plan.${plan}.title`)}</span>
         </Flexbox>

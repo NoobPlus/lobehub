@@ -1,4 +1,4 @@
-import { AIChatModelCard } from '../types/aiModel';
+import type { AIChatModelCard } from '../types/aiModel';
 
 // https://developer.qiniu.com/aitokenapi
 
@@ -9,7 +9,7 @@ const qiniuChatModels: AIChatModelCard[] = [
     },
     contextWindowTokens: 131_072,
     description:
-      '推理速度大幅提升，位居开源模型之首，媲美顶尖闭源模型。采用负载均衡辅助策略和多标记预测训练，性能显著增强。',
+      'Greatly improved reasoning speed, leading open models and comparable to top closed models. Uses load-balancing strategies and multi-token prediction training for significant gains.',
     displayName: 'DeepSeek V3',
     enabled: true,
     id: 'deepseek-v3',
@@ -21,7 +21,7 @@ const qiniuChatModels: AIChatModelCard[] = [
     },
     contextWindowTokens: 65_536,
     description:
-      'DeepSeek R1 是 DeepSeek 团队发布的最新开源模型，具备非常强悍的推理性能，尤其在数学、编程和推理任务上达到了与 OpenAI 的 o1 模型相当的水平。',
+      'DeepSeek R1 is DeepSeek’s latest open model with very strong reasoning, matching OpenAI’s o1 on math, programming, and reasoning tasks.',
     displayName: 'DeepSeek R1',
     enabled: true,
     id: 'deepseek-r1',
@@ -34,7 +34,33 @@ const qiniuChatModels: AIChatModelCard[] = [
       search: true,
     },
     contextWindowTokens: 204_800,
-    description: '专为高效编码与 Agent 工作流而生',
+    description:
+      'MiniMax-M2.1 is a lightweight, cutting-edge large language model optimized for coding, proxy workflows, and modern application development, providing cleaner, more concise output and faster perceptual response times.',
+    displayName: 'MiniMax M2.1',
+    enabled: true,
+    id: 'minimax/minimax-m2.1',
+    maxOutput: 131_072,
+    pricing: {
+      currency: 'CNY',
+      units: [
+        { name: 'textInput', rate: 2.1, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 8.4, strategy: 'fixed', unit: 'millionTokens' },
+      ],
+    },
+    releasedAt: '2025-12-24',
+    settings: {
+      searchImpl: 'params',
+    },
+    type: 'chat',
+  },
+  {
+    abilities: {
+      functionCall: true,
+      reasoning: true,
+      search: true,
+    },
+    contextWindowTokens: 204_800,
+    description: 'Built for efficient coding and agent workflows.',
     displayName: 'MiniMax M2',
     enabled: true,
     id: 'minimax/minimax-m2',
@@ -54,15 +80,40 @@ const qiniuChatModels: AIChatModelCard[] = [
   },
   {
     abilities: {
+      reasoning: true,
+    },
+    contextWindowTokens: 163_840,
+    description:
+      'DeepSeek Math V2 is a model that has made significant breakthroughs in mathematical reasoning capabilities. Its core innovation lies in the "self-verification" training mechanism, and it has achieved gold medal levels in several top mathematics competitions.',
+    displayName: 'DeepSeek Math V2',
+    enabled: true,
+    id: 'deepseek/deepseek-math-v2',
+    maxOutput: 131_072,
+    pricing: {
+      currency: 'CNY',
+      units: [
+        { name: 'textInput', rate: 4, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 16, strategy: 'fixed', unit: 'millionTokens' },
+      ],
+    },
+    releasedAt: '2025-11-27',
+    settings: {
+      searchImpl: 'params',
+    },
+    type: 'chat',
+  },
+  {
+    abilities: {
       functionCall: true,
       reasoning: true,
     },
     contextWindowTokens: 131_072,
-    description: '美团开源的专为对话交互和智能体任务优化的非思维型基础模型，在工具调用和复杂多轮交互场景中表现突出',
+    description:
+      'An open-source non-thinking base model from Meituan optimized for dialogue and agent tasks, strong in tool use and complex multi-turn interactions.',
     displayName: 'LongCat Flash Chat',
     enabled: true,
     id: 'meituan/longcat-flash-chat',
-    maxOutput: 65536,
+    maxOutput: 65_536,
     pricing: {
       currency: 'CNY',
       units: [
@@ -84,7 +135,35 @@ const qiniuChatModels: AIChatModelCard[] = [
       search: true,
     },
     contextWindowTokens: 200_000,
-    description: '智谱最新旗舰模型 GLM-4.6，在高级编码、长文本处理、推理与智能体能力上全面超越前代。',
+    description:
+      "GLM-4.7 is Zhipu's latest flagship model, offering improved general capabilities, simpler and more natural replies, and a more immersive writing experience.",
+    displayName: 'GLM-4.7',
+    enabled: true,
+    id: 'z-ai/glm-4.7',
+    maxOutput: 128_000,
+    pricing: {
+      currency: 'CNY',
+      units: [
+        { name: 'textInput', rate: 3.168, strategy: 'fixed', unit: 'millionTokens' },
+        { name: 'textOutput', rate: 12.528, strategy: 'fixed', unit: 'millionTokens' },
+      ],
+    },
+    releasedAt: '2025-12-23',
+    settings: {
+      extendParams: ['enableReasoning'],
+      searchImpl: 'params',
+    },
+    type: 'chat',
+  },
+  {
+    abilities: {
+      functionCall: true,
+      reasoning: true,
+      search: true,
+    },
+    contextWindowTokens: 200_000,
+    description:
+      'The flagship model of Zhipu, GLM-4.6, surpasses its predecessor in all aspects of advanced coding, long text processing, reasoning, and intelligent agent capabilities.',
     displayName: 'GLM-4.6',
     enabled: true,
     id: 'z-ai/glm-4.6',
@@ -112,7 +191,7 @@ const qiniuChatModels: AIChatModelCard[] = [
     },
     contextWindowTokens: 2_000_000,
     description:
-      '我们很高兴发布 Grok 4 Fast，这是我们在成本效益推理模型方面的最新进展。',
+      'We’re excited to release Grok 4 Fast, our latest progress in cost-effective reasoning models.',
     displayName: 'Grok 4 Fast',
     enabled: true,
     id: 'x-ai/grok-4-fast',
@@ -136,7 +215,7 @@ const qiniuChatModels: AIChatModelCard[] = [
     },
     contextWindowTokens: 256_000,
     description:
-      '我们很高兴推出 grok-code-fast-1，这是一款快速且经济高效的推理模型，在代理编码方面表现出色。',
+      'We’re excited to launch grok-code-fast-1, a fast and cost-effective reasoning model that excels at agentic coding.',
     displayName: 'Grok Code Fast 1',
     id: 'x-ai/grok-code-fast-1',
     pricing: {

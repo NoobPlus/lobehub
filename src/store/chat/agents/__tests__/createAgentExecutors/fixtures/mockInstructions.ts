@@ -1,11 +1,14 @@
-import type {
-  AgentInstruction,
-  AgentInstructionCallLlm,
-  AgentInstructionCallTool,
-  GeneralAgentCallLLMInstructionPayload,
-  GeneralAgentCallingToolInstructionPayload,
+import {
+  type AgentInstruction,
+  type AgentInstructionCallLlm,
+  type AgentInstructionCallTool,
+  type AgentInstructionExecTask,
+  type AgentInstructionExecTasks,
+  type ExecTaskItem,
+  type GeneralAgentCallingToolInstructionPayload,
+  type GeneralAgentCallLLMInstructionPayload,
 } from '@lobechat/agent-runtime';
-import type { ChatToolPayload } from '@lobechat/types';
+import { type ChatToolPayload } from '@lobechat/types';
 import { nanoid } from '@lobechat/utils';
 
 /**
@@ -123,4 +126,51 @@ export const createFinishInstruction = (
     reasonDetail,
     type: 'finish',
   } as AgentInstruction;
+};
+
+/**
+ * Create a mock exec_task instruction (single task)
+ */
+export const createExecTaskInstruction = (
+  task?: Partial<ExecTaskItem>,
+  parentMessageId?: string,
+): AgentInstructionExecTask => {
+  const defaultTask: ExecTaskItem = {
+    description: 'Test task',
+    instruction: 'Execute test task',
+    ...task,
+  };
+
+  return {
+    payload: {
+      parentMessageId: parentMessageId || `msg_${nanoid()}`,
+      task: defaultTask,
+    },
+    type: 'exec_task',
+  };
+};
+
+/**
+ * Create a mock exec_tasks instruction (multiple tasks)
+ */
+export const createExecTasksInstruction = (
+  tasks: ExecTaskItem[] = [],
+  parentMessageId?: string,
+): AgentInstructionExecTasks => {
+  const defaultTasks: ExecTaskItem[] = tasks.length
+    ? tasks
+    : [
+        {
+          description: 'Test task',
+          instruction: 'Execute test task',
+        },
+      ];
+
+  return {
+    payload: {
+      parentMessageId: parentMessageId || `msg_${nanoid()}`,
+      tasks: defaultTasks,
+    },
+    type: 'exec_tasks',
+  };
 };

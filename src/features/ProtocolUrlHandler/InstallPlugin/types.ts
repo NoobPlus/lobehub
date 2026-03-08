@@ -1,4 +1,4 @@
-import { McpInstallSchema } from '@lobechat/electron-client-ipc';
+import { type McpInstallSchema } from '@lobechat/electron-client-ipc';
 
 export enum PluginSource {
   CUSTOM = 'custom',
@@ -23,7 +23,7 @@ export interface ModalConfig {
   width?: number;
 }
 
-// 可信的第三方市场列表
+// List of trusted third-party marketplaces
 export const TRUSTED_MARKETPLACES = {
   higress: {
     description: 'Enterprise-grade MCP plugins for cloud-native applications',

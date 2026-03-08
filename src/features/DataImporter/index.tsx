@@ -1,25 +1,27 @@
 'use client';
 
-import { ErrorShape, ImportFileUploadState, ImportStage } from '@lobechat/types';
+import { type ErrorShape, type ImportFileUploadState } from '@lobechat/types';
+import { ImportStage } from '@lobechat/types';
+import { Center } from '@lobehub/ui';
 import { Upload } from 'antd';
-import { createStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { ImportIcon } from 'lucide-react';
-import React, { ReactNode, memo, useMemo, useState } from 'react';
+import { type ReactNode } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Center } from 'react-layout-kit';
 
 import DataStyleModal from '@/components/DataStyleModal';
 import { importService } from '@/services/import';
 import { useChatStore } from '@/store/chat';
-import { useSessionStore } from '@/store/session';
-import { ImportPgDataStructure } from '@/types/export';
+import { useHomeStore } from '@/store/home';
+import { type ImportPgDataStructure } from '@/types/export';
 
+import { parseConfigFile } from './config';
 import ImportError from './Error';
 import { FileUploading } from './FileUploading';
 import ImportPreviewModal from './ImportDetail';
 import DataLoading from './Loading';
 import SuccessResult from './SuccessResult';
-import { parseConfigFile } from './config';
 
 export interface ImportResult {
   added: number;
@@ -35,7 +37,7 @@ export interface ImportResults {
   type?: string;
 }
 
-const useStyles = createStyles(({ css }) => ({
+const styles = createStaticStyles(({ css }) => ({
   children: css`
     &::before {
       content: '';
@@ -56,9 +58,8 @@ interface DataImporterProps {
 
 const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
   const { t } = useTranslation('common');
-  const { styles } = useStyles();
 
-  const refreshSessions = useSessionStore((s) => s.refreshSessions);
+  const refreshAgentList = useHomeStore((s) => s.refreshAgentList);
   const [refreshMessages, refreshTopics] = useChatStore((s) => [s.refreshMessages, s.refreshTopic]);
 
   const [duration, setDuration] = useState(0);
@@ -164,6 +165,9 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
       </DataStyleModal>
       <Upload
         accept={'application/json'}
+        className={cx(styles.wrapper)}
+        maxCount={1}
+        showUploadList={false}
         beforeUpload={async (file) => {
           const config = await parseConfigFile(file);
           if (!config) return false;
@@ -173,16 +177,15 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
 
           return false;
         }}
-        className={styles.wrapper}
-        maxCount={1}
-        showUploadList={false}
       >
         {/* a very hackable solution: add a pseudo before to have a large hot zone */}
-        <div className={styles.children}>{children}</div>
+        <div className={cx(styles.children)}>{children}</div>
       </Upload>
       {importPgData && (
         <ImportPreviewModal
           importData={importPgData}
+          open={showImportModal}
+          onOpenChange={setShowImportModal}
           onConfirm={async (overwriteExisting) => {
             setImportState(ImportStage.Preparing);
 
@@ -205,12 +208,10 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
               overwriteExisting,
             });
 
-            await refreshSessions();
+            await refreshAgentList();
             await refreshMessages();
             await refreshTopics();
           }}
-          onOpenChange={setShowImportModal}
-          open={showImportModal}
         />
       )}
     </>

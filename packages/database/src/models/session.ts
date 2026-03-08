@@ -1,42 +1,20 @@
 import { DEFAULT_AGENT_CONFIG, DEFAULT_INBOX_AVATAR, INBOX_SESSION_ID } from '@lobechat/const';
-import {
+import type {
   ChatSessionList,
   LobeAgentConfig,
   LobeAgentSession,
   LobeGroupSession,
   SessionRankItem,
 } from '@lobechat/types';
-import {
-  Column,
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  gt,
-  inArray,
-  isNull,
-  like,
-  not,
-  or,
-  sql,
-} from 'drizzle-orm';
+import type { Column } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNull, like, not, or, sql } from 'drizzle-orm';
 import type { PartialDeep } from 'type-fest';
 
 import { merge } from '@/utils/merge';
 
-import {
-  AgentItem,
-  NewAgent,
-  NewSession,
-  SessionItem,
-  agents,
-  agentsToSessions,
-  sessionGroups,
-  sessions,
-  topics,
-} from '../schemas';
-import { LobeChatDatabase } from '../type';
+import type { AgentItem, NewAgent, NewSession, SessionItem } from '../schemas';
+import { agents, agentsToSessions, sessionGroups, sessions, topics } from '../schemas';
+import type { LobeChatDatabase } from '../type';
 import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../utils/genWhere';
 import { idGenerator } from '../utils/idGenerator';
 
@@ -269,7 +247,7 @@ export class SessionModel {
         params,
         systemRole,
         provider,
-        plugins = [],
+        plugins,
         openingMessage,
         openingQuestions = [],
         // TTS config
@@ -280,6 +258,8 @@ export class SessionModel {
         examples, // maps to fewShots
         identifier, // maps to marketIdentifier
         marketIdentifier,
+        // Editor data
+        editorData,
       } = config as any;
       if (type === 'group') {
         const result = await trx
@@ -306,6 +286,7 @@ export class SessionModel {
           chatConfig: chatConfig || {},
           createdAt: new Date(),
           description,
+          editorData: editorData || null,
           fewShots: examples || null, // Map examples to fewShots field
           id: idGenerator('agents'),
           marketIdentifier: identifier || marketIdentifier,
@@ -378,15 +359,14 @@ export class SessionModel {
 
     if (!result) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars,unused-imports/no-unused-vars
+    // eslint-disable-next-line unused-imports/no-unused-vars
     const { agent, clientId, ...session } = result;
     const sessionId = this.genId();
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _, slug: __, ...config } = agent;
 
     return this.create({
-      config: config,
+      config,
       id: sessionId,
       session: {
         ...session,
@@ -546,7 +526,7 @@ export class SessionModel {
     }
 
     // Build data to be merged, excluding params (processed separately)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const { params: _params, ...restData } = data;
     const mergedValue = merge(session.agent, restData);
 
@@ -635,6 +615,7 @@ export class SessionModel {
         avatar: agent?.avatar ?? avatar ?? undefined,
         backgroundColor: agent?.backgroundColor ?? backgroundColor ?? undefined,
         description: agent?.description ?? description ?? undefined,
+
         marketIdentifier: agent?.marketIdentifier ?? undefined,
         tags: agent?.tags ?? undefined,
         title: agent?.title ?? title ?? undefined,

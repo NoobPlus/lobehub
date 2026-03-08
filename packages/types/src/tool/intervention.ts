@@ -5,9 +5,10 @@ import { z } from 'zod';
  */
 export type HumanInterventionPolicy =
   | 'never' // Never intervene, auto-execute
-  | 'required'; // Always require intervention
+  | 'required' // Need intervention (can be bypassed by user's auto-run mode)
+  | 'always'; // Always need intervention (cannot be bypassed by auto-run mode)
 
-export const HumanInterventionPolicySchema = z.enum(['never', 'required']);
+export const HumanInterventionPolicySchema = z.enum(['never', 'required', 'always']);
 
 /**
  * Argument Matcher for parameter-level filtering
@@ -137,13 +138,15 @@ export interface UserInterventionConfig {
    * - auto-run: Automatically approve all tools without user consent
    * - allow-list: Only approve tools in the allow list
    * - manual: Use tool's own humanIntervention config (default)
+   * - headless: Fully automated mode for async tasks - all tools execute automatically,
+   *             security blacklist tools are skipped (not blocked)
    */
-  approvalMode: 'auto-run' | 'allow-list' | 'manual';
+  approvalMode: 'auto-run' | 'allow-list' | 'manual' | 'headless';
 }
 
 export const UserInterventionConfigSchema = z.object({
   allowList: z.array(z.string()).optional(),
-  approvalMode: z.enum(['auto-run', 'allow-list', 'manual']),
+  approvalMode: z.enum(['auto-run', 'allow-list', 'manual', 'headless']),
 });
 
 /**

@@ -1,5 +1,5 @@
-import type { AgentEventDone } from '@lobechat/agent-runtime';
-import { describe, expect, it, vi } from 'vitest';
+import { type AgentEventDone } from '@lobechat/agent-runtime';
+import { describe, expect, it } from 'vitest';
 
 import { createFinishInstruction } from './fixtures';
 import { createMockStore } from './fixtures/mockStore';
@@ -12,7 +12,7 @@ describe('finish executor', () => {
       const mockStore = createMockStore();
       const context = createTestContext();
       const instruction = createFinishInstruction('completed', 'All tasks finished');
-      const state = createInitialState({ sessionId: 'test-session', stepCount: 5 });
+      const state = createInitialState({ operationId: 'test-session', stepCount: 5 });
 
       // When
       const result = await executeWithMockContext({
@@ -43,7 +43,7 @@ describe('finish executor', () => {
       const context = createTestContext();
       const instruction = createFinishInstruction('completed');
       const state = createInitialState({
-        sessionId: 'test-session',
+        operationId: 'test-session',
         stepCount: 10,
         messages: [{ role: 'user', content: 'test' } as any],
         cost: {
@@ -87,7 +87,7 @@ describe('finish executor', () => {
       });
 
       // Then
-      expect(result.newState.sessionId).toBe(state.sessionId);
+      expect(result.newState.operationId).toBe(state.operationId);
       expect(result.newState.stepCount).toBe(state.stepCount);
       expect(result.newState.messages).toEqual(state.messages);
       expect(result.newState.usage).toEqual(state.usage);
@@ -267,7 +267,7 @@ describe('finish executor', () => {
       const mockStore = createMockStore();
       const context = createTestContext();
       const instruction = createFinishInstruction('completed');
-      const state = createInitialState({ sessionId: 'test', stepCount: 5 });
+      const state = createInitialState({ operationId: 'test', stepCount: 5 });
       const originalState = JSON.parse(JSON.stringify(state));
 
       // When

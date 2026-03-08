@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { getTestDB } from '../../core/getTestDB';
 import { chunks, embeddings, users } from '../../schemas';
-import { LobeChatDatabase } from '../../type';
+import type { LobeChatDatabase } from '../../type';
 import { EmbeddingModel } from '../embedding';
-import { getTestDB } from './_util';
 import { designThinkingQuery } from './fixtures/embedding';
 
 const userId = 'embedding-user-test';

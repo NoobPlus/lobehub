@@ -1,34 +1,33 @@
 import { getSingletonAnalyticsOptional } from '@lobehub/analytics';
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
-import useSWR, { SWRResponse, mutate } from 'swr';
-import type { PartialDeep } from 'type-fest';
-import { StateCreator } from 'zustand/vanilla';
+import { type SWRResponse } from 'swr';
+import useSWR from 'swr';
+import { type PartialDeep } from 'type-fest';
 
 import { message } from '@/components/AntdStaticMethods';
-import { MESSAGE_CANCEL_FLAT } from '@/const/message';
 import { DEFAULT_AGENT_LOBE_SESSION, INBOX_SESSION_ID } from '@/const/session';
-import { DEFAULT_CHAT_GROUP_CHAT_CONFIG } from '@/const/settings';
-import { useClientDataSWR } from '@/libs/swr';
+import { mutate, useClientDataSWR } from '@/libs/swr';
 import { chatGroupService } from '@/services/chatGroup';
 import { sessionService } from '@/services/session';
-import { getChatGroupStoreState } from '@/store/chatGroup';
-import { SessionStore } from '@/store/session';
+import { getChatGroupStoreState } from '@/store/agentGroup';
+import { type SessionStore } from '@/store/session';
+import { type StoreSetter } from '@/store/types';
 import { getUserStoreState, useUserStore } from '@/store/user';
 import { settingsSelectors, userProfileSelectors } from '@/store/user/selectors';
-import { MetaData } from '@/types/meta';
 import {
-  ChatSessionList,
-  LobeAgentSession,
-  LobeSessionGroups,
-  LobeSessionType,
-  LobeSessions,
-  UpdateSessionParams,
+  type ChatSessionList,
+  type LobeAgentSession,
+  type LobeSessionGroups,
+  type LobeSessions,
+  type UpdateSessionParams,
 } from '@/types/session';
+import { LobeSessionType } from '@/types/session';
 import { merge } from '@/utils/merge';
 import { setNamespace } from '@/utils/storeDebug';
 
-import { SessionDispatch, sessionsReducer } from './reducers';
+import { type SessionDispatch } from './reducers';
+import { sessionsReducer } from './reducers';
 import { sessionSelectors } from './selectors';
 import { sessionMetaSelectors } from './selectors/meta';
 
@@ -37,85 +36,34 @@ const n = setNamespace('session');
 const FETCH_SESSIONS_KEY = 'fetchSessions';
 const SEARCH_SESSIONS_KEY = 'searchSessions';
 
-/* eslint-disable typescript-sort-keys/interface */
-export interface SessionAction {
-  /**
-   * switch the session
-   */
-  switchSession: (sessionId: string) => void;
-  /**
-   * reset sessions to default
-   */
-  clearSessions: () => Promise<void>;
-  /**
-   * create a new session
-   * @param agent
-   * @returns sessionId
-   */
-  createSession: (
-    session?: PartialDeep<LobeAgentSession>,
-    isSwitchSession?: boolean,
-  ) => Promise<string>;
+type Setter = StoreSetter<SessionStore>;
+export const createSessionSlice = (set: Setter, get: () => SessionStore, _api?: unknown) =>
+  new SessionActionImpl(set, get, _api);
 
-  duplicateSession: (id: string) => Promise<void>;
-  triggerSessionUpdate: (id: string) => Promise<void>;
-  updateSessionGroupId: (sessionId: string, groupId: string) => Promise<void>;
-  updateSessionMeta: (meta: Partial<MetaData>) => void;
+export class SessionActionImpl {
+  readonly #get: () => SessionStore;
+  readonly #set: Setter;
 
-  /**
-   * Pins or unpins a session.
-   */
-  pinSession: (id: string, pinned: boolean) => Promise<void>;
-  /**
-   * re-fetch the data
-   */
-  refreshSessions: () => Promise<void>;
-  /**
-   * remove session
-   * @param id - sessionId
-   */
-  removeSession: (id: string) => Promise<void>;
+  constructor(set: Setter, get: () => SessionStore, _api?: unknown) {
+    void _api;
+    this.#set = set;
+    this.#get = get;
+  }
 
-  /**
-   * Set the agent panel pinned state
-   */
-  setAgentPinned: (pinned: boolean | ((prev: boolean) => boolean)) => void;
-  /**
-   * Toggle the agent panel pinned state
-   */
-  toggleAgentPinned: () => void;
-
-  updateSearchKeywords: (keywords: string) => void;
-
-  useFetchSessions: (
-    enabled: boolean,
-    isLogin: boolean | undefined,
-  ) => SWRResponse<ChatSessionList>;
-  useSearchSessions: (keyword?: string) => SWRResponse<any>;
-
-  internal_dispatchSessions: (payload: SessionDispatch) => void;
-  internal_updateSession: (id: string, data: Partial<UpdateSessionParams>) => Promise<void>;
-  internal_processSessions: (
-    sessions: LobeSessions,
-    customGroups: LobeSessionGroups,
-    actions?: string,
-  ) => void;
-  /* eslint-enable */
-}
-
-export const createSessionSlice: StateCreator<
-  SessionStore,
-  [['zustand/devtools', never]],
-  [],
-  SessionAction
-> = (set, get) => ({
-  clearSessions: async () => {
+  clearSessions = async (): Promise<void> => {
     await sessionService.removeAllSessions();
-    await get().refreshSessions();
-  },
+    await this.#get().refreshSessions();
+  };
 
-  createSession: async (agent, isSwitchSession = true) => {
-    const { switchSession, refreshSessions } = get();
+  closeAllAgentsDrawer = (): void => {
+    this.#set({ allAgentsDrawerOpen: false }, false, n('closeAllAgentsDrawer'));
+  };
+
+  createSession = async (
+    agent?: PartialDeep<LobeAgentSession>,
+    isSwitchSession: boolean = true,
+  ): Promise<string> => {
+    const { switchSession, refreshSessions } = this.#get();
 
     // merge the defaultAgent in settings
     const defaultAgent = merge(
@@ -149,16 +97,16 @@ export const createSessionSlice: StateCreator<
     if (isSwitchSession) switchSession(id);
 
     return id;
-  },
+  };
 
-  duplicateSession: async (id) => {
-    const { switchSession, refreshSessions } = get();
-    const session = sessionSelectors.getSessionById(id)(get());
+  duplicateSession = async (id: string): Promise<void> => {
+    const { switchSession, refreshSessions } = this.#get();
+    const session = sessionSelectors.getSessionById(id)(this.#get());
 
     if (!session) return;
     const title = sessionMetaSelectors.getTitle(session.meta);
 
-    const newTitle = t('duplicateSession.title', { ns: 'chat', title: title });
+    const newTitle = t('duplicateSession.title', { ns: 'chat', title });
 
     const messageLoadingKey = 'duplicateSession.loading';
 
@@ -182,83 +130,78 @@ export const createSessionSlice: StateCreator<
     message.success(t('duplicateSession.success', { ns: 'chat' }));
 
     switchSession(newId);
-  },
-  pinSession: async (id, pinned) => {
-    await get().internal_updateSession(id, { pinned });
-  },
-  removeSession: async (sessionId) => {
+  };
+
+  openAllAgentsDrawer = (): void => {
+    this.#set({ allAgentsDrawerOpen: true }, false, n('openAllAgentsDrawer'));
+  };
+
+  pinSession = async (id: string, pinned: boolean): Promise<void> => {
+    await this.#get().internal_updateSession(id, { pinned });
+  };
+
+  removeSession = async (sessionId: string): Promise<void> => {
     await sessionService.removeSession(sessionId);
-    await get().refreshSessions();
+    await this.#get().refreshSessions();
 
     // If the active session deleted, switch to the inbox session
-    if (sessionId === get().activeId) {
-      get().switchSession(INBOX_SESSION_ID);
+    if (sessionId === this.#get().activeId) {
+      this.#get().switchSession(INBOX_SESSION_ID);
     }
-  },
+  };
 
-  setAgentPinned: (value) => {
-    set(
+  setAgentPinned = (value: boolean | ((prev: boolean) => boolean)): void => {
+    this.#set(
       (state) => ({
         isAgentPinned: typeof value === 'function' ? value(state.isAgentPinned) : value,
       }),
       false,
       n('setAgentPinned'),
     );
-  },
+  };
 
-  switchSession: (sessionId) => {
-    if (get().activeId === sessionId) return;
+  switchSession = (sessionId: string): void => {
+    if (this.#get().activeAgentId === sessionId) return;
 
-    set({ activeId: sessionId }, false, n(`activeSession/${sessionId}`));
-  },
+    this.#set({ activeAgentId: sessionId }, false, n(`activeSession/${sessionId}`));
+  };
 
-  toggleAgentPinned: () => {
-    set((state) => ({ isAgentPinned: !state.isAgentPinned }), false, n('toggleAgentPinned'));
-  },
+  toggleAgentPinned = (): void => {
+    this.#set((state) => ({ isAgentPinned: !state.isAgentPinned }), false, n('toggleAgentPinned'));
+  };
 
-  triggerSessionUpdate: async (id) => {
-    await get().internal_updateSession(id, { updatedAt: new Date() });
-  },
+  triggerSessionUpdate = async (id: string): Promise<void> => {
+    await this.#get().internal_updateSession(id, { updatedAt: new Date() });
+  };
 
-  updateSearchKeywords: (keywords) => {
-    set(
+  updateSearchKeywords = (keywords: string): void => {
+    this.#set(
       { isSearching: !!keywords, sessionSearchKeywords: keywords },
       false,
       n('updateSearchKeywords'),
     );
-  },
-  updateSessionGroupId: async (sessionId, group) => {
-    const session = sessionSelectors.getSessionById(sessionId)(get());
+  };
+
+  updateSessionGroupId = async (sessionId: string, group: string): Promise<void> => {
+    const session = sessionSelectors.getSessionById(sessionId)(this.#get());
 
     if (session?.type === 'group') {
       // For group sessions (chat groups), use the chat group service
       await chatGroupService.updateGroup(sessionId, {
         groupId: group === 'default' ? null : group,
       });
-      await get().refreshSessions();
+      await this.#get().refreshSessions();
     } else {
       // For regular agent sessions, use the existing session service
-      await get().internal_updateSession(sessionId, { group });
+      await this.#get().internal_updateSession(sessionId, { group });
     }
-  },
+  };
 
-  updateSessionMeta: async (meta) => {
-    const session = sessionSelectors.currentSession(get());
-    if (!session) return;
-
-    const { activeId, refreshSessions } = get();
-
-    const abortController = get().signalSessionMeta as AbortController;
-    if (abortController) abortController.abort(MESSAGE_CANCEL_FLAT);
-    const controller = new AbortController();
-    set({ signalSessionMeta: controller }, false, 'updateSessionMetaSignal');
-
-    await sessionService.updateSessionMeta(activeId, meta, controller.signal);
-    await refreshSessions();
-  },
-
-  useFetchSessions: (enabled, isLogin) =>
-    useClientDataSWR<ChatSessionList>(
+  useFetchSessions = (
+    enabled: boolean,
+    isLogin: boolean | undefined,
+  ): SWRResponse<ChatSessionList> => {
+    return useClientDataSWR<ChatSessionList>(
       enabled ? [FETCH_SESSIONS_KEY, isLogin] : null,
       () => sessionService.getGroupedSessions(),
       {
@@ -268,17 +211,13 @@ export const createSessionSlice: StateCreator<
         },
         onSuccess: (data) => {
           if (
-            get().isSessionsFirstFetchFinished &&
-            isEqual(get().sessions, data.sessions) &&
-            isEqual(get().sessionGroups, data.sessionGroups)
+            this.#get().isSessionsFirstFetchFinished &&
+            isEqual(this.#get().sessions, data.sessions) &&
+            isEqual(this.#get().sessionGroups, data.sessionGroups)
           )
             return;
 
-          get().internal_processSessions(
-            data.sessions,
-            data.sessionGroups,
-            n('useFetchSessions/updateData') as any,
-          );
+          this.#get().internal_processSessions(data.sessions, data.sessionGroups);
 
           // Sync chat groups from group sessions to chat store
           const groupSessions = data.sessions.filter((session) => session.type === 'group');
@@ -288,20 +227,19 @@ export const createSessionSlice: StateCreator<
             const chatGroupStore = getChatGroupStoreState();
             const chatGroups = groupSessions.map((session) => ({
               accessedAt: session.updatedAt,
+              avatar: null,
+              backgroundColor: null,
               clientId: null,
-              config: {
-                maxResponseInRow: 3,
-                orchestratorModel: 'gpt-4',
-                orchestratorProvider: 'openai',
-                responseOrder: 'sequential' as const,
-                responseSpeed: 'medium' as const,
-                scene: DEFAULT_CHAT_GROUP_CHAT_CONFIG.scene,
-              },
+              config: null,
+              content: null,
               createdAt: session.createdAt,
               description: session.meta?.description || '',
+              editorData: null,
 
               groupId: session.group || null,
               id: session.id, // Add the missing groupId property
+
+              marketIdentifier: null,
 
               // Will be set by the backend
               pinned: session.pinned || false,
@@ -317,13 +255,19 @@ export const createSessionSlice: StateCreator<
             chatGroupStore.internal_updateGroupMaps(chatGroups);
           }
 
-          set({ isSessionsFirstFetchFinished: true }, false, n('useFetchSessions/onSuccess', data));
+          this.#set(
+            { isSessionsFirstFetchFinished: true },
+            false,
+            n('useFetchSessions/onSuccess', data),
+          );
         },
         suspense: true,
       },
-    ),
-  useSearchSessions: (keyword) =>
-    useSWR<LobeSessions>(
+    );
+  };
+
+  useSearchSessions = (keyword?: string): SWRResponse<any> => {
+    return useSWR<LobeSessions>(
       [SEARCH_SESSIONS_KEY, keyword],
       async () => {
         if (!keyword) return [];
@@ -331,20 +275,25 @@ export const createSessionSlice: StateCreator<
         return sessionService.searchSessions(keyword);
       },
       { revalidateOnFocus: false, revalidateOnMount: false },
-    ),
+    );
+  };
 
-  /* eslint-disable sort-keys-fix/sort-keys-fix */
-  internal_dispatchSessions: (payload) => {
-    const nextSessions = sessionsReducer(get().sessions, payload);
-    get().internal_processSessions(nextSessions, get().sessionGroups);
-  },
-  internal_updateSession: async (id, data) => {
-    get().internal_dispatchSessions({ type: 'updateSession', id, value: data });
+  internal_dispatchSessions = (payload: SessionDispatch): void => {
+    const nextSessions = sessionsReducer(this.#get().sessions, payload);
+    this.#get().internal_processSessions(nextSessions, this.#get().sessionGroups);
+  };
+
+  internal_updateSession = async (
+    id: string,
+    data: Partial<UpdateSessionParams>,
+  ): Promise<void> => {
+    this.#get().internal_dispatchSessions({ id, type: 'updateSession', value: data });
 
     await sessionService.updateSession(id, data);
-    await get().refreshSessions();
-  },
-  internal_processSessions: (sessions, sessionGroups) => {
+    await this.#get().refreshSessions();
+  };
+
+  internal_processSessions = (sessions: LobeSessions, sessionGroups: LobeSessionGroups): void => {
     const customGroups = sessionGroups.map((item) => ({
       ...item,
       children: sessions.filter((i) => i.group === item.id && !i.pinned),
@@ -355,7 +304,7 @@ export const createSessionSlice: StateCreator<
     );
     const pinnedGroup = sessions.filter((item) => item.pinned);
 
-    set(
+    this.#set(
       {
         customSessionGroups: customGroups,
         defaultSessions: defaultGroup,
@@ -366,8 +315,11 @@ export const createSessionSlice: StateCreator<
       false,
       n('processSessions'),
     );
-  },
-  refreshSessions: async () => {
+  };
+
+  refreshSessions = async (): Promise<void> => {
     await mutate([FETCH_SESSIONS_KEY, true]);
-  },
-});
+  };
+}
+
+export type SessionAction = Pick<SessionActionImpl, keyof SessionActionImpl>;

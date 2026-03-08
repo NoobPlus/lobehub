@@ -1,10 +1,15 @@
 import type { AgentEvent } from './event';
-import { AgentInstruction, AgentRuntimeContext } from './instruction';
-import { AgentState } from './state';
+import type { AgentInstruction, AgentRuntimeContext } from './instruction';
+import type { AgentState } from './state';
 
 export type InstructionExecutor = (
   instruction: AgentInstruction,
   state: AgentState,
+  /**
+   * Runtime context for this step
+   * Contains stepContext with dynamic state like GTD todos
+   */
+  context?: AgentRuntimeContext,
 ) => Promise<{
   events: AgentEvent[];
   newState: AgentState;

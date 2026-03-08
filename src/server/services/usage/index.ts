@@ -3,10 +3,10 @@ import debug from 'debug';
 import { desc, eq } from 'drizzle-orm';
 
 import { messages } from '@/database/schemas';
-import { LobeChatDatabase } from '@/database/type';
+import { type LobeChatDatabase } from '@/database/type';
 import { genRangeWhere, genWhere } from '@/database/utils/genWhere';
-import { MessageMetadata } from '@/types/message';
-import { UsageLog, UsageRecordItem } from '@/types/usage/usageRecord';
+import { type MessageMetadata } from '@/types/message';
+import { type UsageLog, type UsageRecordItem } from '@/types/usage/usageRecord';
 import { formatDate } from '@/utils/format';
 
 const log = debug('lobe-usage:service');
@@ -25,11 +25,11 @@ export class UsageRecordService {
    * @returns UsageRecordItem[]
    */
   findByMonth = async (mo?: string): Promise<UsageRecordItem[]> => {
-    // 设置 startAt 和 endAt
+    // Set startAt and endAt
     let startAt: string;
     let endAt: string;
-    if (mo) {
-      // mo 格式: "YYYY-MM"
+    if (mo && dayjs(mo, 'YYYY-MM', true).isValid()) {
+      // mo format: "YYYY-MM"
       startAt = dayjs(mo, 'YYYY-MM').startOf('month').format('YYYY-MM-DD');
       endAt = dayjs(mo, 'YYYY-MM').endOf('month').format('YYYY-MM-DD');
     } else {
@@ -86,20 +86,23 @@ export class UsageRecordService {
   };
 
   findAndGroupByDay = async (mo?: string): Promise<UsageLog[]> => {
-    // 设置 startAt 和 endAt
+    // Set startAt and endAt
     let startAt: string;
     let endAt: string;
-    if (mo) {
-      // mo 格式: "YYYY-MM"
+    let month: string;
+    if (mo && dayjs(mo, 'YYYY-MM', true).isValid()) {
+      // mo format: "YYYY-MM"
       startAt = dayjs(mo, 'YYYY-MM').startOf('month').format('YYYY-MM-DD');
       endAt = dayjs(mo, 'YYYY-MM').endOf('month').format('YYYY-MM-DD');
+      month = mo;
     } else {
       startAt = dayjs().startOf('month').format('YYYY-MM-DD');
       endAt = dayjs().endOf('month').format('YYYY-MM-DD');
+      month = dayjs().format('YYYY-MM');
     }
-    const spends = await this.findByMonth(mo);
+    const spends = await this.findByMonth(month);
     // Clustering by time
-    let usages = new Map<string, { date: Date; logs: UsageRecordItem[] }>();
+    const usages = new Map<string, { date: Date; logs: UsageRecordItem[] }>();
     spends.forEach((spend) => {
       if (!usages.has(formatDate(spend.createdAt))) {
         usages.set(formatDate(spend.createdAt), { date: spend.createdAt, logs: [spend] });
@@ -108,7 +111,7 @@ export class UsageRecordService {
       usages.get(formatDate(spend.createdAt))?.logs.push(spend);
     });
     // Calculate usage
-    let usageLogs: UsageLog[] = [];
+    const usageLogs: UsageLog[] = [];
     usages.forEach((spends, date) => {
       const totalSpend = spends.logs.reduce((acc, spend) => acc + spend.spend, 0);
       const totalTokens = spends.logs.reduce((acc, spend) => (spend.totalTokens || 0) + acc, 0);

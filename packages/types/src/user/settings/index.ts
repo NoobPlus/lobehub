@@ -1,15 +1,16 @@
 import { z } from 'zod';
 
 import type { LobeAgentSettings } from '../../session';
-import { UserGeneralConfig } from './general';
-import { UserHotkeyConfig } from './hotkey';
-import { UserImageConfig } from './image';
-import { UserKeyVaults } from './keyVaults';
-import { MarketAuthTokens } from './market';
-import { UserModelProviderConfig } from './modelProvider';
-import { UserSystemAgentConfig } from './systemAgent';
-import { UserToolConfig } from './tool';
-import { UserTTSConfig } from './tts';
+import type { UserGeneralConfig } from './general';
+import type { UserHotkeyConfig } from './hotkey';
+import type { UserImageConfig } from './image';
+import type { UserKeyVaults } from './keyVaults';
+import type { MarketAuthTokens } from './market';
+import type { UserMemorySettings } from './memory';
+import type { UserModelProviderConfig } from './modelProvider';
+import type { UserSystemAgentConfig } from './systemAgent';
+import type { UserToolConfig } from './tool';
+import type { UserTTSConfig } from './tts';
 
 export type UserDefaultAgent = LobeAgentSettings;
 
@@ -19,6 +20,7 @@ export * from './hotkey';
 export * from './image';
 export * from './keyVaults';
 export * from './market';
+export * from './memory';
 export * from './modelProvider';
 export * from './sync';
 export * from './systemAgent';
@@ -26,7 +28,7 @@ export * from './tool';
 export * from './tts';
 
 /**
- * 配置设置
+ * User configuration settings
  */
 export interface UserSettings {
   defaultAgent: UserDefaultAgent;
@@ -36,6 +38,7 @@ export interface UserSettings {
   keyVaults: UserKeyVaults;
   languageModel: UserModelProviderConfig;
   market?: MarketAuthTokens;
+  memory?: UserMemorySettings;
   systemAgent: UserSystemAgentConfig;
   tool: UserToolConfig;
   tts: UserTTSConfig;
@@ -54,6 +57,7 @@ export const UserSettingsSchema = z
     keyVaults: z.any().optional(),
     languageModel: z.any().optional(),
     market: z.any().optional(),
+    memory: z.any().optional(),
     systemAgent: z.any().optional(),
     tool: z.any().optional(),
     tts: z.any().optional(),

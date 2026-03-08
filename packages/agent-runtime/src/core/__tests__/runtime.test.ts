@@ -1,7 +1,7 @@
-import { ChatToolPayload } from '@lobechat/types';
+import type { ChatToolPayload } from '@lobechat/types';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
+import type {
   Agent,
   AgentEventError,
   AgentRuntimeContext,
@@ -10,7 +10,6 @@ import {
   CostCalculationContext,
   CostLimit,
   RuntimeConfig,
-  ToolsCalling,
   Usage,
 } from '../../types';
 import { AgentRuntime } from '../runtime';
@@ -23,9 +22,10 @@ class MockAgent implements Agent {
 
   async runner(context: AgentRuntimeContext, state: AgentState) {
     switch (context.phase) {
-      case 'user_input':
+      case 'user_input': {
         return { type: 'call_llm' as const, payload: { messages: state.messages } };
-      case 'llm_result':
+      }
+      case 'llm_result': {
         const llmPayload = context.payload as { result: any; hasToolCalls: boolean };
         if (llmPayload.hasToolCalls) {
           return {
@@ -34,10 +34,13 @@ class MockAgent implements Agent {
           };
         }
         return { type: 'finish' as const, reason: 'completed' as const, reasonDetail: 'Done' };
-      case 'tool_result':
+      }
+      case 'tool_result': {
         return { type: 'call_llm' as const, payload: { messages: state.messages } };
-      default:
+      }
+      default: {
         return { type: 'finish' as const, reason: 'completed' as const, reasonDetail: 'Done' };
+      }
     }
   }
 }
@@ -46,13 +49,14 @@ class MockAgent implements Agent {
 function createTestContext(
   phase: AgentRuntimeContext['phase'],
   payload?: any,
-  sessionId: string = 'test-session',
+  operationId: string = 'test-session',
 ): AgentRuntimeContext {
   return {
     phase,
     payload,
     session: {
-      sessionId,
+      // Note: AgentRuntimeContext.session uses sessionId for backward compatibility
+      sessionId: operationId,
       messageCount: 1,
       status: 'idle',
       stepCount: 0,
@@ -116,7 +120,7 @@ describe('AgentRuntime', () => {
       };
 
       const runtime = new AgentRuntime(agent);
-      const state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+      const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
 
       const toolCall = {
         id: 'call_123',
@@ -142,7 +146,7 @@ describe('AgentRuntime', () => {
       const agent = new MockAgent();
       const runtime = new AgentRuntime(agent);
       const state = AgentRuntime.createInitialState({
-        sessionId: 'test-session',
+        operationId: 'test-session',
         messages: [{ role: 'user', content: 'Hello' }],
       });
 
@@ -159,7 +163,7 @@ describe('AgentRuntime', () => {
       agent.runner = vi.fn().mockImplementation(() => Promise.reject(new Error('Agent error')));
 
       const runtime = new AgentRuntime(agent);
-      const state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+      const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
 
       const result = await runtime.step(state);
 
@@ -179,7 +183,7 @@ describe('AgentRuntime', () => {
         const agent = new MockAgent();
         const runtime = new AgentRuntime(agent);
         const state = AgentRuntime.createInitialState({
-          sessionId: 'test-session',
+          operationId: 'test-session',
           messages: [{ role: 'user', content: 'Hello' }],
         });
 
@@ -204,7 +208,7 @@ describe('AgentRuntime', () => {
 
         const runtime = new AgentRuntime(agent);
         const state = AgentRuntime.createInitialState({
-          sessionId: 'test-session',
+          operationId: 'test-session',
           messages: [{ role: 'user', content: 'Hello' }],
         });
 
@@ -252,7 +256,7 @@ describe('AgentRuntime', () => {
 
         const runtime = new AgentRuntime(agent);
         const state = AgentRuntime.createInitialState({
-          sessionId: 'test-session',
+          operationId: 'test-session',
           messages: [{ role: 'user', content: 'Hello' }],
         });
 
@@ -286,7 +290,7 @@ describe('AgentRuntime', () => {
         };
 
         const runtime = new AgentRuntime(agent);
-        const state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+        const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
 
         const toolCall = {
           id: 'call_123',
@@ -317,7 +321,7 @@ describe('AgentRuntime', () => {
       it('should throw error for unknown tool', async () => {
         const agent = new MockAgent();
         const runtime = new AgentRuntime(agent);
-        const state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+        const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
 
         const toolCall = {
           id: 'call_123',
@@ -356,14 +360,14 @@ describe('AgentRuntime', () => {
         );
 
         const runtime = new AgentRuntime(agent);
-        const state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+        const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
 
         const result = await runtime.step(state);
 
         expect(result.events).toHaveLength(1);
         expect(result.events[0]).toMatchObject({
           type: 'human_approve_required',
-          sessionId: 'test-session',
+          operationId: 'test-session',
         });
 
         expect(result.newState.status).toBe('waiting_for_human');
@@ -381,7 +385,7 @@ describe('AgentRuntime', () => {
         );
 
         const runtime = new AgentRuntime(agent);
-        const state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+        const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
 
         const result = await runtime.step(state);
 
@@ -390,7 +394,7 @@ describe('AgentRuntime', () => {
           type: 'human_prompt_required',
           prompt: 'Please provide input',
           metadata: { key: 'value' },
-          sessionId: 'test-session',
+          operationId: 'test-session',
         });
 
         expect(result.newState.status).toBe('waiting_for_human');
@@ -415,7 +419,7 @@ describe('AgentRuntime', () => {
         );
 
         const runtime = new AgentRuntime(agent);
-        const state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+        const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
 
         const result = await runtime.step(state);
 
@@ -428,7 +432,7 @@ describe('AgentRuntime', () => {
             { label: 'Option 2', value: 'opt2' },
           ],
           multi: false,
-          sessionId: 'test-session',
+          operationId: 'test-session',
         });
 
         expect(result.newState.status).toBe('waiting_for_human');
@@ -447,7 +451,7 @@ describe('AgentRuntime', () => {
         );
 
         const runtime = new AgentRuntime(agent);
-        const state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+        const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
 
         const result = await runtime.step(state);
 
@@ -462,16 +466,49 @@ describe('AgentRuntime', () => {
         });
 
         expect(result.newState.status).toBe('done');
+        // finish is not a real execution step, should not increment stepCount
+        expect(result.newState.stepCount).toBe(0);
+      });
+
+      it('should not count finish as a step in stepCount', async () => {
+        const agent = new MockAgent();
+        agent.modelRuntime = async function* () {
+          yield { content: 'test response' };
+        };
+
+        agent.runner = vi.fn().mockImplementation((context: AgentRuntimeContext) => {
+          if (context.phase === 'user_input') {
+            return Promise.resolve({ type: 'call_llm', payload: { messages: [] } });
+          }
+          // After LLM result, finish
+          return Promise.resolve({ type: 'finish', reason: 'completed', reasonDetail: 'Done' });
+        });
+
+        const runtime = new AgentRuntime(agent);
+        const state = AgentRuntime.createInitialState({
+          operationId: 'test-session',
+          messages: [{ role: 'user', content: 'Hello' }],
+        });
+
+        // Step 1: call_llm (real work)
+        const result1 = await runtime.step(state, createTestContext('user_input'));
+        expect(result1.newState.stepCount).toBe(1);
+        expect(result1.newState.status).toBe('running');
+
+        // Step 2: finish (not real work)
+        const result2 = await runtime.step(result1.newState, result1.nextContext);
+        expect(result2.newState.stepCount).toBe(1); // should stay at 1, not become 2
+        expect(result2.newState.status).toBe('done');
       });
     });
   });
 
   describe('createInitialState', () => {
     it('should create initial state without message', () => {
-      const state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+      const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
 
       expect(state).toMatchObject({
-        sessionId: 'test-session',
+        operationId: 'test-session',
         status: 'idle',
         messages: [],
         stepCount: 0,
@@ -482,7 +519,7 @@ describe('AgentRuntime', () => {
 
     it('should create initial state with message', () => {
       const state = AgentRuntime.createInitialState({
-        sessionId: 'test-session',
+        operationId: 'test-session',
         messages: [{ role: 'user', content: 'Hello world' }],
       });
 
@@ -496,7 +533,7 @@ describe('AgentRuntime', () => {
 
     it('should create initial state with custom stepCount', () => {
       const state = AgentRuntime.createInitialState({
-        sessionId: 'test-session',
+        operationId: 'test-session',
         stepCount: 5,
       });
 
@@ -505,7 +542,7 @@ describe('AgentRuntime', () => {
 
     it('should create initial state with maxSteps limit', () => {
       const state = AgentRuntime.createInitialState({
-        sessionId: 'test-session',
+        operationId: 'test-session',
         maxSteps: 10,
       });
 
@@ -519,7 +556,7 @@ describe('AgentRuntime', () => {
       const agent = new MockAgent();
       const runtime = new AgentRuntime(agent);
 
-      let state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+      const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
       expect(state.stepCount).toBe(0);
 
       // First step
@@ -540,7 +577,7 @@ describe('AgentRuntime', () => {
       const runtime = new AgentRuntime(agent);
 
       const state = AgentRuntime.createInitialState({
-        sessionId: 'test-session',
+        operationId: 'test-session',
         maxSteps: 3, // 允许 3 步
       });
 
@@ -559,18 +596,17 @@ describe('AgentRuntime', () => {
       expect(result3.newState.stepCount).toBe(3);
       expect(result3.newState.status).not.toBe('error');
 
-      // Fourth step - should finish due to maxSteps
+      // Fourth step - exceeds maxSteps, enters forceFinish mode
+      // Instead of immediately stopping, the runtime sets forceFinish=true
+      // and continues execution so the agent can produce a final text response
       const result4 = await runtime.step(result3.newState, createTestContext('user_input'));
       expect(result4.newState.stepCount).toBe(4);
-      expect(result4.newState.status).toBe('done');
-      expect(result4.events[0]).toMatchObject({
-        type: 'done',
-        finalState: expect.objectContaining({
-          status: 'done',
-        }),
-        reason: 'max_steps_exceeded',
-        reasonDetail: 'Maximum steps exceeded: 3',
-      });
+      expect(result4.newState.forceFinish).toBe(true);
+      expect(result4.newState.status).toBe('running'); // continues for final LLM call
+
+      // Fifth step - LLM result with no tool calls, agent finishes
+      const result5 = await runtime.step(result4.newState, result4.nextContext!);
+      expect(result5.newState.status).toBe('done');
     });
 
     it('should include stepCount in session context', async () => {
@@ -580,7 +616,7 @@ describe('AgentRuntime', () => {
 
       const runtime = new AgentRuntime(agent);
       const state = AgentRuntime.createInitialState({
-        sessionId: 'test-session',
+        operationId: 'test-session',
         stepCount: 5, // Start with step 5
         messages: [{ role: 'user', content: 'test' }],
       });
@@ -606,7 +642,7 @@ describe('AgentRuntime', () => {
       const runtime = new AgentRuntime(agent);
 
       const state = AgentRuntime.createInitialState({
-        sessionId: 'test-session',
+        operationId: 'test-session',
         stepCount: 3,
       });
 
@@ -638,7 +674,7 @@ describe('AgentRuntime', () => {
       const runtime = new AgentRuntime(agent);
 
       // Create interrupted state
-      let state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+      const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
       const interruptResult = runtime.interrupt(state, 'Test interruption');
 
       // Resume execution
@@ -659,7 +695,7 @@ describe('AgentRuntime', () => {
       const agent = new MockAgent();
       const runtime = new AgentRuntime(agent);
 
-      let state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+      const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
       const interruptResult = runtime.interrupt(state, 'Fatal error', false);
 
       await expect(runtime.resume(interruptResult.newState)).rejects.toThrow(
@@ -671,7 +707,7 @@ describe('AgentRuntime', () => {
       const agent = new MockAgent();
       const runtime = new AgentRuntime(agent);
 
-      const state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+      const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
 
       await expect(runtime.resume(state)).rejects.toThrow(
         'Cannot resume: state is not interrupted',
@@ -685,8 +721,8 @@ describe('AgentRuntime', () => {
       };
       const runtime = new AgentRuntime(agent);
 
-      let state = AgentRuntime.createInitialState({
-        sessionId: 'test-session',
+      const state = AgentRuntime.createInitialState({
+        operationId: 'test-session',
         messages: [{ role: 'user', content: 'Hello' }],
       });
       const interruptResult = runtime.interrupt(state, 'Test interruption');
@@ -695,6 +731,7 @@ describe('AgentRuntime', () => {
         phase: 'user_input',
         payload: { message: { role: 'user', content: 'Hello' } },
         session: {
+          // Note: AgentRuntimeContext.session uses sessionId for backward compatibility
           sessionId: 'test-session',
           messageCount: 1,
           status: 'interrupted',
@@ -720,7 +757,7 @@ describe('AgentRuntime', () => {
 
   describe('Usage and Cost Tracking', () => {
     it('should initialize with zero usage and cost', () => {
-      const state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+      const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
 
       expect(state.usage).toMatchObject({
         llm: {
@@ -767,14 +804,16 @@ describe('AgentRuntime', () => {
 
         async runner(context: AgentRuntimeContext, state: AgentState) {
           switch (context.phase) {
-            case 'user_input':
+            case 'user_input': {
               return { type: 'call_llm' as const, payload: { messages: state.messages } };
-            default:
+            }
+            default: {
               return {
                 type: 'finish' as const,
                 reason: 'completed' as const,
                 reasonDetail: 'Done',
               };
+            }
           }
         }
 
@@ -816,7 +855,7 @@ describe('AgentRuntime', () => {
       const runtime = new AgentRuntime(agent);
 
       const state = AgentRuntime.createInitialState({
-        sessionId: 'test-session',
+        operationId: 'test-session',
         messages: [{ role: 'user', content: 'Hello' }],
       });
 
@@ -844,7 +883,7 @@ describe('AgentRuntime', () => {
 
         calculateCost(context: CostCalculationContext): Cost {
           const newCost = structuredClone(context.previousCost || ({} as Cost));
-          newCost.total = 10.0; // High cost that exceeds limit
+          newCost.total = 10; // High cost that exceeds limit
           newCost.currency = 'USD';
           newCost.calculatedAt = new Date().toISOString();
           return newCost;
@@ -858,13 +897,13 @@ describe('AgentRuntime', () => {
       const runtime = new AgentRuntime(agent);
 
       const costLimit: CostLimit = {
-        maxTotalCost: 5.0,
+        maxTotalCost: 5,
         currency: 'USD',
         onExceeded: 'stop',
       };
 
       const state = AgentRuntime.createInitialState({
-        sessionId: 'test-session',
+        operationId: 'test-session',
         messages: [{ role: 'user', content: 'Hello' }],
         costLimit,
       });
@@ -887,9 +926,9 @@ describe('AgentRuntime', () => {
 
         calculateCost(context: CostCalculationContext): Cost {
           return {
-            llm: { byModel: [], total: 15.0, currency: 'USD' },
+            llm: { byModel: [], total: 15, currency: 'USD' },
             tools: { byTool: [], total: 0, currency: 'USD' },
-            total: 15.0,
+            total: 15,
             currency: 'USD',
             calculatedAt: new Date().toISOString(),
           };
@@ -903,13 +942,13 @@ describe('AgentRuntime', () => {
       const runtime = new AgentRuntime(agent);
 
       const costLimit: CostLimit = {
-        maxTotalCost: 10.0,
+        maxTotalCost: 10,
         currency: 'USD',
         onExceeded: 'interrupt',
       };
 
       const state = AgentRuntime.createInitialState({
-        sessionId: 'test-session',
+        operationId: 'test-session',
         messages: [{ role: 'user', content: 'Hello' }],
         costLimit,
       });
@@ -942,9 +981,10 @@ describe('AgentRuntime', () => {
         .fn()
         .mockImplementation((context: AgentRuntimeContext, state: AgentState) => {
           switch (context.phase) {
-            case 'user_input':
+            case 'user_input': {
               return Promise.resolve({ type: 'call_llm', payload: { messages: state.messages } });
-            case 'llm_result':
+            }
+            case 'llm_result': {
               const llmPayload = context.payload as { result: any; hasToolCalls: boolean };
               if (llmPayload.hasToolCalls) {
                 // Convert OpenAI format tool_calls to ChatToolPayload format
@@ -961,7 +1001,8 @@ describe('AgentRuntime', () => {
                 });
               }
               return Promise.resolve({ type: 'finish', reason: 'completed', reasonDetail: 'Done' });
-            case 'human_approved_tool':
+            }
+            case 'human_approved_tool': {
               const approvedPayload = context.payload as { approvedToolCall: ChatToolPayload };
               return Promise.resolve({
                 payload: {
@@ -970,16 +1011,19 @@ describe('AgentRuntime', () => {
                 },
                 type: 'call_tool',
               });
-            case 'tool_result':
+            }
+            case 'tool_result': {
               return Promise.resolve({ type: 'call_llm', payload: { messages: state.messages } });
-            default:
+            }
+            default: {
               return Promise.resolve({ type: 'finish', reason: 'completed', reasonDetail: 'Done' });
+            }
           }
         });
 
       async function* mockModelRuntime(payload: unknown) {
         const messages = (payload as any).messages;
-        const lastMessage = messages[messages.length - 1];
+        const lastMessage = messages.at(-1);
         if (lastMessage.role === 'user') {
           yield { content: "I'll check the weather for you." };
           yield {
@@ -1003,8 +1047,8 @@ describe('AgentRuntime', () => {
       const runtime = new AgentRuntime(agent);
 
       // Step 1: User asks question
-      let state = AgentRuntime.createInitialState({
-        sessionId: 'test-session',
+      const state = AgentRuntime.createInitialState({
+        operationId: 'test-session',
         messages: [{ role: 'user', content: "What's the weather in Beijing?" }],
       });
       let result = await runtime.step(state);
@@ -1105,7 +1149,7 @@ describe('AgentRuntime', () => {
       const agent = new BatchToolAgent();
       const runtime = new AgentRuntime(agent);
       const state = AgentRuntime.createInitialState({
-        sessionId: 'batch-test',
+        operationId: 'batch-test',
         messages: [{ role: 'user', content: 'Execute tools' }],
       });
 
@@ -1175,7 +1219,7 @@ describe('AgentRuntime', () => {
       const agent = new ArrayReturnAgent();
       const runtime = new AgentRuntime(agent);
       const state = AgentRuntime.createInitialState({
-        sessionId: 'array-test',
+        operationId: 'array-test',
         messages: [{ role: 'user', content: 'Execute tools' }],
       });
 
@@ -1238,7 +1282,7 @@ describe('AgentRuntime', () => {
       const agent = new BlockingAgent();
       const runtime = new AgentRuntime(agent);
       const state = AgentRuntime.createInitialState({
-        sessionId: 'blocking-test',
+        operationId: 'blocking-test',
         messages: [{ role: 'user', content: 'Execute' }],
       });
 
@@ -1319,7 +1363,7 @@ describe('AgentRuntime', () => {
       const agent = new UsageTrackingAgent();
       const runtime = new AgentRuntime(agent);
       const state = AgentRuntime.createInitialState({
-        sessionId: 'merge-test',
+        operationId: 'merge-test',
         messages: [{ role: 'user', content: 'Execute' }],
       });
 
@@ -1334,13 +1378,483 @@ describe('AgentRuntime', () => {
     });
   });
 
+  describe('Multi-Round Batch Tool Execution (LOBE-1657)', () => {
+    /**
+     * This test verifies the fix for LOBE-1657:
+     * When executing multiple rounds of batch tool calls, tool messages should not be duplicated.
+     *
+     * Root cause: The mergeToolResults method was extracting ALL tool messages from each result,
+     * but since each result.newState was cloned from baseState, it contained old tool messages
+     * that would get re-added.
+     *
+     * Fix: Track existing tool_call_ids and only merge NEW tool messages.
+     */
+    it('should not duplicate tool messages across multiple batch executions', async () => {
+      // Track execution order for debugging
+      const executionLog: string[] = [];
+
+      // Agent that simulates multi-round tool execution like the real scenario:
+      // Step 0: user_input -> call_llm
+      // Step 1: llm_result (has tools) -> call_tools_batch (2 tools)
+      // Step 2: tools_batch_result -> call_llm
+      // Step 3: llm_result (has tools) -> call_tools_batch (2 tools)
+      // Step 4: tools_batch_result -> call_llm -> finish
+      class MultiRoundBatchAgent implements Agent {
+        private roundCount = 0;
+
+        tools = {
+          search_tool: vi.fn().mockImplementation(async (args: { query: string }) => {
+            executionLog.push(`search_tool(${args.query})`);
+            return { result: `search result for ${args.query}` };
+          }),
+          crawl_tool: vi.fn().mockImplementation(async (args: { url: string }) => {
+            executionLog.push(`crawl_tool(${args.url})`);
+            return { content: `content from ${args.url}` };
+          }),
+        };
+
+        async runner(context: AgentRuntimeContext, state: AgentState) {
+          executionLog.push(`runner(${context.phase})`);
+
+          switch (context.phase) {
+            case 'user_input': {
+              return { type: 'call_llm' as const, payload: { messages: state.messages } };
+            }
+
+            case 'llm_result': {
+              const llmPayload = context.payload as { result: any; hasToolCalls: boolean };
+              if (llmPayload.hasToolCalls) {
+                this.roundCount++;
+                // Convert tool_calls to batch instruction
+                const toolsCalling = llmPayload.result.tool_calls.map((tc: any) => ({
+                  id: tc.id,
+                  type: 'default' as const,
+                  apiName: tc.function.name,
+                  identifier: tc.function.name,
+                  arguments: tc.function.arguments,
+                }));
+
+                return {
+                  type: 'call_tools_batch' as const,
+                  payload: {
+                    parentMessageId: 'assistant-msg',
+                    toolsCalling,
+                  },
+                };
+              }
+              return { type: 'finish' as const, reason: 'completed' as const };
+            }
+
+            case 'tools_batch_result': {
+              // After tools complete, call LLM again
+              return { type: 'call_llm' as const, payload: { messages: state.messages } };
+            }
+
+            default: {
+              return { type: 'finish' as const, reason: 'completed' as const };
+            }
+          }
+        }
+
+        // Mock LLM that returns tool calls for first 2 rounds, then finishes
+        modelRuntime = async function* (this: MultiRoundBatchAgent, payload: any) {
+          const toolMessages = payload.messages.filter((m: any) => m.role === 'tool');
+          executionLog.push(`modelRuntime(tool_messages=${toolMessages.length})`);
+
+          if (this.roundCount < 2) {
+            // First 2 rounds: return tool calls
+            yield { content: `Round ${this.roundCount + 1}: I will use tools.` };
+            yield {
+              tool_calls: [
+                {
+                  id: `call_search_${this.roundCount + 1}`,
+                  type: 'function' as const,
+                  function: {
+                    name: 'search_tool',
+                    arguments: JSON.stringify({ query: `query_${this.roundCount + 1}` }),
+                  },
+                },
+                {
+                  id: `call_crawl_${this.roundCount + 1}`,
+                  type: 'function' as const,
+                  function: {
+                    name: 'crawl_tool',
+                    arguments: JSON.stringify({ url: `url_${this.roundCount + 1}` }),
+                  },
+                },
+              ],
+            };
+          } else {
+            // Third round: finish
+            yield { content: 'All done!' };
+          }
+        }.bind(this);
+      }
+
+      const agent = new MultiRoundBatchAgent();
+      const runtime = new AgentRuntime(agent);
+
+      // Start with user message
+      const state = AgentRuntime.createInitialState({
+        operationId: 'multi-round-test',
+        messages: [{ role: 'user', content: 'Please search and crawl some pages' }],
+      });
+
+      // Execute the full conversation flow
+      let result = await runtime.step(state); // Step 0: user_input -> call_llm
+      expect(result.newState.status).toBe('running');
+
+      // Process LLM result (has tool calls)
+      result = await runtime.step(result.newState, result.nextContext); // Step 1: llm_result -> call_tools_batch
+      expect(result.events.filter((e) => e.type === 'tool_result')).toHaveLength(2);
+
+      // First batch done - should have 2 tool messages
+      let toolMessages = result.newState.messages.filter((m) => m.role === 'tool');
+      expect(toolMessages).toHaveLength(2);
+      expect(toolMessages.map((m) => m.tool_call_id).sort()).toEqual([
+        'call_crawl_1',
+        'call_search_1',
+      ]);
+
+      // Continue with LLM
+      result = await runtime.step(result.newState, result.nextContext); // Step 2: tools_batch_result -> call_llm
+
+      // Process second LLM result (has tool calls)
+      result = await runtime.step(result.newState, result.nextContext); // Step 3: llm_result -> call_tools_batch
+      expect(result.events.filter((e) => e.type === 'tool_result')).toHaveLength(2);
+
+      // Second batch done - should have 4 tool messages total (NOT 6 or more due to duplicates)
+      toolMessages = result.newState.messages.filter((m) => m.role === 'tool');
+      expect(toolMessages).toHaveLength(4); // This was the bug: was 6+ due to duplicates
+
+      // Verify all tool_call_ids are unique
+      const toolCallIds = toolMessages.map((m) => m.tool_call_id);
+      const uniqueToolCallIds = [...new Set(toolCallIds)];
+      expect(toolCallIds).toHaveLength(uniqueToolCallIds.length); // No duplicates
+
+      // Verify expected tool_call_ids
+      expect(toolCallIds.sort()).toEqual([
+        'call_crawl_1',
+        'call_crawl_2',
+        'call_search_1',
+        'call_search_2',
+      ]);
+
+      // Continue to finish
+      result = await runtime.step(result.newState, result.nextContext); // Step 4: tools_batch_result -> call_llm
+      result = await runtime.step(result.newState, result.nextContext); // Step 5: llm_result -> finish
+
+      expect(result.newState.status).toBe('done');
+
+      // Final check: still 4 tool messages, no duplicates
+      toolMessages = result.newState.messages.filter((m) => m.role === 'tool');
+      expect(toolMessages).toHaveLength(4);
+    });
+
+    it('should handle mixed scenarios: existing tool messages + new batch execution', async () => {
+      // This tests a scenario where we execute two separate batch tool calls
+      // The second batch should not re-add the tool messages from the first batch
+      class TwoBatchAgent implements Agent {
+        private batchCount = 0;
+
+        tools = {
+          tool_a: vi.fn().mockResolvedValue({ result: 'a' }),
+          tool_b: vi.fn().mockResolvedValue({ result: 'b' }),
+        };
+
+        async runner(context: AgentRuntimeContext, _state: AgentState) {
+          if (context.phase === 'user_input' || context.phase === 'tools_batch_result') {
+            this.batchCount++;
+            if (this.batchCount === 1) {
+              // First batch
+              return {
+                type: 'call_tools_batch' as const,
+                payload: {
+                  parentMessageId: 'msg',
+                  toolsCalling: [
+                    {
+                      id: 'batch1_call_a',
+                      type: 'default' as const,
+                      apiName: 'tool_a',
+                      identifier: 'tool_a',
+                      arguments: '{}',
+                    },
+                  ],
+                },
+              };
+            } else if (this.batchCount === 2) {
+              // Second batch - should not duplicate first batch's tool messages
+              return {
+                type: 'call_tools_batch' as const,
+                payload: {
+                  parentMessageId: 'msg',
+                  toolsCalling: [
+                    {
+                      id: 'batch2_call_a',
+                      type: 'default' as const,
+                      apiName: 'tool_a',
+                      identifier: 'tool_a',
+                      arguments: '{}',
+                    },
+                    {
+                      id: 'batch2_call_b',
+                      type: 'default' as const,
+                      apiName: 'tool_b',
+                      identifier: 'tool_b',
+                      arguments: '{}',
+                    },
+                  ],
+                },
+              };
+            }
+          }
+          return { type: 'finish' as const, reason: 'completed' as const };
+        }
+      }
+
+      const agent = new TwoBatchAgent();
+      const runtime = new AgentRuntime(agent);
+
+      const state = AgentRuntime.createInitialState({
+        operationId: 'two-batch-test',
+        messages: [{ role: 'user', content: 'test' }],
+      });
+
+      // First batch execution
+      let result = await runtime.step(state);
+      let toolMessages = result.newState.messages.filter((m) => m.role === 'tool');
+      expect(toolMessages).toHaveLength(1);
+      expect(toolMessages[0].tool_call_id).toBe('batch1_call_a');
+
+      // Second batch execution - should have 3 total (1 from first + 2 from second)
+      result = await runtime.step(result.newState, result.nextContext);
+      toolMessages = result.newState.messages.filter((m) => m.role === 'tool');
+      expect(toolMessages).toHaveLength(3);
+
+      // Verify no duplicates
+      const toolCallIds = toolMessages.map((m) => m.tool_call_id);
+      expect(new Set(toolCallIds).size).toBe(3);
+      expect(toolCallIds.sort()).toEqual(['batch1_call_a', 'batch2_call_a', 'batch2_call_b']);
+    });
+  });
+
+  describe('StepContext Passing', () => {
+    it('should pass stepContext to agent runner', async () => {
+      const agent = new MockAgent();
+      const runnerSpy = vi.spyOn(agent, 'runner');
+
+      const runtime = new AgentRuntime(agent);
+      const state = AgentRuntime.createInitialState({
+        operationId: 'test-session',
+        messages: [{ role: 'user', content: 'Hello' }],
+      });
+
+      const stepContext = {
+        todos: {
+          items: [
+            { text: 'Buy milk', status: 'todo' as const },
+            { text: 'Call mom', status: 'completed' as const },
+          ],
+          updatedAt: '2024-06-01T00:00:00.000Z',
+        },
+      };
+
+      const context: AgentRuntimeContext = {
+        phase: 'user_input',
+        payload: { message: { role: 'user', content: 'Hello' } },
+        session: {
+          sessionId: 'test-session',
+          messageCount: 1,
+          status: 'idle',
+          stepCount: 0,
+        },
+        stepContext,
+      };
+
+      await runtime.step(state, context);
+
+      // Verify agent runner received the stepContext
+      expect(runnerSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stepContext: expect.objectContaining({
+            todos: expect.objectContaining({
+              items: expect.arrayContaining([
+                expect.objectContaining({ text: 'Buy milk', status: 'todo' }),
+              ]),
+            }),
+          }),
+        }),
+        expect.any(Object),
+      );
+    });
+
+    it('should pass stepContext to custom executors', async () => {
+      const customExecutor = vi.fn().mockResolvedValue({
+        events: [{ type: 'done', finalState: {}, reason: 'completed' }],
+        newState: { status: 'done' },
+      });
+
+      const agent = new MockAgent();
+      agent.runner = vi.fn().mockResolvedValue({
+        type: 'finish',
+        reason: 'completed',
+      });
+
+      const config: RuntimeConfig = {
+        executors: {
+          finish: customExecutor,
+        },
+      };
+
+      const runtime = new AgentRuntime(agent, config);
+      const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
+
+      const stepContext = {
+        todos: {
+          items: [{ text: 'Task 1', status: 'todo' as const }],
+          updatedAt: '2024-06-01T00:00:00.000Z',
+        },
+      };
+
+      const context: AgentRuntimeContext = {
+        phase: 'init',
+        session: {
+          sessionId: 'test-session',
+          messageCount: 0,
+          status: 'idle',
+          stepCount: 0,
+        },
+        stepContext,
+      };
+
+      await runtime.step(state, context);
+
+      // Verify custom executor received the context with stepContext
+      expect(customExecutor).toHaveBeenCalledWith(
+        expect.any(Object), // instruction
+        expect.any(Object), // state
+        expect.objectContaining({
+          stepContext: expect.objectContaining({
+            todos: expect.objectContaining({
+              items: expect.arrayContaining([expect.objectContaining({ text: 'Task 1' })]),
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('should pass stepContext to batch tool execution', async () => {
+      const toolASpy = vi.fn().mockResolvedValue({ result: 'a' });
+      const toolBSpy = vi.fn().mockResolvedValue({ result: 'b' });
+
+      class BatchToolAgent implements Agent {
+        tools = {
+          tool_a: toolASpy,
+          tool_b: toolBSpy,
+        };
+
+        async runner(context: AgentRuntimeContext, _state: AgentState) {
+          if (context.phase === 'user_input') {
+            return {
+              type: 'call_tools_batch' as const,
+              payload: {
+                parentMessageId: 'msg',
+                toolsCalling: [
+                  {
+                    id: 'call_a',
+                    type: 'default' as const,
+                    apiName: 'tool_a',
+                    identifier: 'tool_a',
+                    arguments: '{}',
+                  },
+                  {
+                    id: 'call_b',
+                    type: 'default' as const,
+                    apiName: 'tool_b',
+                    identifier: 'tool_b',
+                    arguments: '{}',
+                  },
+                ],
+              },
+            };
+          }
+          return { type: 'finish' as const, reason: 'completed' as const };
+        }
+      }
+
+      const agent = new BatchToolAgent();
+      const runtime = new AgentRuntime(agent);
+      const state = AgentRuntime.createInitialState({
+        operationId: 'batch-test',
+        messages: [{ role: 'user', content: 'Execute tools' }],
+      });
+
+      const stepContext = {
+        todos: {
+          items: [{ text: 'Batch task', status: 'todo' as const }],
+          updatedAt: '2024-06-01T00:00:00.000Z',
+        },
+      };
+
+      const context: AgentRuntimeContext = {
+        phase: 'user_input',
+        payload: { message: { role: 'user', content: 'Execute tools' } },
+        session: {
+          sessionId: 'batch-test',
+          messageCount: 1,
+          status: 'idle',
+          stepCount: 0,
+        },
+        stepContext,
+      };
+
+      const result = await runtime.step(state, context);
+
+      // Both tools should have been executed
+      expect(toolASpy).toHaveBeenCalled();
+      expect(toolBSpy).toHaveBeenCalled();
+
+      // nextContext should preserve stepContext-related phase info
+      expect(result.nextContext?.phase).toBe('tools_batch_result');
+    });
+
+    it('should handle undefined stepContext gracefully', async () => {
+      const agent = new MockAgent();
+      agent.runner = vi.fn().mockResolvedValue({
+        type: 'finish',
+        reason: 'completed',
+      });
+
+      const runtime = new AgentRuntime(agent);
+      const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
+
+      // Context without stepContext
+      const context: AgentRuntimeContext = {
+        phase: 'init',
+        session: {
+          sessionId: 'test-session',
+          messageCount: 0,
+          status: 'idle',
+          stepCount: 0,
+        },
+        // No stepContext
+      };
+
+      const result = await runtime.step(state, context);
+
+      // Should complete without errors
+      expect(result.newState.status).toBe('done');
+      expect(result.events[0].type).toBe('done');
+    });
+  });
+
   describe('Edge Cases and Error Handling', () => {
     it('should handle unknown instruction type', async () => {
       const agent = new MockAgent();
       agent.runner = vi.fn().mockResolvedValue({ type: 'unknown_instruction_type' as any });
 
       const runtime = new AgentRuntime(agent);
-      const state = AgentRuntime.createInitialState({ sessionId: 'test-session' });
+      const state = AgentRuntime.createInitialState({ operationId: 'test-session' });
 
       const result = await runtime.step(state);
 
@@ -1353,13 +1867,14 @@ describe('AgentRuntime', () => {
     it('should handle LLM errors', async () => {
       const agent = new MockAgent();
       agent.modelRuntime = async function* () {
+        yield* []; // satisfy require-yield
         throw new Error('LLM API error');
       };
 
       const runtime = new AgentRuntime(agent);
       const state = AgentRuntime.createInitialState({
         messages: [{ role: 'user', content: 'test' }],
-        sessionId: 'test-session',
+        operationId: 'test-session',
       });
 
       const result = await runtime.step(state);
@@ -1378,9 +1893,9 @@ describe('AgentRuntime', () => {
           return {
             calculatedAt: new Date().toISOString(),
             currency: 'USD',
-            llm: { byModel: [], currency: 'USD', total: 15.0 },
+            llm: { byModel: [], currency: 'USD', total: 15 },
             tools: { byTool: [], currency: 'USD', total: 0 },
-            total: 15.0,
+            total: 15,
           };
         }
 
@@ -1394,14 +1909,14 @@ describe('AgentRuntime', () => {
 
       const costLimit: CostLimit = {
         currency: 'USD',
-        maxTotalCost: 10.0,
+        maxTotalCost: 10,
         onExceeded: 'warn',
       };
 
       const state = AgentRuntime.createInitialState({
         costLimit,
         messages: [{ role: 'user', content: 'test' }],
-        sessionId: 'test-session',
+        operationId: 'test-session',
       });
 
       const result = await runtime.step(state);
@@ -1445,8 +1960,8 @@ describe('AgentRuntime', () => {
             calculatedAt: new Date().toISOString(),
             currency: 'USD',
             llm: { byModel: [], currency: 'USD', total: 0 },
-            tools: { byTool: [], currency: 'USD', total: 20.0 },
-            total: 20.0,
+            tools: { byTool: [], currency: 'USD', total: 20 },
+            total: 20,
           };
         }
       }
@@ -1456,14 +1971,14 @@ describe('AgentRuntime', () => {
 
       const costLimit: CostLimit = {
         currency: 'USD',
-        maxTotalCost: 10.0,
+        maxTotalCost: 10,
         onExceeded: 'stop',
       };
 
       const state = AgentRuntime.createInitialState({
         costLimit,
         messages: [{ role: 'user', content: 'test' }],
-        sessionId: 'test-session',
+        operationId: 'test-session',
       });
 
       const result = await runtime.step(state);
@@ -1497,9 +2012,9 @@ describe('AgentRuntime', () => {
             tools: {
               byTool: [],
               currency: 'USD',
-              total: baseCost.tools.total + 5.0,
+              total: baseCost.tools.total + 5,
             },
-            total: baseCost.total + 5.0,
+            total: baseCost.total + 5,
           };
         }
 
@@ -1536,7 +2051,7 @@ describe('AgentRuntime', () => {
       const runtime = new AgentRuntime(agent);
       const state = AgentRuntime.createInitialState({
         messages: [{ role: 'user', content: 'Execute' }],
-        sessionId: 'cost-merge-test',
+        operationId: 'cost-merge-test',
       });
 
       const result = await runtime.step(state);
@@ -1616,7 +2131,7 @@ describe('AgentRuntime', () => {
       const runtime = new AgentRuntime(agent);
       const state = AgentRuntime.createInitialState({
         messages: [{ role: 'user', content: 'Execute' }],
-        sessionId: 'usage-merge-test',
+        operationId: 'usage-merge-test',
       });
 
       const result = await runtime.step(state);

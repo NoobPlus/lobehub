@@ -2,13 +2,14 @@ import type { ChatModelCard } from '@lobechat/types';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import debug from 'debug';
-import { LOBE_DEFAULT_MODEL_LIST } from 'model-bank';
 import type { AiModelType } from 'model-bank';
-import OpenAI, { ClientOptions } from 'openai';
-import { Stream } from 'openai/streaming';
+import { LOBE_DEFAULT_MODEL_LIST } from 'model-bank';
+import type { ClientOptions } from 'openai';
+import OpenAI from 'openai';
+import type { Stream } from 'openai/streaming';
 
 import { responsesAPIModels } from '../../const/models';
-import {
+import type {
   ChatCompletionErrorPayload,
   ChatCompletionTool,
   ChatMethodOptions,
@@ -19,23 +20,32 @@ import {
   EmbeddingsPayload,
   GenerateObjectOptions,
   GenerateObjectPayload,
-  TextToImagePayload,
   TextToSpeechOptions,
   TextToSpeechPayload,
 } from '../../types';
-import { AgentRuntimeErrorType, ILobeAgentRuntimeErrorType } from '../../types/error';
-import { CreateImagePayload, CreateImageResponse } from '../../types/image';
+import type { ILobeAgentRuntimeErrorType } from '../../types/error';
+import { AgentRuntimeErrorType } from '../../types/error';
+import type { CreateImagePayload, CreateImageResponse } from '../../types/image';
+import type {
+  CreateVideoPayload,
+  CreateVideoResponse,
+  HandleCreateVideoWebhookPayload,
+  HandleCreateVideoWebhookResult,
+} from '../../types/video';
 import { AgentRuntimeError } from '../../utils/createError';
 import { debugResponse, debugStream } from '../../utils/debugStream';
 import { desensitizeUrl } from '../../utils/desensitizeUrl';
 import { getModelPropertyWithFallback } from '../../utils/getFallbackModelProperty';
 import { getModelPricing } from '../../utils/getModelPricing';
 import { handleOpenAIError } from '../../utils/handleOpenAIError';
+import { isExceededContextWindowError } from '../../utils/isExceededContextWindowError';
+import { isQuotaLimitError } from '../../utils/isQuotaLimitError';
 import { postProcessModelList } from '../../utils/postProcessModelList';
 import { StreamingResponse } from '../../utils/response';
-import { LobeRuntimeAI } from '../BaseAI';
+import type { LobeRuntimeAI } from '../BaseAI';
 import { convertOpenAIMessages, convertOpenAIResponseInputs } from '../contextBuilders/openai';
-import { OpenAIResponsesStream, OpenAIStream, OpenAIStreamOptions } from '../streams';
+import type { OpenAIStreamOptions } from '../streams';
+import { OpenAIResponsesStream, OpenAIStream } from '../streams';
 import { createOpenAICompatibleImage } from './createImage';
 import { transformResponseAPIToStream, transformResponseToStream } from './nonStreamToStream';
 
@@ -60,6 +70,11 @@ export type CreateImageOptions = Omit<ClientOptions, 'apiKey'> & {
   provider: string;
 };
 
+export type CreateVideoOptions = Omit<ClientOptions, 'apiKey'> & {
+  apiKey: string;
+  provider: string;
+};
+
 export interface CustomClientOptions<T extends Record<string, any> = any> {
   createChatCompletionStream?: (
     client: any,
@@ -74,6 +89,7 @@ export interface OpenAICompatibleFactoryOptions<T extends Record<string, any> = 
   baseURL?: string;
   chatCompletion?: {
     excludeUsage?: boolean;
+    forceImageBase64?: boolean;
     handleError?: (
       error: any,
       options: ConstructorOptions<T>,
@@ -109,6 +125,10 @@ export interface OpenAICompatibleFactoryOptions<T extends Record<string, any> = 
     payload: CreateImagePayload,
     options: CreateImageOptions,
   ) => Promise<CreateImageResponse>;
+  createVideo?: (
+    payload: CreateVideoPayload,
+    options: CreateVideoOptions,
+  ) => Promise<CreateVideoResponse>;
   customClient?: CustomClientOptions<T>;
   debug?: {
     chatCompletion: () => boolean;
@@ -137,6 +157,10 @@ export interface OpenAICompatibleFactoryOptions<T extends Record<string, any> = 
      */
     useToolsCalling?: boolean;
   };
+  handleCreateVideoWebhook?: (
+    payload: HandleCreateVideoWebhookPayload,
+    options: CreateVideoOptions,
+  ) => Promise<HandleCreateVideoWebhookResult>;
   models?:
     | ((params: { client: OpenAI }) => Promise<ChatModelCard[]>)
     | {
@@ -163,6 +187,8 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
   customClient,
   responses,
   createImage: customCreateImage,
+  createVideo: customCreateVideo,
+  handleCreateVideoWebhook: customHandleCreateVideoWebhook,
   generateObject: generateObjectConfig,
 }: OpenAICompatibleFactoryOptions<T>) => {
   const ErrorType = {
@@ -334,7 +360,7 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
           processedPayload = { ...payload, apiMode: 'responses' } as any;
         }
 
-        // 再进行工厂级处理
+        // Then perform factory-level processing
         const postPayload = chatCompletion?.handlePayload
           ? chatCompletion.handlePayload(processedPayload, this._options)
           : ({
@@ -343,7 +369,7 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
             } as OpenAI.ChatCompletionCreateParamsStreaming);
 
         if ((postPayload as any).apiMode === 'responses') {
-          return this.handleResponseAPIMode(processedPayload, options);
+          return await this.handleResponseAPIMode(processedPayload, options);
         }
 
         const computedBaseURL =
@@ -388,7 +414,9 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
           this.baseURL = targetBaseURL;
         }
 
-        const messages = await convertOpenAIMessages(postPayload.messages);
+        const messages = await convertOpenAIMessages(postPayload.messages, {
+          forceImageBase64: chatCompletion?.forceImageBase64,
+        });
 
         let response: Stream<OpenAI.Chat.Completions.ChatCompletionChunk>;
 
@@ -411,7 +439,7 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
           ) as any;
         } else {
           // Remove internal apiMode parameter before sending to API
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
           const { apiMode: _, ...cleanedPayload } = postPayload as any;
           const finalPayload = {
             ...cleanedPayload,
@@ -426,7 +454,9 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
           log('sending chat completion request with %d messages', messages.length);
 
           if (debugParams?.chatCompletion?.()) {
+            // eslint-disable-next-line no-console
             console.log('[requestPayload]');
+            // eslint-disable-next-line no-console
             console.log(JSON.stringify(finalPayload), '\n');
           }
 
@@ -512,11 +542,33 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
       return createOpenAICompatibleImage(this.client, payload, this.id);
     }
 
+    async createVideo(payload: CreateVideoPayload) {
+      if (!customCreateVideo) {
+        throw new Error('createVideo is not supported by this provider');
+      }
+      return customCreateVideo(payload, {
+        ...this._options,
+        apiKey: this._options.apiKey!,
+        provider,
+      });
+    }
+
+    async handleCreateVideoWebhook(payload: HandleCreateVideoWebhookPayload) {
+      if (!customHandleCreateVideoWebhook) {
+        throw new Error('handleCreateVideoWebhook is not supported by this provider');
+      }
+      return customHandleCreateVideoWebhook(payload, {
+        ...this._options,
+        apiKey: this._options.apiKey!,
+        provider,
+      });
+    }
+
     async models() {
       const log = debug(`${this.logPrefix}:models`);
       log('fetching available models');
 
-      let resultModels: ChatModelCard[] = [];
+      let resultModels: ChatModelCard[];
       if (typeof models === 'function') {
         log('using custom models function');
         resultModels = await models({ client: this.client });
@@ -736,19 +788,6 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
       }
     }
 
-    async textToImage(payload: TextToImagePayload) {
-      const log = debug(`${this.logPrefix}:textToImage`);
-      log('textToImage called with prompt length: %d', payload.prompt?.length || 0);
-
-      try {
-        const res = await this.client.images.generate(payload);
-        log('generated %d images', res.data?.length || 0);
-        return (res.data || []).map((o) => o.url) as string[];
-      } catch (error) {
-        throw this.handleError(error);
-      }
-    }
-
     async textToSpeech(payload: TextToSpeechPayload, options?: TextToSpeechOptions) {
       const log = debug(`${this.logPrefix}:textToSpeech`);
       log(
@@ -863,6 +902,27 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
         }
       }
 
+      const errorMsg = errorResult.error?.message || errorResult.message;
+      if (isExceededContextWindowError(errorMsg)) {
+        log('context length exceeded detected from message');
+        return AgentRuntimeError.chat({
+          endpoint: desensitizedEndpoint,
+          error: errorResult,
+          errorType: AgentRuntimeErrorType.ExceededContextWindow,
+          provider: this.id,
+        });
+      }
+
+      if (isQuotaLimitError(errorMsg)) {
+        log('quota limit reached detected from message');
+        return AgentRuntimeError.chat({
+          endpoint: desensitizedEndpoint,
+          error: errorResult,
+          errorType: AgentRuntimeErrorType.QuotaLimitReached,
+          provider: this.id,
+        });
+      }
+
       log('returning generic error');
       return AgentRuntimeError.chat({
         endpoint: desensitizedEndpoint,
@@ -891,7 +951,9 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
       delete res.frequency_penalty;
       delete res.presence_penalty;
 
-      const input = await convertOpenAIResponseInputs(messages as any);
+      const input = await convertOpenAIResponseInputs(messages as any, {
+        forceImageBase64: chatCompletion?.forceImageBase64,
+      });
 
       const isStreaming = payload.stream !== false;
       log(
@@ -916,10 +978,13 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
         store: false,
         stream: !isStreaming ? undefined : isStreaming,
         tools: tools?.map((tool) => this.convertChatCompletionToolToResponseTool(tool)),
+        user: options?.user,
       } as OpenAI.Responses.ResponseCreateParamsStreaming | OpenAI.Responses.ResponseCreateParams;
 
       if (debugParams?.responses?.()) {
+        // eslint-disable-next-line no-console
         console.log('[requestPayload]');
+        // eslint-disable-next-line no-console
         console.log(JSON.stringify(postPayload), '\n');
       }
 
@@ -1020,7 +1085,9 @@ export const createOpenAICompatibleRuntime = <T extends Record<string, any> = an
 
       if (shouldUseResponses) {
         log('calling responses.create for tool calling');
-        const input = await convertOpenAIResponseInputs(messages as any);
+        const input = await convertOpenAIResponseInputs(messages as any, {
+          forceImageBase64: chatCompletion?.forceImageBase64,
+        });
 
         const res = await this.client.responses.create(
           {

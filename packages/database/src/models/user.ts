@@ -1,5 +1,6 @@
-import {
+import type {
   SSOProvider,
+  UserGeneralConfig,
   UserGuide,
   UserKeyVaults,
   UserPreference,
@@ -7,21 +8,15 @@ import {
 } from '@lobechat/types';
 import { TRPCError } from '@trpc/server';
 import dayjs from 'dayjs';
-import { eq } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, or, sql } from 'drizzle-orm';
 import type { PartialDeep } from 'type-fest';
 
 import { merge } from '@/utils/merge';
 import { today } from '@/utils/time';
 
-import {
-  NewUser,
-  UserItem,
-  UserSettingsItem,
-  nextauthAccounts,
-  userSettings,
-  users,
-} from '../schemas';
-import { LobeChatDatabase } from '../type';
+import type { NewUser, UserItem, UserSettingsItem } from '../schemas';
+import { messages, nextauthAccounts, topics, users, userSettings } from '../schemas';
+import type { LobeChatDatabase } from '../type';
 
 type DecryptUserKeyVaults = (
   encryptKeyVaultsStr: string | null,
@@ -32,6 +27,24 @@ export class UserNotFoundError extends TRPCError {
   constructor() {
     super({ code: 'UNAUTHORIZED', message: 'user not found' });
   }
+}
+
+export interface ListUsersForMemoryExtractorCursor {
+  createdAt: Date;
+  id: string;
+}
+
+export type ListUsersForMemoryExtractorOptions = {
+  cursor?: ListUsersForMemoryExtractorCursor;
+  limit?: number;
+  whitelist?: string[];
+};
+
+export type ListUsersForHourlyMemoryExtractorOptions = ListUsersForMemoryExtractorOptions;
+
+export interface UserInfoForAIGeneration {
+  responseLanguage: string;
+  userName: string;
 }
 
 export class UserModel {
@@ -70,8 +83,10 @@ export class UserModel {
         email: users.email,
         firstName: users.firstName,
         fullName: users.fullName,
+        interests: users.interests,
         isOnboarded: users.isOnboarded,
         lastName: users.lastName,
+        onboarding: users.onboarding,
         preference: users.preference,
         settingsDefaultAgent: userSettings.defaultAgent,
 
@@ -81,6 +96,7 @@ export class UserModel {
         settingsKeyVaults: userSettings.keyVaults,
         settingsLanguageModel: userSettings.languageModel,
         settingsMarket: userSettings.market,
+        settingsMemory: userSettings.memory,
         settingsSystemAgent: userSettings.systemAgent,
         settingsTTS: userSettings.tts,
         settingsTool: userSettings.tool,
@@ -114,6 +130,7 @@ export class UserModel {
       keyVaults: decryptKeyVaults,
       languageModel: state.settingsLanguageModel || {},
       market: state.settingsMarket || undefined,
+      memory: state.settingsMemory || {},
       systemAgent: state.settingsSystemAgent || {},
       tool: state.settingsTool || {},
       tts: state.settingsTTS || {},
@@ -124,8 +141,10 @@ export class UserModel {
       email: state.email || undefined,
       firstName: state.firstName || undefined,
       fullName: state.fullName || undefined,
+      interests: state.interests || undefined,
       isOnboarded: state.isOnboarded,
       lastName: state.lastName || undefined,
+      onboarding: state.onboarding || undefined,
       preference: state.preference as UserPreference,
       settings,
       userId: this.userId,
@@ -146,6 +165,24 @@ export class UserModel {
 
   getUserSettings = async () => {
     return this.db.query.userSettings.findFirst({ where: eq(userSettings.id, this.userId) });
+  };
+
+  getUserPreference = async (): Promise<UserPreference | undefined> => {
+    const user = await this.db.query.users.findFirst({
+      columns: { preference: true },
+      where: eq(users.id, this.userId),
+    });
+    return user?.preference as UserPreference | undefined;
+  };
+
+  getUserSettingsDefaultAgentConfig = async () => {
+    const result = await this.db
+      .select({ defaultAgent: userSettings.defaultAgent })
+      .from(userSettings)
+      .where(eq(userSettings.id, this.userId))
+      .limit(1);
+
+    return result[0]?.defaultAgent;
   };
 
   updateUser = async (value: Partial<UserItem>) => {
@@ -277,5 +314,104 @@ export class UserModel {
 
     // Decrypt keyVaults
     return await decryptor(state.settingsKeyVaults, id);
+  };
+
+  static listUsersForMemoryExtractor = (
+    db: LobeChatDatabase,
+    options: ListUsersForMemoryExtractorOptions = {},
+  ) => {
+    const cursorCondition = options.cursor
+      ? or(
+          gt(users.createdAt, options.cursor.createdAt),
+          and(eq(users.createdAt, options.cursor.createdAt), gt(users.id, options.cursor.id)),
+        )
+      : undefined;
+
+    const whitelistCondition =
+      options.whitelist && options.whitelist.length > 0
+        ? inArray(users.id, options.whitelist)
+        : undefined;
+
+    const where = and(cursorCondition, whitelistCondition);
+
+    return db.query.users.findMany({
+      columns: { createdAt: true, id: true },
+      limit: options.limit,
+      orderBy: (fields, { asc }) => [asc(fields.createdAt), asc(fields.id)],
+      where,
+    });
+  };
+
+  static listUsersForHourlyMemoryExtractor = (
+    db: LobeChatDatabase,
+    options: ListUsersForHourlyMemoryExtractorOptions = {},
+  ) => {
+    const cursorCondition = options.cursor
+      ? or(
+          gt(users.createdAt, options.cursor.createdAt),
+          and(eq(users.createdAt, options.cursor.createdAt), gt(users.id, options.cursor.id)),
+        )
+      : undefined;
+
+    const whitelistCondition =
+      options.whitelist && options.whitelist.length > 0
+        ? inArray(users.id, options.whitelist)
+        : undefined;
+
+    // User memory defaults to enabled=true when user settings are missing.
+    const memoryEnabledCondition = sql`COALESCE((${userSettings.memory} ->> 'enabled')::boolean, true) = true`;
+    // Eligible users must have at least one topic with at least one user message.
+    const hasChattedTopicCondition = sql`
+      EXISTS (
+        SELECT 1
+        FROM ${topics}
+        INNER JOIN ${messages}
+          ON ${messages.topicId} = ${topics.id}
+          AND ${messages.userId} = ${users.id}
+          AND ${messages.role} = 'user'
+        WHERE ${topics.userId} = ${users.id}
+      )
+    `;
+
+    const query = db
+      .select({
+        createdAt: users.createdAt,
+        id: users.id,
+      })
+      .from(users)
+      .leftJoin(userSettings, eq(users.id, userSettings.id))
+      .where(
+        and(cursorCondition, whitelistCondition, memoryEnabledCondition, hasChattedTopicCondition),
+      )
+      .orderBy(asc(users.createdAt), asc(users.id));
+
+    return options.limit !== undefined ? query.limit(options.limit) : query;
+  };
+
+  /**
+   * Get user info for AI generation (name and language preference)
+   */
+  static getInfoForAIGeneration = async (
+    db: LobeChatDatabase,
+    userId: string,
+  ): Promise<UserInfoForAIGeneration> => {
+    const result = await db
+      .select({
+        firstName: users.firstName,
+        fullName: users.fullName,
+        general: userSettings.general,
+      })
+      .from(users)
+      .leftJoin(userSettings, eq(users.id, userSettings.id))
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const user = result[0];
+    const general = user?.general as UserGeneralConfig | undefined;
+
+    return {
+      responseLanguage: general?.responseLanguage || 'en-US',
+      userName: user?.fullName || user?.firstName || 'User',
+    };
   };
 }

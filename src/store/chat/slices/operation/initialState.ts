@@ -1,4 +1,4 @@
-import type { Operation, OperationType } from './types';
+import { type Operation, type OperationType } from './types';
 
 /**
  * Chat Operation State
@@ -17,8 +17,8 @@ export interface ChatOperationState {
   operations: Record<string, Operation>;
 
   /**
-   * Operations indexed by session/topic
-   * key: messageMapKey(sessionId, topicId), value: operationId[]
+   * Operations indexed by agent/topic
+   * key: messageMapKey(agentId, topicId), value: operationId[]
    */
   operationsByContext: Record<string, string[]>;
 
@@ -33,6 +33,16 @@ export interface ChatOperationState {
    * key: OperationType, value: operationId[]
    */
   operationsByType: Record<OperationType, string[]>;
+
+  /**
+   * Agent IDs with unread completed generation
+   */
+  unreadCompletedAgentIds: Set<string>;
+
+  /**
+   * Topic IDs with unread completed generation
+   */
+  unreadCompletedTopicIds: Set<string>;
 }
 
 export const initialOperationState: ChatOperationState = {
@@ -41,4 +51,6 @@ export const initialOperationState: ChatOperationState = {
   operationsByContext: {},
   operationsByMessage: {},
   operationsByType: {} as Record<OperationType, string[]>,
+  unreadCompletedAgentIds: new Set(),
+  unreadCompletedTopicIds: new Set(),
 };

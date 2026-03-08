@@ -1,11 +1,11 @@
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
+import { type CreateEmailOptions } from 'resend';
 import { Resend } from 'resend';
-import type { CreateEmailOptions } from 'resend';
 
 import { emailEnv } from '@/envs/email';
 
-import { EmailPayload, EmailResponse, EmailServiceImpl } from '../type';
+import { type EmailPayload, type EmailResponse, type EmailServiceImpl } from '../type';
 
 const log = debug('lobe-email:Resend');
 
@@ -27,14 +27,16 @@ export class ResendImpl implements EmailServiceImpl {
   }
 
   async sendMail(payload: EmailPayload): Promise<EmailResponse> {
-    const from = payload.from ?? emailEnv.RESEND_FROM;
+    // Note: Use || to handle empty string from Dockerfile defaults
+    const from = payload.from || emailEnv.RESEND_FROM;
     const html = payload.html;
     const text = payload.text;
 
     if (!from) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'Missing sender address. Provide payload.from or RESEND_FROM environment variable.',
+        message:
+          'Missing sender address. Provide payload.from or RESEND_FROM environment variable.',
       });
     }
 

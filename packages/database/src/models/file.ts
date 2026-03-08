@@ -1,11 +1,10 @@
-import { FilesTabs, QueryFileListParams, SortType } from '@lobechat/types';
+import type { QueryFileListParams } from '@lobechat/types';
+import { FilesTabs, SortType } from '@lobechat/types';
 import { and, asc, count, desc, eq, ilike, inArray, like, notExists, or, sum } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 
+import type { FileItem, NewFile, NewGlobalFile } from '../schemas';
 import {
-  FileItem,
-  NewFile,
-  NewGlobalFile,
   chunks,
   documentChunks,
   embeddings,
@@ -14,7 +13,7 @@ import {
   globalFiles,
   knowledgeBaseFiles,
 } from '../schemas';
-import { LobeChatDatabase, Transaction } from '../type';
+import type { LobeChatDatabase, Transaction } from '../type';
 
 export class FileModel {
   private readonly userId: string;
@@ -40,20 +39,27 @@ export class FileModel {
   }
 
   create = async (
-    params: Omit<NewFile, 'id' | 'userId'> & { id?: string; knowledgeBaseId?: string },
+    params: Omit<NewFile, 'id' | 'userId'> & {
+      id?: string;
+      knowledgeBaseId?: string;
+      parentId?: string;
+    },
     insertToGlobalFiles?: boolean,
     trx?: Transaction,
   ): Promise<{ id: string }> => {
     const executeInTransaction = async (tx: Transaction): Promise<FileItem> => {
       if (insertToGlobalFiles) {
-        await tx.insert(globalFiles).values({
-          creator: this.userId,
-          fileType: params.fileType,
-          hashId: params.fileHash!,
-          metadata: params.metadata,
-          size: params.size,
-          url: params.url,
-        });
+        await tx
+          .insert(globalFiles)
+          .values({
+            creator: this.userId,
+            fileType: params.fileType,
+            hashId: params.fileHash!,
+            metadata: params.metadata,
+            size: params.size,
+            url: params.url,
+          })
+          .onConflictDoNothing();
       }
 
       const result = (await tx

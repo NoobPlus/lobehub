@@ -17,17 +17,17 @@ describe('Operation Selectors', () => {
       act(() => {
         result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1' },
+          context: { agentId: 'session1' },
         });
 
         result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1' },
+          context: { agentId: 'session1' },
         });
 
         result.current.startOperation({
           type: 'reasoning',
-          context: { sessionId: 'session1' },
+          context: { agentId: 'session1' },
         });
       });
 
@@ -47,29 +47,29 @@ describe('Operation Selectors', () => {
 
       act(() => {
         // Set active session and topic
-        useChatStore.setState({ activeId: 'session1', activeTopicId: 'topic1' });
+        useChatStore.setState({ activeAgentId: 'session1', activeTopicId: 'topic1' });
 
         result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', topicId: 'topic1' },
+          context: { agentId: 'session1', topicId: 'topic1' },
         });
 
         result.current.startOperation({
           type: 'reasoning',
-          context: { sessionId: 'session1', topicId: 'topic1' },
+          context: { agentId: 'session1', topicId: 'topic1' },
         });
 
         // Operation in different context
         result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session2', topicId: 'topic2' },
+          context: { agentId: 'session2', topicId: 'topic2' },
         });
       });
 
       const currentOps = operationSelectors.getCurrentContextOperations(result.current);
 
       expect(currentOps).toHaveLength(2);
-      expect(currentOps.every((op) => op.context.sessionId === 'session1')).toBe(true);
+      expect(currentOps.every((op) => op.context.agentId === 'session1')).toBe(true);
       expect(currentOps.every((op) => op.context.topicId === 'topic1')).toBe(true);
     });
   });
@@ -85,7 +85,7 @@ describe('Operation Selectors', () => {
       act(() => {
         opId = result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1' },
+          context: { agentId: 'session1' },
         }).operationId;
       });
 
@@ -106,7 +106,7 @@ describe('Operation Selectors', () => {
       act(() => {
         result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1' },
+          context: { agentId: 'session1' },
         });
       });
 
@@ -122,7 +122,7 @@ describe('Operation Selectors', () => {
       const { result } = renderHook(() => useChatStore());
 
       act(() => {
-        useChatStore.setState({ activeId: 'session1', activeTopicId: 'topic1' });
+        useChatStore.setState({ activeAgentId: 'session1', activeTopicId: 'topic1' });
       });
 
       expect(operationSelectors.canSendMessage(result.current)).toBe(true);
@@ -130,7 +130,7 @@ describe('Operation Selectors', () => {
       act(() => {
         result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', topicId: 'topic1' },
+          context: { agentId: 'session1', topicId: 'topic1' },
         });
       });
 
@@ -143,7 +143,7 @@ describe('Operation Selectors', () => {
       const { result } = renderHook(() => useChatStore());
 
       act(() => {
-        useChatStore.setState({ activeId: 'session1', activeTopicId: 'topic1' });
+        useChatStore.setState({ activeAgentId: 'session1', activeTopicId: 'topic1' });
       });
 
       expect(operationSelectors.canInterrupt(result.current)).toBe(false);
@@ -151,7 +151,7 @@ describe('Operation Selectors', () => {
       act(() => {
         result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', topicId: 'topic1' },
+          context: { agentId: 'session1', topicId: 'topic1' },
         });
       });
 
@@ -164,11 +164,11 @@ describe('Operation Selectors', () => {
       const { result } = renderHook(() => useChatStore());
 
       act(() => {
-        useChatStore.setState({ activeId: 'session1', activeTopicId: 'topic1' });
+        useChatStore.setState({ activeAgentId: 'session1', activeTopicId: 'topic1' });
 
         result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', topicId: 'topic1' },
+          context: { agentId: 'session1', topicId: 'topic1' },
           label: 'Generating response...',
         });
 
@@ -176,7 +176,7 @@ describe('Operation Selectors', () => {
         setTimeout(() => {
           result.current.startOperation({
             type: 'reasoning',
-            context: { sessionId: 'session1', topicId: 'topic1' },
+            context: { agentId: 'session1', topicId: 'topic1' },
             label: 'Thinking...',
           });
         }, 10);
@@ -188,6 +188,171 @@ describe('Operation Selectors', () => {
     });
   });
 
+  describe('getDeepestRunningOperationByMessage', () => {
+    it('should return undefined when no operations exist', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      const deepestOp = operationSelectors.getDeepestRunningOperationByMessage('msg1')(
+        result.current,
+      );
+
+      expect(deepestOp).toBeUndefined();
+    });
+
+    it('should return undefined when no running operations exist', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      let opId: string;
+      act(() => {
+        opId = result.current.startOperation({
+          type: 'execAgentRuntime',
+          context: { agentId: 'session1', messageId: 'msg1' },
+        }).operationId;
+        result.current.associateMessageWithOperation('msg1', opId);
+        result.current.completeOperation(opId);
+      });
+
+      const deepestOp = operationSelectors.getDeepestRunningOperationByMessage('msg1')(
+        result.current,
+      );
+
+      expect(deepestOp).toBeUndefined();
+    });
+
+    it('should return the only running operation when there is one', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      let opId: string;
+      act(() => {
+        opId = result.current.startOperation({
+          type: 'execAgentRuntime',
+          context: { agentId: 'session1', messageId: 'msg1' },
+        }).operationId;
+        result.current.associateMessageWithOperation('msg1', opId);
+      });
+
+      const deepestOp = operationSelectors.getDeepestRunningOperationByMessage('msg1')(
+        result.current,
+      );
+
+      expect(deepestOp).toBeDefined();
+      expect(deepestOp?.type).toBe('execAgentRuntime');
+    });
+
+    it('should return the leaf operation in a parent-child tree', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      let parentOpId: string;
+      let childOpId: string;
+
+      act(() => {
+        // Start parent operation
+        parentOpId = result.current.startOperation({
+          type: 'execAgentRuntime',
+          context: { agentId: 'session1', messageId: 'msg1' },
+        }).operationId;
+        result.current.associateMessageWithOperation('msg1', parentOpId);
+
+        // Start child operation
+        childOpId = result.current.startOperation({
+          type: 'reasoning',
+          context: { agentId: 'session1', messageId: 'msg1' },
+          parentOperationId: parentOpId,
+        }).operationId;
+        result.current.associateMessageWithOperation('msg1', childOpId);
+      });
+
+      const deepestOp = operationSelectors.getDeepestRunningOperationByMessage('msg1')(
+        result.current,
+      );
+
+      // Should return the child (reasoning) not the parent (execAgentRuntime)
+      expect(deepestOp).toBeDefined();
+      expect(deepestOp?.type).toBe('reasoning');
+      expect(deepestOp?.id).toBe(childOpId!);
+    });
+
+    it('should return the deepest leaf in a multi-level tree', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      let rootOpId: string;
+      let level1OpId: string;
+      let level2OpId: string;
+
+      act(() => {
+        // Level 0: root operation
+        rootOpId = result.current.startOperation({
+          type: 'execAgentRuntime',
+          context: { agentId: 'session1', messageId: 'msg1' },
+        }).operationId;
+        result.current.associateMessageWithOperation('msg1', rootOpId);
+
+        // Level 1: child of root
+        level1OpId = result.current.startOperation({
+          type: 'callLLM',
+          context: { agentId: 'session1', messageId: 'msg1' },
+          parentOperationId: rootOpId,
+        }).operationId;
+        result.current.associateMessageWithOperation('msg1', level1OpId);
+
+        // Level 2: grandchild (deepest)
+        level2OpId = result.current.startOperation({
+          type: 'reasoning',
+          context: { agentId: 'session1', messageId: 'msg1' },
+          parentOperationId: level1OpId,
+        }).operationId;
+        result.current.associateMessageWithOperation('msg1', level2OpId);
+      });
+
+      const deepestOp = operationSelectors.getDeepestRunningOperationByMessage('msg1')(
+        result.current,
+      );
+
+      // Should return the deepest leaf (reasoning at level 2)
+      expect(deepestOp).toBeDefined();
+      expect(deepestOp?.type).toBe('reasoning');
+      expect(deepestOp?.id).toBe(level2OpId!);
+    });
+
+    it('should return parent when child operation completes', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      let parentOpId: string;
+      let childOpId: string;
+
+      act(() => {
+        parentOpId = result.current.startOperation({
+          type: 'execAgentRuntime',
+          context: { agentId: 'session1', messageId: 'msg1' },
+        }).operationId;
+        result.current.associateMessageWithOperation('msg1', parentOpId);
+
+        childOpId = result.current.startOperation({
+          type: 'reasoning',
+          context: { agentId: 'session1', messageId: 'msg1' },
+          parentOperationId: parentOpId,
+        }).operationId;
+        result.current.associateMessageWithOperation('msg1', childOpId);
+      });
+
+      // Before completing child
+      let deepestOp = operationSelectors.getDeepestRunningOperationByMessage('msg1')(
+        result.current,
+      );
+      expect(deepestOp?.type).toBe('reasoning');
+
+      // Complete child operation
+      act(() => {
+        result.current.completeOperation(childOpId);
+      });
+
+      // After completing child, parent should be the deepest running
+      deepestOp = operationSelectors.getDeepestRunningOperationByMessage('msg1')(result.current);
+      expect(deepestOp?.type).toBe('execAgentRuntime');
+      expect(deepestOp?.id).toBe(parentOpId!);
+    });
+  });
+
   describe('isMessageProcessing', () => {
     it('should return true if message has running operations', () => {
       const { result } = renderHook(() => useChatStore());
@@ -195,7 +360,7 @@ describe('Operation Selectors', () => {
       act(() => {
         result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', messageId: 'msg1' },
+          context: { agentId: 'session1', messageId: 'msg1' },
         });
       });
 
@@ -213,7 +378,7 @@ describe('Operation Selectors', () => {
       act(() => {
         opId = result.current.startOperation({
           type: 'sendMessage',
-          context: { sessionId: 'session1', messageId: 'user_msg_1' },
+          context: { agentId: 'session1', messageId: 'user_msg_1' },
         }).operationId;
 
         // Associate message with operation
@@ -232,7 +397,7 @@ describe('Operation Selectors', () => {
       act(() => {
         opId = result.current.startOperation({
           type: 'createAssistantMessage',
-          context: { sessionId: 'session1', messageId: 'assistant_msg_1' },
+          context: { agentId: 'session1', messageId: 'assistant_msg_1' },
         }).operationId;
 
         // Associate message with operation
@@ -251,7 +416,7 @@ describe('Operation Selectors', () => {
       act(() => {
         opId = result.current.startOperation({
           type: 'sendMessage',
-          context: { sessionId: 'session1', messageId: 'msg1' },
+          context: { agentId: 'session1', messageId: 'msg1' },
         }).operationId;
 
         result.current.associateMessageWithOperation('msg1', opId!);
@@ -275,7 +440,7 @@ describe('Operation Selectors', () => {
         // execAgentRuntime should not be considered as "creating"
         opId = result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', messageId: 'msg1' },
+          context: { agentId: 'session1', messageId: 'msg1' },
         }).operationId;
 
         result.current.associateMessageWithOperation('msg1', opId!);
@@ -295,21 +460,21 @@ describe('Operation Selectors', () => {
         // sendMessage - should be creating
         sendMsgOpId = result.current.startOperation({
           type: 'sendMessage',
-          context: { sessionId: 'session1', messageId: 'user_msg' },
+          context: { agentId: 'session1', messageId: 'user_msg' },
         }).operationId;
         result.current.associateMessageWithOperation('user_msg', sendMsgOpId!);
 
         // createAssistantMessage - should be creating
         createAssistantOpId = result.current.startOperation({
           type: 'createAssistantMessage',
-          context: { sessionId: 'session1', messageId: 'assistant_msg' },
+          context: { agentId: 'session1', messageId: 'assistant_msg' },
         }).operationId;
         result.current.associateMessageWithOperation('assistant_msg', createAssistantOpId!);
 
         // toolCalling - should NOT be creating
         toolCallOpId = result.current.startOperation({
           type: 'toolCalling',
-          context: { sessionId: 'session1', messageId: 'tool_msg' },
+          context: { agentId: 'session1', messageId: 'tool_msg' },
         }).operationId;
         result.current.associateMessageWithOperation('tool_msg', toolCallOpId!);
       });
@@ -329,7 +494,7 @@ describe('Operation Selectors', () => {
       act(() => {
         opId = result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', topicId: 'topic1', messageId: 'msg1' },
+          context: { agentId: 'session1', topicId: 'topic1', messageId: 'msg1' },
         }).operationId;
 
         result.current.associateMessageWithOperation('msg1', opId!);
@@ -338,9 +503,133 @@ describe('Operation Selectors', () => {
       const context = operationSelectors.getOperationContextFromMessage('msg1')(result.current);
 
       expect(context).toBeDefined();
-      expect(context?.sessionId).toBe('session1');
+      expect(context?.agentId).toBe('session1');
       expect(context?.topicId).toBe('topic1');
       expect(context?.messageId).toBe('msg1');
+    });
+  });
+
+  describe('isAgentRunning', () => {
+    it('should return false when no operations exist', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      expect(operationSelectors.isAgentRunning('agent1')(result.current)).toBe(false);
+    });
+
+    it('should return true only for the agent with running operations', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      act(() => {
+        result.current.startOperation({
+          type: 'execAgentRuntime',
+          context: { agentId: 'agent1' },
+        });
+      });
+
+      expect(operationSelectors.isAgentRunning('agent1')(result.current)).toBe(true);
+      expect(operationSelectors.isAgentRunning('agent2')(result.current)).toBe(false);
+    });
+
+    it('should return false when operation completes', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      let opId: string;
+
+      act(() => {
+        opId = result.current.startOperation({
+          type: 'execAgentRuntime',
+          context: { agentId: 'agent1' },
+        }).operationId;
+      });
+
+      expect(operationSelectors.isAgentRunning('agent1')(result.current)).toBe(true);
+
+      act(() => {
+        result.current.completeOperation(opId!);
+      });
+
+      expect(operationSelectors.isAgentRunning('agent1')(result.current)).toBe(false);
+    });
+
+    it('should exclude aborting operations', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      let opId: string;
+
+      act(() => {
+        opId = result.current.startOperation({
+          type: 'execAgentRuntime',
+          context: { agentId: 'agent1' },
+        }).operationId;
+      });
+
+      expect(operationSelectors.isAgentRunning('agent1')(result.current)).toBe(true);
+
+      act(() => {
+        result.current.updateOperationMetadata(opId!, { isAborting: true });
+      });
+
+      expect(operationSelectors.isAgentRunning('agent1')(result.current)).toBe(false);
+    });
+
+    it('should detect any topic with running operations for the agent', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      act(() => {
+        // Agent 1, topic 1
+        result.current.startOperation({
+          type: 'execAgentRuntime',
+          context: { agentId: 'agent1', topicId: 'topic1' },
+        });
+
+        // Agent 1, topic 2
+        result.current.startOperation({
+          type: 'execAgentRuntime',
+          context: { agentId: 'agent1', topicId: 'topic2' },
+        });
+
+        // Agent 2, topic 3
+        result.current.startOperation({
+          type: 'execAgentRuntime',
+          context: { agentId: 'agent2', topicId: 'topic3' },
+        });
+      });
+
+      // Agent 1 should be running (has 2 topics with operations)
+      expect(operationSelectors.isAgentRunning('agent1')(result.current)).toBe(true);
+      // Agent 2 should also be running
+      expect(operationSelectors.isAgentRunning('agent2')(result.current)).toBe(true);
+      // Agent 3 should not be running
+      expect(operationSelectors.isAgentRunning('agent3')(result.current)).toBe(false);
+    });
+
+    it('should detect server agent runtime operations', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      act(() => {
+        result.current.startOperation({
+          type: 'execServerAgentRuntime',
+          context: { agentId: 'agent1', groupId: 'group1' },
+        });
+      });
+
+      expect(operationSelectors.isAgentRunning('agent1')(result.current)).toBe(true);
+      expect(operationSelectors.isAgentRunning('agent2')(result.current)).toBe(false);
+    });
+
+    it('should not detect non-AI-runtime operations', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      act(() => {
+        // sendMessage is not an AI runtime operation type
+        result.current.startOperation({
+          type: 'sendMessage',
+          context: { agentId: 'agent1' },
+        });
+      });
+
+      // sendMessage is not in AI_RUNTIME_OPERATION_TYPES, so should return false
+      expect(operationSelectors.isAgentRunning('agent1')(result.current)).toBe(false);
     });
   });
 
@@ -353,7 +642,7 @@ describe('Operation Selectors', () => {
       act(() => {
         result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1' },
+          context: { agentId: 'session1' },
         });
       });
 
@@ -368,26 +657,11 @@ describe('Operation Selectors', () => {
       act(() => {
         result.current.startOperation({
           type: 'sendMessage',
-          context: { sessionId: 'session1' },
+          context: { agentId: 'session1' },
         });
       });
 
       expect(operationSelectors.isSendingMessage(result.current)).toBe(true);
-    });
-
-    it('isInRAGFlow should work', () => {
-      const { result } = renderHook(() => useChatStore());
-
-      expect(operationSelectors.isInRAGFlow(result.current)).toBe(false);
-
-      act(() => {
-        result.current.startOperation({
-          type: 'rag',
-          context: { sessionId: 'session1' },
-        });
-      });
-
-      expect(operationSelectors.isInRAGFlow(result.current)).toBe(true);
     });
 
     it('isMainWindowAgentRuntimeRunning should only detect main window operations', () => {
@@ -395,7 +669,7 @@ describe('Operation Selectors', () => {
 
       // Set active context
       act(() => {
-        useChatStore.setState({ activeId: 'session1', activeTopicId: undefined });
+        useChatStore.setState({ activeAgentId: 'session1', activeTopicId: undefined });
       });
 
       expect(operationSelectors.isMainWindowAgentRuntimeRunning(result.current)).toBe(false);
@@ -405,7 +679,7 @@ describe('Operation Selectors', () => {
       act(() => {
         mainOpId = result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', topicId: null },
+          context: { agentId: 'session1', topicId: null },
           metadata: { inThread: false },
         }).operationId;
       });
@@ -427,7 +701,7 @@ describe('Operation Selectors', () => {
 
       // Set active context
       act(() => {
-        useChatStore.setState({ activeId: 'session1', activeTopicId: undefined });
+        useChatStore.setState({ activeAgentId: 'session1', activeTopicId: undefined });
       });
 
       // Start a thread operation (inThread: true)
@@ -435,7 +709,7 @@ describe('Operation Selectors', () => {
       act(() => {
         threadOpId = result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', topicId: null, threadId: 'thread1' },
+          context: { agentId: 'session1', topicId: null, threadId: 'thread1' },
           metadata: { inThread: true },
         }).operationId;
       });
@@ -459,7 +733,7 @@ describe('Operation Selectors', () => {
 
       // Set active context
       act(() => {
-        useChatStore.setState({ activeId: 'session1', activeTopicId: undefined });
+        useChatStore.setState({ activeAgentId: 'session1', activeTopicId: undefined });
       });
 
       let mainOpId: string;
@@ -469,13 +743,13 @@ describe('Operation Selectors', () => {
       act(() => {
         mainOpId = result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', topicId: null },
+          context: { agentId: 'session1', topicId: null },
           metadata: { inThread: false },
         }).operationId;
 
         threadOpId = result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', topicId: null, threadId: 'thread1' },
+          context: { agentId: 'session1', topicId: null, threadId: 'thread1' },
           metadata: { inThread: true },
         }).operationId;
       });
@@ -506,14 +780,14 @@ describe('Operation Selectors', () => {
 
       // Set active context
       act(() => {
-        useChatStore.setState({ activeId: 'session1', activeTopicId: undefined });
+        useChatStore.setState({ activeAgentId: 'session1', activeTopicId: undefined });
       });
 
       let opId: string;
       act(() => {
         opId = result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', topicId: null },
+          context: { agentId: 'session1', topicId: null },
           metadata: { inThread: false },
         }).operationId;
       });
@@ -535,7 +809,7 @@ describe('Operation Selectors', () => {
 
       // Set active session and topic
       act(() => {
-        useChatStore.setState({ activeId: 'session1', activeTopicId: 'topic1' });
+        useChatStore.setState({ activeAgentId: 'session1', activeTopicId: 'topic1' });
       });
 
       let topic1OpId: string;
@@ -545,7 +819,7 @@ describe('Operation Selectors', () => {
       act(() => {
         topic1OpId = result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', topicId: 'topic1' },
+          context: { agentId: 'session1', topicId: 'topic1' },
           metadata: { inThread: false },
         }).operationId;
       });
@@ -557,7 +831,7 @@ describe('Operation Selectors', () => {
       act(() => {
         topic2OpId = result.current.startOperation({
           type: 'execAgentRuntime',
-          context: { sessionId: 'session1', topicId: 'topic2' },
+          context: { agentId: 'session1', topicId: 'topic2' },
           metadata: { inThread: false },
         }).operationId;
       });

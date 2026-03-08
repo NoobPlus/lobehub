@@ -1,28 +1,29 @@
 'use client';
 
+import { type ChatInputProps } from '@lobehub/editor/react';
 import { ChatInput, ChatInputActionBar } from '@lobehub/editor/react';
-import { Text } from '@lobehub/ui';
-import { createStyles } from 'antd-style';
+import { Center, Flexbox, Text } from '@lobehub/ui';
+import { createStaticStyles, cx } from 'antd-style';
+import { type ReactNode } from 'react';
 import { memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Center, Flexbox } from 'react-layout-kit';
 
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { useChatStore } from '@/store/chat';
 import { chatSelectors } from '@/store/chat/selectors';
+import { fileChatSelectors, useFileStore } from '@/store/file';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
+import { type ActionToolbarProps } from '../ActionBar';
 import ActionBar from '../ActionBar';
 import InputEditor from '../InputEditor';
 import SendArea from '../SendArea';
 import TypoBar from '../TypoBar';
-import FilePreview from './FilePreview';
+import ContextContainer from './ContextContainer';
 
-const useStyles = createStyles(({ css, token }) => ({
+const styles = createStaticStyles(({ css }) => ({
   container: css`
-    margin-block-start: -5px;
-
     .show-on-hover {
       opacity: 0;
     }
@@ -43,67 +44,111 @@ const useStyles = createStyles(({ css, token }) => ({
 
     width: 100%;
     height: 100%;
-    padding: 12px;
-
-    background: ${token.colorBgContainerSecondary};
+    margin-block-start: 0;
+  `,
+  inputFullscreen: css`
+    border: none;
+    border-radius: 0 !important;
   `,
 }));
 
-const DesktopChatInput = memo<{ showFootnote?: boolean }>(({ showFootnote }) => {
-  const { t } = useTranslation('chat');
-  const [chatInputHeight, updateSystemStatus] = useGlobalStore((s) => [
-    systemStatusSelectors.chatInputHeight(s),
-    s.updateSystemStatus,
-  ]);
-  const [slashMenuRef, expand, showTypoBar, editor, leftActions] = useChatInputStore((s) => [
-    s.slashMenuRef,
-    s.expand,
-    s.showTypoBar,
-    s.editor,
-    s.leftActions,
-  ]);
+interface DesktopChatInputProps extends ActionToolbarProps {
+  actionBarStyle?: React.CSSProperties;
+  extentHeaderContent?: ReactNode;
+  inputContainerProps?: ChatInputProps;
+  leftContent?: ReactNode;
+  sendAreaPrefix?: ReactNode;
+  showFootnote?: boolean;
+}
 
-  const { styles, cx } = useStyles();
+const DesktopChatInput = memo<DesktopChatInputProps>(
+  ({
+    showFootnote,
+    inputContainerProps,
+    extentHeaderContent,
+    actionBarStyle,
+    borderRadius,
+    extraActionItems,
+    dropdownPlacement,
+    leftContent,
+    sendAreaPrefix,
+  }) => {
+    const { t } = useTranslation('chat');
+    const [chatInputHeight, updateSystemStatus] = useGlobalStore((s) => [
+      systemStatusSelectors.chatInputHeight(s),
+      s.updateSystemStatus,
+    ]);
+    const hasContextSelections = useFileStore(fileChatSelectors.chatContextSelectionHasItem);
+    const hasFiles = useFileStore(fileChatSelectors.chatUploadFileListHasItem);
+    const [slashMenuRef, expand, showTypoBar, editor, leftActions] = useChatInputStore((s) => [
+      s.slashMenuRef,
+      s.expand,
+      s.showTypoBar,
+      s.editor,
+      s.leftActions,
+    ]);
 
-  const chatKey = useChatStore(chatSelectors.currentChatKey);
+    const chatKey = useChatStore(chatSelectors.currentChatKey);
 
-  useEffect(() => {
-    if (editor) editor.focus();
-  }, [chatKey, editor]);
+    useEffect(() => {
+      if (editor) editor.focus();
+    }, [chatKey, editor]);
 
-  const fileNode = leftActions.flat().includes('fileUpload') && <FilePreview />;
+    const shouldShowContextContainer =
+      leftActions.flat().includes('fileUpload') || hasContextSelections || hasFiles;
+    const contextContainerNode = shouldShowContextContainer && <ContextContainer />;
 
-  return (
-    <>
-      {!expand && fileNode}
+    return (
       <Flexbox
         className={cx(styles.container, expand && styles.fullscreen)}
         gap={8}
-        paddingBlock={showFootnote ? '0 8px' : '0 12px'}
-        paddingInline={12}
+        paddingBlock={expand ? 0 : showFootnote ? '0 12px' : '0 16px'}
       >
         <ChatInput
+          data-testid="chat-input"
           defaultHeight={chatInputHeight || 32}
-          footer={
-            <ChatInputActionBar
-              left={<ActionBar />}
-              right={<SendArea />}
-              style={{
-                paddingRight: 8,
-              }}
-            />
-          }
           fullscreen={expand}
-          header={showTypoBar && <TypoBar />}
           maxHeight={320}
           minHeight={36}
+          resize={true}
+          slashMenuRef={slashMenuRef}
+          footer={
+            <ChatInputActionBar
+              style={actionBarStyle ?? { paddingRight: 8 }}
+              left={
+                leftContent ?? (
+                  <ActionBar
+                    borderRadius={borderRadius}
+                    dropdownPlacement={dropdownPlacement}
+                    extraActionItems={extraActionItems}
+                  />
+                )
+              }
+              right={
+                sendAreaPrefix ? (
+                  <Flexbox horizontal align={'center'} gap={6}>
+                    {sendAreaPrefix}
+                    <SendArea />
+                  </Flexbox>
+                ) : (
+                  <SendArea />
+                )
+              }
+            />
+          }
+          header={
+            <Flexbox gap={0}>
+              {extentHeaderContent}
+              {showTypoBar && <TypoBar />}
+              {contextContainerNode}
+            </Flexbox>
+          }
           onSizeChange={(height) => {
             updateSystemStatus({ chatInputHeight: height });
           }}
-          resize={true}
-          slashMenuRef={slashMenuRef}
+          {...inputContainerProps}
+          className={cx(expand && styles.inputFullscreen, inputContainerProps?.className)}
         >
-          {expand && fileNode}
           <InputEditor />
         </ChatInput>
         {showFootnote && !expand && (
@@ -114,9 +159,9 @@ const DesktopChatInput = memo<{ showFootnote?: boolean }>(({ showFootnote }) => 
           </Center>
         )}
       </Flexbox>
-    </>
-  );
-});
+    );
+  },
+);
 
 DesktopChatInput.displayName = 'DesktopChatInput';
 

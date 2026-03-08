@@ -2,18 +2,20 @@
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { LobeChatDatabase } from '../../type';import { sleep } from '@/utils/sleep';
+import { sleep } from '@/utils/sleep';
 
+import { getTestDB } from '../../core/getTestDB';
+import type { NewKnowledgeBase } from '../../schemas';
 import {
-  NewKnowledgeBase,
+  documents,
   files,
   globalFiles,
   knowledgeBaseFiles,
   knowledgeBases,
   users,
 } from '../../schemas';
+import type { LobeChatDatabase } from '../../type';
 import { KnowledgeBaseModel } from '../knowledgeBase';
-import { getTestDB } from './_util';
 
 const serverDB: LobeChatDatabase = await getTestDB();
 
@@ -192,6 +194,165 @@ describe('KnowledgeBaseModel', () => {
       });
       expect(addedFiles).toHaveLength(2);
     });
+
+    it('should add documents (with docs_ prefix) to a knowledge base by resolving to file IDs', async () => {
+      await serverDB.insert(globalFiles).values([
+        {
+          hashId: 'hash1',
+          url: 'https://example.com/document.pdf',
+          size: 1000,
+          fileType: 'application/pdf',
+          creator: userId,
+        },
+      ]);
+
+      // Create mirror file first (document references it via fileId)
+      await serverDB.insert(files).values([
+        {
+          id: 'file1',
+          name: 'document.pdf',
+          url: 'https://example.com/document.pdf',
+          fileHash: 'hash1',
+          size: 1000,
+          fileType: 'application/pdf',
+          userId,
+        },
+      ]);
+
+      // Create document with fileId pointing to the mirror file
+      await serverDB.insert(documents).values([
+        {
+          id: 'docs_test123',
+          title: 'Test Document',
+          content: 'Test content',
+          fileType: 'application/pdf',
+          totalCharCount: 100,
+          totalLineCount: 10,
+          sourceType: 'file',
+          source: 'test.pdf',
+          fileId: 'file1',
+          userId,
+        },
+      ]);
+
+      const { id: knowledgeBaseId } = await knowledgeBaseModel.create({ name: 'Test Group' });
+
+      // Pass document ID (with docs_ prefix)
+      const result = await knowledgeBaseModel.addFilesToKnowledgeBase(knowledgeBaseId, [
+        'docs_test123',
+      ]);
+
+      // Should resolve to file1 and insert that
+      expect(result).toHaveLength(1);
+      expect(result[0].fileId).toBe('file1');
+      expect(result[0].knowledgeBaseId).toBe(knowledgeBaseId);
+
+      const addedFiles = await serverDB.query.knowledgeBaseFiles.findMany({
+        where: eq(knowledgeBaseFiles.knowledgeBaseId, knowledgeBaseId),
+      });
+      expect(addedFiles).toHaveLength(1);
+      expect(addedFiles[0].fileId).toBe('file1');
+
+      // Verify document.knowledgeBaseId was updated
+      const document = await serverDB.query.documents.findFirst({
+        where: eq(documents.id, 'docs_test123'),
+      });
+      expect(document?.knowledgeBaseId).toBe(knowledgeBaseId);
+    });
+
+    it('should return empty array when all document IDs resolve to null fileIds', async () => {
+      // Create a document without a fileId (fileId is null)
+      await serverDB.insert(documents).values([
+        {
+          id: 'docs_no_file',
+          title: 'Document without file',
+          content: 'Test content',
+          fileType: 'text/plain',
+          totalCharCount: 50,
+          totalLineCount: 5,
+          sourceType: 'file',
+          source: 'test.txt',
+          fileId: null,
+          userId,
+        },
+      ]);
+
+      const { id: knowledgeBaseId } = await knowledgeBaseModel.create({ name: 'Test Group' });
+
+      // Pass only document IDs whose fileId is null => resolvedFileIds will be empty
+      const result = await knowledgeBaseModel.addFilesToKnowledgeBase(knowledgeBaseId, [
+        'docs_no_file',
+      ]);
+
+      expect(result).toEqual([]);
+
+      // Verify no files were added to the knowledge base
+      const addedFiles = await serverDB.query.knowledgeBaseFiles.findMany({
+        where: eq(knowledgeBaseFiles.knowledgeBaseId, knowledgeBaseId),
+      });
+      expect(addedFiles).toHaveLength(0);
+    });
+
+    it('should handle mixed document IDs and file IDs', async () => {
+      await serverDB.insert(globalFiles).values([
+        {
+          hashId: 'hash1',
+          url: 'https://example.com/document.pdf',
+          size: 1000,
+          fileType: 'application/pdf',
+          creator: userId,
+        },
+        {
+          hashId: 'hash2',
+          url: 'https://example.com/image.jpg',
+          size: 500,
+          fileType: 'image/jpeg',
+          creator: userId,
+        },
+      ]);
+
+      // Create files - file1 is mirror of the document, file2 is standalone
+      await serverDB.insert(files).values([
+        {
+          id: 'file1',
+          name: 'document.pdf',
+          url: 'https://example.com/document.pdf',
+          fileHash: 'hash1',
+          size: 1000,
+          fileType: 'application/pdf',
+          userId,
+        },
+        fileList[1], // file2 - standalone file
+      ]);
+
+      // Create document with fileId pointing to the mirror file
+      await serverDB.insert(documents).values([
+        {
+          id: 'docs_test456',
+          title: 'Test Document',
+          content: 'Test content',
+          fileType: 'application/pdf',
+          totalCharCount: 100,
+          totalLineCount: 10,
+          sourceType: 'file',
+          source: 'test.pdf',
+          fileId: 'file1',
+          userId,
+        },
+      ]);
+
+      const { id: knowledgeBaseId } = await knowledgeBaseModel.create({ name: 'Test Group' });
+
+      // Mix of document ID and direct file ID
+      const result = await knowledgeBaseModel.addFilesToKnowledgeBase(knowledgeBaseId, [
+        'docs_test456',
+        'file2',
+      ]);
+
+      expect(result).toHaveLength(2);
+      const fileIds = result.map((r) => r.fileId).sort();
+      expect(fileIds).toEqual(['file1', 'file2']);
+    });
   });
 
   describe('removeFilesFromKnowledgeBase', () => {
@@ -227,6 +388,147 @@ describe('KnowledgeBaseModel', () => {
       });
       expect(remainingFiles).toHaveLength(1);
       expect(remainingFiles[0].fileId).toBe('file2');
+    });
+
+    it('should remove documents (with docs_ prefix) from a knowledge base by resolving to file IDs', async () => {
+      await serverDB.insert(globalFiles).values([
+        {
+          hashId: 'hash1',
+          url: 'https://example.com/document.pdf',
+          size: 1000,
+          fileType: 'application/pdf',
+          creator: userId,
+        },
+      ]);
+
+      // Create mirror file first (document references it via fileId)
+      await serverDB.insert(files).values([
+        {
+          id: 'file1',
+          name: 'document.pdf',
+          url: 'https://example.com/document.pdf',
+          fileHash: 'hash1',
+          size: 1000,
+          fileType: 'application/pdf',
+          userId,
+        },
+      ]);
+
+      // Create document with fileId pointing to the mirror file
+      await serverDB.insert(documents).values([
+        {
+          id: 'docs_test789',
+          title: 'Test Document',
+          content: 'Test content',
+          fileType: 'application/pdf',
+          totalCharCount: 100,
+          totalLineCount: 10,
+          sourceType: 'file',
+          source: 'test.pdf',
+          fileId: 'file1',
+          userId,
+        },
+      ]);
+
+      const { id: knowledgeBaseId } = await knowledgeBaseModel.create({ name: 'Test Group' });
+      await knowledgeBaseModel.addFilesToKnowledgeBase(knowledgeBaseId, ['docs_test789']);
+
+      // Remove using document ID
+      await knowledgeBaseModel.removeFilesFromKnowledgeBase(knowledgeBaseId, ['docs_test789']);
+
+      const remainingFiles = await serverDB.query.knowledgeBaseFiles.findMany({
+        where: eq(knowledgeBaseFiles.knowledgeBaseId, knowledgeBaseId),
+      });
+      expect(remainingFiles).toHaveLength(0);
+
+      // Verify document.knowledgeBaseId was cleared
+      const document = await serverDB.query.documents.findFirst({
+        where: eq(documents.id, 'docs_test789'),
+      });
+      expect(document?.knowledgeBaseId).toBeNull();
+    });
+
+    it('should handle removing document IDs that resolve to null fileIds (empty resolvedFileIds)', async () => {
+      await serverDB.insert(globalFiles).values([
+        {
+          hashId: 'hash1',
+          url: 'https://example.com/document.pdf',
+          size: 1000,
+          fileType: 'application/pdf',
+          creator: userId,
+        },
+      ]);
+
+      await serverDB.insert(files).values([
+        {
+          id: 'file1',
+          name: 'document.pdf',
+          url: 'https://example.com/document.pdf',
+          fileHash: 'hash1',
+          size: 1000,
+          fileType: 'application/pdf',
+          userId,
+        },
+      ]);
+
+      const { id: knowledgeBaseId } = await knowledgeBaseModel.create({ name: 'Test Group' });
+      await knowledgeBaseModel.addFilesToKnowledgeBase(knowledgeBaseId, ['file1']);
+
+      // Create a document without a fileId (fileId is null)
+      await serverDB.insert(documents).values([
+        {
+          id: 'docs_null_file',
+          title: 'Document without file',
+          content: 'Test content',
+          fileType: 'text/plain',
+          totalCharCount: 50,
+          totalLineCount: 5,
+          sourceType: 'file',
+          source: 'test.txt',
+          fileId: null,
+          knowledgeBaseId,
+          userId,
+        },
+      ]);
+
+      // Try to remove using only a document ID whose fileId is null
+      // resolvedFileIds will be empty after filtering, so the early return on line 109-111 is hit
+      await knowledgeBaseModel.removeFilesFromKnowledgeBase(knowledgeBaseId, ['docs_null_file']);
+
+      // The existing file should still be in the knowledge base
+      const remainingFiles = await serverDB.query.knowledgeBaseFiles.findMany({
+        where: eq(knowledgeBaseFiles.knowledgeBaseId, knowledgeBaseId),
+      });
+      expect(remainingFiles).toHaveLength(1);
+      expect(remainingFiles[0].fileId).toBe('file1');
+    });
+
+    it('should not allow removing files from another user knowledge base', async () => {
+      await serverDB.insert(globalFiles).values([
+        {
+          hashId: 'hash1',
+          url: 'https://example.com/document.pdf',
+          size: 1000,
+          fileType: 'application/pdf',
+          creator: userId,
+        },
+      ]);
+
+      await serverDB.insert(files).values([fileList[0]]);
+
+      const { id: knowledgeBaseId } = await knowledgeBaseModel.create({ name: 'Test Group' });
+      await knowledgeBaseModel.addFilesToKnowledgeBase(knowledgeBaseId, ['file1']);
+
+      // Another user tries to remove files from this knowledge base
+      const attackerModel = new KnowledgeBaseModel(serverDB, 'user2');
+      await attackerModel.removeFilesFromKnowledgeBase(knowledgeBaseId, ['file1']);
+
+      // Files should still exist since the attacker doesn't own them
+      const remainingFiles = await serverDB.query.knowledgeBaseFiles.findMany({
+        where: eq(knowledgeBaseFiles.knowledgeBaseId, knowledgeBaseId),
+      });
+      expect(remainingFiles).toHaveLength(1);
+      expect(remainingFiles[0].fileId).toBe('file1');
     });
   });
 
