@@ -152,6 +152,39 @@ export class AgentBotProviderModel {
 
   // --------------- System-wide static methods ---------------
 
+  static findEnabledByPlatformAndAppId = async (
+    db: LobeChatDatabase,
+    platform: string,
+    applicationId: string,
+    gateKeeper?: GateKeeper,
+  ): Promise<DecryptedBotProvider | null> => {
+    const [result] = await db
+      .select()
+      .from(agentBotProviders)
+      .where(
+        and(
+          eq(agentBotProviders.platform, platform),
+          eq(agentBotProviders.applicationId, applicationId),
+          eq(agentBotProviders.enabled, true),
+        ),
+      )
+      .limit(1);
+
+    if (!result?.credentials) return null;
+
+    try {
+      const credentials = gateKeeper
+        ? JSON.parse((await gateKeeper.decrypt(result.credentials)).plaintext)
+        : JSON.parse(result.credentials);
+
+      if (!credentials.botToken && !credentials.appSecret) return null;
+
+      return { ...result, credentials };
+    } catch {
+      return null;
+    }
+  };
+
   static findEnabledByPlatform = async (
     db: LobeChatDatabase,
     platform: string,
