@@ -151,7 +151,7 @@
     ]
   },
   "overrides": {
-    "@lexical/code": "github:Innei/lexical-code-no-prism",
+    "@lexical/code": "npm:lexical-code-no-prism",
     "pdfjs-dist": "5.4.530",
     "stylelint-config-clean-order": "7.0.0"
   },
@@ -504,7 +504,7 @@
       "ffmpeg-static"
     ],
     "overrides": {
-      "@lexical/code": "github:Innei/lexical-code-no-prism",
+      "@lexical/code": "npm:lexical-code-no-prism",
       "@types/react": "19.2.13",
       "better-auth": "1.4.6",
       "better-call": "1.1.8",
