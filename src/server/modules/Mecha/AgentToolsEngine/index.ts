@@ -11,12 +11,13 @@
  */
 import { KnowledgeBaseManifest } from '@lobechat/builtin-tool-knowledge-base';
 import { LocalSystemManifest } from '@lobechat/builtin-tool-local-system';
+import { MemoryManifest } from '@lobechat/builtin-tool-memory';
+import { RemoteDeviceManifest } from '@lobechat/builtin-tool-remote-device';
 import { WebBrowsingManifest } from '@lobechat/builtin-tool-web-browsing';
-import { type LobeToolManifest } from '@lobechat/context-engine';
+import { builtinTools, defaultToolIds } from '@lobechat/builtin-tools';
+import { createEnableChecker, type LobeToolManifest } from '@lobechat/context-engine';
 import { ToolsEngine } from '@lobechat/context-engine';
 import debug from 'debug';
-
-import { builtinTools } from '@/tools';
 
 import {
   type ServerAgentToolsContext,
@@ -90,6 +91,8 @@ export const createServerAgentToolsEngine = (
   const {
     additionalManifests,
     agentConfig,
+    deviceContext,
+    globalMemoryEnabled = false,
     hasEnabledKnowledgeBases = false,
     model,
     provider,
@@ -98,38 +101,28 @@ export const createServerAgentToolsEngine = (
   const isSearchEnabled = searchMode !== 'off';
 
   log(
-    'Creating agent tools engine for model=%s, provider=%s, searchMode=%s, additionalManifests=%d',
+    'Creating agent tools engine for model=%s, provider=%s, searchMode=%s, additionalManifests=%d, deviceGateway=%s',
     model,
     provider,
     searchMode,
     additionalManifests?.length ?? 0,
+    !!deviceContext?.gatewayConfigured,
   );
 
   return createServerToolsEngine(context, {
     // Pass additional manifests (e.g., LobeHub Skills)
     additionalManifests,
     // Add default tools based on configuration
-    defaultToolIds: [WebBrowsingManifest.identifier, KnowledgeBaseManifest.identifier],
-    // Create search-aware enableChecker for this request
-    enableChecker: ({ pluginId }) => {
-      // Filter LocalSystem tool on server (it's desktop-only)
-      if (pluginId === LocalSystemManifest.identifier) {
-        return false;
-      }
-
-      // For WebBrowsingManifest, apply search logic
-      if (pluginId === WebBrowsingManifest.identifier) {
-        // TODO: Check model builtin search capability when needed
-        return isSearchEnabled;
-      }
-
-      // For KnowledgeBaseManifest, only enable if knowledge is enabled
-      if (pluginId === KnowledgeBaseManifest.identifier) {
-        return hasEnabledKnowledgeBases;
-      }
-
-      // For all other plugins, enable by default
-      return true;
-    },
+    defaultToolIds,
+    enableChecker: createEnableChecker({
+      rules: {
+        [KnowledgeBaseManifest.identifier]: hasEnabledKnowledgeBases,
+        [LocalSystemManifest.identifier]:
+          !!deviceContext?.gatewayConfigured && !!deviceContext?.deviceOnline,
+        [MemoryManifest.identifier]: globalMemoryEnabled,
+        [RemoteDeviceManifest.identifier]: !!deviceContext?.gatewayConfigured,
+        [WebBrowsingManifest.identifier]: isSearchEnabled,
+      },
+    }),
   });
 };

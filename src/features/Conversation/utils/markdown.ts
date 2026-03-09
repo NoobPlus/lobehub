@@ -5,12 +5,14 @@ import { ARTIFACT_TAG_REGEX, ARTIFACT_THINKING_TAG_REGEX } from '@lobechat/const
  */
 export const processWithArtifact = (input: string = '') => {
   // First remove outer fenced code block if it exists
+  /* eslint-disable regexp/no-super-linear-backtracking */
   let output = input.replace(
     /^([\s\S]*?)\s*```[^\n]*\n((?:<lobeThinking>[\s\S]*?<\/lobeThinking>[\t\v\f\r \xA0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]*\n\s*)?<lobeArtifact[\s\S]*?<\/lobeArtifact>\s*)\n```\s*([\s\S]*)$/,
     (_, before = '', content, after = '') => {
       return [before.trim(), content.trim(), after.trim()].filter(Boolean).join('\n\n');
     },
   );
+  /* eslint-enable regexp/no-super-linear-backtracking */
 
   const thinkMatch = ARTIFACT_THINKING_TAG_REGEX.exec(output);
 
@@ -59,17 +61,17 @@ export const processWithArtifact = (input: string = '') => {
   return output;
 };
 
-// 预处理函数：确保 think 标签前后有两个换行符
+// Preprocessing function: ensure two newlines before and after think tags
 export const normalizeThinkTags = (input: string) => {
   return (
     input
-      // 确保 <think> 标签前后有两个换行符
+      // Ensure two newlines before and after <think> tags
       .replaceAll(/([^\n])\s*<think>/g, '$1\n\n<think>')
       .replaceAll(/<think>\s*([^\n])/g, '<think>\n\n$1')
-      // 确保 </think> 标签前后有两个换行符
+      // Ensure two newlines before and after </think> tags
       .replaceAll(/([^\n])\s*<\/think>/g, '$1\n\n</think>')
       .replaceAll(/<\/think>\s*([^\n])/g, '</think>\n\n$1')
-      // 处理可能产生的多余换行符
+      // Remove excess newlines that may have been introduced
       .replaceAll(/\n{3,}/g, '\n\n')
   );
 };

@@ -1,9 +1,9 @@
-/* eslint-disable sort-keys-fix/sort-keys-fix, typescript-sort-keys/interface */
 // Disable the auto sort key eslint rule to make the code more logic and readable
 import { ENABLE_BUSINESS_FEATURES } from '@lobechat/business-const';
 import { LOADING_FLAT } from '@lobechat/const';
 import {
   type ChatImageItem,
+  type ChatThreadType,
   type ChatVideoItem,
   type ConversationContext,
   type SendMessageParams,
@@ -62,11 +62,10 @@ export const conversationLifecycle = (set: Setter, get: () => ChatStore, _api?: 
 
 export class ConversationLifecycleActionImpl {
   readonly #get: () => ChatStore;
-  readonly #set: Setter;
 
   constructor(set: Setter, get: () => ChatStore, _api?: unknown) {
     void _api;
-    this.#set = set;
+    void set;
     this.#get = get;
   }
 
@@ -89,7 +88,10 @@ export class ConversationLifecycleActionImpl {
     // Only create newThread if we have both sourceMessageId and threadType
     const newThread =
       isCreatingNewThread && context.sourceMessageId && context.threadType
-        ? { sourceMessageId: context.sourceMessageId, type: context.threadType }
+        ? {
+            sourceMessageId: context.sourceMessageId,
+            type: context.threadType as ChatThreadType,
+          }
         : undefined;
 
     if (!agentId) return;
@@ -152,7 +154,7 @@ export class ConversationLifecycleActionImpl {
       },
     });
 
-    // 构造服务端模式临时消息的本地媒体预览（优先使用 S3 URL）
+    // Construct local media preview for server-mode temporary messages (S3 URL takes priority)
     const filesInStore = getFileStoreState().chatUploadFileList;
     const tempImages: ChatImageItem[] = filesInStore
       .filter((f) => f.file?.type?.startsWith('image'))
@@ -266,6 +268,13 @@ export class ConversationLifecycleActionImpl {
 
         // Record the created topicId in metadata (not context)
         this.#get().updateOperationMetadata(operationId, { createdTopicId: data.topicId });
+      } else if (operationContext.topicId) {
+        // Optimistically update topic's updatedAt so sidebar re-groups immediately
+        this.#get().internal_dispatchTopic({
+          type: 'updateTopic',
+          id: operationContext.topicId,
+          value: { updatedAt: Date.now() },
+        });
       }
 
       // Record created threadId in operation metadata
@@ -311,7 +320,7 @@ export class ConversationLifecycleActionImpl {
         }
       }
     } finally {
-      // 创建了新topic 或者 用户 cancel 了消息（或者失败了），此时无 data
+      // A new topic was created, or the user cancelled the message (or it failed), so data is absent here
       if (data?.isCreateNewTopic || !data) {
         this.#get().internal_dispatchMessage(
           { type: 'deleteMessages', ids: [tempId, tempAssistantId] },

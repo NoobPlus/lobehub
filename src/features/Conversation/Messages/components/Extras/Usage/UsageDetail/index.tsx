@@ -28,7 +28,7 @@ interface TokenDetailProps {
 const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provider }) => {
   const { t } = useTranslation('chat');
 
-  // 使用 systemStatus 管理短格式显示状态
+  // Use systemStatus to manage short-format display state
   const isShortFormat = useGlobalStore(systemStatusSelectors.tokenDisplayFormatShort);
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
 
@@ -107,6 +107,12 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
       value: isShowCredit
         ? detailTokens.inputCachedWrite.credit
         : detailTokens.inputCachedWrite.token,
+    },
+    !!detailTokens.inputTool && {
+      color: cssVar.geekblue,
+      id: 'inputTool',
+      title: t('messages.tokenDetails.inputTool'),
+      value: isShowCredit ? detailTokens.inputTool.credit : detailTokens.inputTool.token,
     },
     !!detailTokens.totalOutput && {
       color: cssVar.colorSuccess,
@@ -221,7 +227,7 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
         gap={2}
         style={{ cursor: 'pointer' }}
         onClick={(e) => {
-          // 阻止 Popover 并切换格式
+          // Prevent Popover from closing and toggle the format
           e.preventDefault();
           e.stopPropagation();
           updateSystemStatus({ tokenDisplayFormatShort: !isShortFormat });
@@ -230,6 +236,10 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
         <Icon icon={isShowCredit ? BadgeCent : CoinsIcon} />
         <AnimatedNumber
           duration={1500}
+          // Force remount when switching between token/credit to prevent unwanted animation
+          // See: https://github.com/lobehub/lobe-chat/pull/10098
+          key={isShowCredit ? 'credit' : 'token'}
+          value={totalCount}
           formatter={(value) => {
             const roundedValue = Math.round(value);
             if (isShortFormat) {
@@ -237,10 +247,6 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
             }
             return new Intl.NumberFormat('en-US').format(roundedValue);
           }}
-          // Force remount when switching between token/credit to prevent unwanted animation
-          // See: https://github.com/lobehub/lobe-chat/pull/10098
-          key={isShowCredit ? 'credit' : 'token'}
-          value={totalCount}
         />
       </Center>
     </Popover>

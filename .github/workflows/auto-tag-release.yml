@@ -41,8 +41,8 @@ jobs:
             echo "⏭️ Not a release PR"
           fi
 
-      - name: Detect hotfix PR (branch first, title fallback)
-        id: hotfix
+      - name: Detect patch PR (branch first, title fallback)
+        id: patch
         if: steps.release.outputs.should_tag != 'true'
         run: |
           HEAD_REF="${{ github.event.pull_request.head.ref }}"
@@ -50,31 +50,48 @@ jobs:
           echo "Head ref: $HEAD_REF"
           echo "PR Title: $PR_TITLE"
 
-          # Priority 1: hotfix/* branch always counts as hotfix, ignore PR title gate.
-          if [[ "$HEAD_REF" == hotfix/* ]]; then
+          # Priority 1: hotfix/* or release/* branch always triggers, ignore PR title gate.
+          if [[ "$HEAD_REF" == hotfix/* ]] || [[ "$HEAD_REF" == release/* ]]; then
             echo "should_tag=true" >> $GITHUB_OUTPUT
-            echo "✅ Detected hotfix PR from hotfix/* branch (title gate bypassed)"
+            echo "✅ Detected auto-release PR from $HEAD_REF branch (title gate bypassed)"
             exit 0
           fi
 
           # Priority 2: fallback to PR title prefix gate (legacy behavior).
-          if echo "$PR_TITLE" | grep -qiE '^(💄[[:space:]]*)?style(\(.+\))?:|^(✨[[:space:]]*)?feat(\(.+\))?:|^(🐛[[:space:]]*)?fix(\(.+\))?:|^(♻️[[:space:]]*)?refactor(\(.+\))?:|^((🐛|🩹)[[:space:]]*)?hotfix(\(.+\))?:'; then
+          if echo "$PR_TITLE" | grep -qiE '^(💄[[:space:]]*)?style(\(.+\))?:|^(✨[[:space:]]*)?feat(\(.+\))?:|^(🐛[[:space:]]*)?fix(\(.+\))?:|^(♻️[[:space:]]*)?refactor(\(.+\))?:|^((🐛|🩹)[[:space:]]*)?hotfix(\(.+\))?:|^(👷[[:space:]]*)?build(\(.+\))?:'; then
             echo "should_tag=true" >> $GITHUB_OUTPUT
-            echo "✅ Detected hotfix PR from title prefix gate"
+            echo "✅ Detected patch PR from title prefix gate"
           else
             echo "should_tag=false" >> $GITHUB_OUTPUT
-            echo "⏭️ Not a hotfix PR (neither hotfix/* branch nor style/feat/fix/refactor/hotfix title prefix)"
+            echo "⏭️ Not a patch PR (neither hotfix/release branch nor style/feat/fix/refactor/hotfix/build title prefix)"
           fi
 
       - name: Prepare main branch
-        if: steps.release.outputs.should_tag == 'true' || steps.hotfix.outputs.should_tag == 'true'
+        if: steps.release.outputs.should_tag == 'true' || steps.patch.outputs.should_tag == 'true'
         run: |
           git checkout main
           git pull --rebase origin main
 
-      - name: Resolve hotfix version (patch bump)
-        id: hotfix-version
-        if: steps.hotfix.outputs.should_tag == 'true'
+      - name: Setup Node.js
+        if: steps.release.outputs.should_tag == 'true' || steps.patch.outputs.should_tag == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.11.1
+          package-manager-cache: false
+
+      - name: Install bun
+        if: steps.release.outputs.should_tag == 'true' || steps.patch.outputs.should_tag == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install deps
+        if: steps.release.outputs.should_tag == 'true' || steps.patch.outputs.should_tag == 'true'
+        run: bun i
+
+      - name: Resolve patch version (patch bump)
+        id: patch-version
+        if: steps.patch.outputs.should_tag == 'true'
         run: |
           CURRENT_VERSION="$(node -p "require('./package.json').version")"
           echo "Current version: ${CURRENT_VERSION}"
@@ -87,7 +104,7 @@ jobs:
           fi
 
           NEXT_VERSION="$(npx -y semver@7 -i patch "${BASE_VERSION}")"
-          echo "📦 Hotfix version: ${NEXT_VERSION}"
+          echo "📦 Patch version: ${NEXT_VERSION}"
           echo "version=${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Set context (release)
@@ -97,12 +114,12 @@ jobs:
           echo "KIND=release" >> $GITHUB_ENV
           echo "VERSION=${{ steps.release.outputs.version }}" >> $GITHUB_ENV
 
-      - name: Set context (hotfix)
-        if: steps.hotfix.outputs.should_tag == 'true'
+      - name: Set context (patch)
+        if: steps.patch.outputs.should_tag == 'true'
         run: |
           echo "SHOULD_TAG=true" >> $GITHUB_ENV
-          echo "KIND=hotfix" >> $GITHUB_ENV
-          echo "VERSION=${{ steps.hotfix-version.outputs.version }}" >> $GITHUB_ENV
+          echo "KIND=patch" >> $GITHUB_ENV
+          echo "VERSION=${{ steps.patch-version.outputs.version }}" >> $GITHUB_ENV
 
       - name: Check if tag already exists
         if: env.SHOULD_TAG == 'true'
@@ -117,12 +134,10 @@ jobs:
             echo "✅ Tag v$VERSION does not exist, can create"
           fi
 
-      - name: Bump package.json version (before tagging)
+      - name: Bump package.json version
         if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
-        id: bump-version
         run: |
           VERSION="${{ env.VERSION }}"
-          KIND="${{ env.KIND }}"
           echo "📝 Bumping package.json version to: $VERSION"
 
           # Validate VERSION is strict semver before writing
@@ -130,10 +145,6 @@ jobs:
             echo "❌ Invalid semver version: $VERSION"
             exit 1
           fi
-
-          # Configure git
-          git config --global user.name "lobehubbot"
-          git config --global user.email "i@lobehub.com"
 
           # Update package.json using Node.js
           node -e "
@@ -149,13 +160,27 @@ jobs:
             console.log('✅ package.json updated to', target);
           "
 
+      - name: Generate changelog
+        if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
+        run: bun run workflow:changelog:gen
+
+      - name: Build static changelog
+        if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
+        run: bun run workflow:changelog
+
+      - name: Commit release changes and push
+        if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
+        id: bump-version
+        run: |
+          VERSION="${{ env.VERSION }}"
+
+          # Configure git
+          git config --global user.name "lobehubbot"
+          git config --global user.email "i@lobehub.com"
+
           # Commit changes (if any) and push
-          git add package.json
-          if [ "$KIND" == "hotfix" ]; then
-            COMMIT_MSG="🐛 chore(hotfix): bump version to v$VERSION [skip ci]"
-          else
-            COMMIT_MSG="🔧 chore(release): bump version to v$VERSION [skip ci]"
-          fi
+          git add package.json CHANGELOG.md changelog/
+          COMMIT_MSG="🔖 chore(release): release version v$VERSION [skip ci]"
           git commit -m "$COMMIT_MSG" || echo "Nothing to commit"
           git push origin HEAD:main
 
@@ -172,14 +197,8 @@ jobs:
           # Tag the bumped version commit SHA (not the PR merge commit SHA)
           TAG_SHA="${{ steps.bump-version.outputs.tag_sha }}"
 
-          if [ "$KIND" == "hotfix" ]; then
-            PREFIX="🐛 hotfix"
-          else
-            PREFIX="🚀 release"
-          fi
-
           # Create annotated tag with single line message
-          git tag -a "v$VERSION" "$TAG_SHA" -m "$PREFIX: v$VERSION | PR #${{ github.event.pull_request.number }} | Author: ${{ github.event.pull_request.user.login }}"
+          git tag -a "v$VERSION" "$TAG_SHA" -m "🚀 release: v$VERSION | PR #${{ github.event.pull_request.number }} | Author: ${{ github.event.pull_request.user.login }}"
 
           # Push tag
           git push origin "v$VERSION"
@@ -206,6 +225,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
+      - name: Sync main to canary
+        if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
+        run: |
+          gh workflow run sync-main-to-canary.yaml
+          echo "✅ Dispatched sync-main-to-canary workflow"
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
       - name: Output result
         run: |
           if [ "${{ env.SHOULD_TAG }}" == "true" ]; then
@@ -215,5 +242,5 @@ jobs:
               echo "✅ Result: Tag v${{ env.VERSION }} created successfully!"
             fi
           else
-            echo "ℹ️ Result: Not a release/hotfix PR, no tag created"
+            echo "ℹ️ Result: Not a release/patch PR, no tag created"
           fi

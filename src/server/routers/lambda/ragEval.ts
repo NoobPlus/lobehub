@@ -1,4 +1,3 @@
-/* eslint-disable sort-keys-fix/sort-keys-fix  */
 import {
   type EvalDatasetRecord,
   type InsertEvalDatasetRecord,
@@ -23,7 +22,7 @@ import {
   EvalDatasetRecordModel,
   EvalEvaluationModel,
   EvaluationRecordModel,
-} from '@/database/server/models/ragEval';
+} from '@/database/models/ragEval';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { keyVaults, serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { createAsyncCaller } from '@/server/routers/async';

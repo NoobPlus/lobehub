@@ -1,5 +1,4 @@
-/* eslint-disable sort-keys-fix/sort-keys-fix , typescript-sort-keys/interface */
-import { createEnv } from '@t3-oss/env-nextjs';
+import { createEnv } from '@t3-oss/env-core';
 import { z } from 'zod';
 
 export const getLLMConfig = () => {
@@ -214,6 +213,9 @@ export const getLLMConfig = () => {
 
       ENABLED_ZENMUX: z.boolean(),
       ZENMUX_API_KEY: z.string().optional(),
+
+      ENABLED_STRAICO: z.boolean(),
+      STRAICO_API_KEY: z.string().optional(),
 
       ENABLED_LOBEHUB: z.boolean(),
 
@@ -431,6 +433,9 @@ export const getLLMConfig = () => {
 
       ENABLED_ZENMUX: !!process.env.ZENMUX_API_KEY,
       ZENMUX_API_KEY: process.env.ZENMUX_API_KEY,
+
+      ENABLED_STRAICO: !!process.env.STRAICO_API_KEY,
+      STRAICO_API_KEY: process.env.STRAICO_API_KEY,
 
       ENABLED_LOBEHUB: !!process.env.ENABLED_LOBEHUB,
 

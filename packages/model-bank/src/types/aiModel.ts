@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { ModelParamsSchema, VideoModelParamsSchema } from '../standard-parameters';
+import { type ModelParamsSchema, type VideoModelParamsSchema } from '../standard-parameters';
 
 export type ModelPriceCurrency = 'CNY' | 'USD';
 
@@ -250,13 +250,19 @@ export type ExtendParamsType =
   | 'gpt5_1ReasoningEffort'
   | 'gpt5_2ReasoningEffort'
   | 'gpt5_2ProReasoningEffort'
+  | 'grok4_20ReasoningEffort'
   | 'textVerbosity'
   | 'thinking'
   | 'thinkingBudget'
   | 'thinkingLevel'
   | 'thinkingLevel2'
+  | 'thinkingLevel3'
+  | 'thinkingLevel4'
+  | 'thinkingLevel5'
   | 'imageAspectRatio'
+  | 'imageAspectRatio2'
   | 'imageResolution'
+  | 'imageResolution2'
   | 'urlContext';
 
 export interface AiModelSettings {
@@ -279,13 +285,19 @@ export const ExtendParamsTypeSchema = z.enum([
   'gpt5_1ReasoningEffort',
   'gpt5_2ReasoningEffort',
   'gpt5_2ProReasoningEffort',
+  'grok4_20ReasoningEffort',
   'textVerbosity',
   'thinking',
   'thinkingBudget',
   'thinkingLevel',
   'thinkingLevel2',
+  'thinkingLevel3',
+  'thinkingLevel4',
+  'thinkingLevel5',
   'imageAspectRatio',
+  'imageAspectRatio2',
   'imageResolution',
+  'imageResolution2',
   'urlContext',
 ]);
 

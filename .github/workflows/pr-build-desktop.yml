@@ -26,8 +26,6 @@ jobs:
     steps:
       - name: Checkout base
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Setup Node & Bun
         uses: ./.github/actions/setup-node-bun
@@ -56,8 +54,6 @@ jobs:
       version: ${{ steps.set_version.outputs.version }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -96,8 +92,6 @@ jobs:
         os: [macos-latest, macos-15-intel, windows-2025, ubuntu-latest]
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Setup Node & pnpm
         uses: ./.github/actions/setup-node-pnpm
@@ -135,6 +129,7 @@ jobs:
         env:
           # 设置更新通道，PR构建为nightly，否则为stable
           UPDATE_CHANNEL: 'nightly'
+          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
           # 默认添加一个加密 SECRET
@@ -159,6 +154,7 @@ jobs:
         env:
           # 设置更新通道，PR构建为nightly，否则为stable
           UPDATE_CHANNEL: 'nightly'
+          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
           KEY_VAULTS_SECRET: 'oLXWIiR/AKF+rWaqy9lHkrYgzpATbW3CtJp3UfkVgpE='
@@ -175,6 +171,7 @@ jobs:
         env:
           # 设置更新通道，PR构建为nightly，否则为stable
           UPDATE_CHANNEL: 'nightly'
+          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
           KEY_VAULTS_SECRET: 'oLXWIiR/AKF+rWaqy9lHkrYgzpATbW3CtJp3UfkVgpE='
@@ -286,8 +283,6 @@ jobs:
       artifact_path: ${{ steps.set_path.outputs.path }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       # 下载合并后的构建产物
       - name: Download merged artifacts
