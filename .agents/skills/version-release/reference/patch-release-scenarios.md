@@ -19,7 +19,7 @@ git checkout -b release/weekly-{YYYYMMDD}
 git push -u origin release/weekly-{YYYYMMDD}
 ```
 
-2. **Scan changes and write changelog**
+1. **Scan changes and write changelog**
 
 ```bash
 git log main..canary --oneline
@@ -28,7 +28,7 @@ git diff main...canary --stat
 
 Write a user-facing changelog following the format in `patch-release-changelog-example.md`.
 
-3. **Create PR to main** with the changelog as the PR body
+1. **Create PR to main** with the changelog as the PR body
 
 ```bash
 gh pr create \
@@ -38,7 +38,7 @@ gh pr create \
   --body-file changelog.md
 ```
 
-4. **After merge**: auto-tag-release detects `release/*` branch → auto patch +1.
+1. **After merge**: auto-tag-release detects `release/*` branch → auto patch +1.
 
 ---
 
@@ -57,9 +57,9 @@ git checkout -b hotfix/v{version}-{short-hash}
 git push -u origin hotfix/v{version}-{short-hash}
 ```
 
-2. **Create PR to main** with a gitmoji prefix title (e.g. `🐛 fix: description`)
+1. **Create PR to main** with a gitmoji prefix title (e.g. `🐛 fix: description`)
 
-3. **After merge**: auto-tag-release detects `hotfix/*` branch → auto patch +1.
+2. **After merge**: auto-tag-release detects `hotfix/*` branch → auto patch +1.
 
 ### Script
 
@@ -91,21 +91,22 @@ Database schema changes that need to be released independently. These require a 
 
 ### Steps
 
-1. **Create release branch from canary**
+1. **Create release branch from main and cherry-pick migration commits**
 
 ```bash
-git checkout canary
-git pull origin canary
+git checkout main
+git pull --rebase origin main
 git checkout -b release/db-migration-{name}
+git cherry-pick <migration-commit-hash>
 git push -u origin release/db-migration-{name}
 ```
 
-2. **Write a migration-specific changelog** — See `db-migration-changelog-example.md` for the format. This should explain:
+1. **Write a migration-specific changelog** — See `db-migration-changelog-example.md` for the format. This should explain:
    - What tables/columns are added, modified, or removed
    - Whether the migration is backwards-compatible
    - Any action required by self-hosted users
 
-3. **Create PR to main** with the migration changelog as the PR body
+2. **Create PR to main** with the migration changelog as the PR body
 
 ```bash
 gh pr create \
@@ -115,4 +116,4 @@ gh pr create \
   --body-file changelog.md
 ```
 
-4. **After merge**: auto-tag-release detects `release/*` branch → auto patch +1.
+1. **After merge**: auto-tag-release detects `release/*` branch → auto patch +1.
