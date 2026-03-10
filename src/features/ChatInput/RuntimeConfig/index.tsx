@@ -98,6 +98,7 @@ const RuntimeConfig = memo(() => {
   const agentId = useAgentId();
   const { updateAgentChatConfig } = useUpdateAgentConfig();
   const [dirPopoverOpen, setDirPopoverOpen] = useState(false);
+  const [modePopoverOpen, setModePopoverOpen] = useState(false);
 
   const [isLoading, runtimeMode] = useAgentStore((s) => [
     agentByIdSelectors.isAgentConfigLoadingById(agentId)(s),
@@ -195,32 +196,40 @@ const RuntimeConfig = memo(() => {
     </Flexbox>
   );
 
+  const modeButton = (
+    <div className={styles.button}>
+      <Icon icon={ModeIcon} size={14} />
+      <span>{modeLabel}</span>
+      <Icon icon={ChevronDownIcon} size={12} />
+    </div>
+  );
+
+  const dirButton = (
+    <div className={styles.button}>
+      <Icon icon={effectiveWorkingDirectory ? FolderIcon : SquircleDashed} size={14} />
+      <span>{displayName}</span>
+      <Icon icon={ChevronDownIcon} size={12} />
+    </div>
+  );
+
   const rightContent = () => {
     if (runtimeMode === 'local') {
       return (
         <Popover
-          open={dirPopoverOpen}
-          placement="topRight"
-          trigger="click"
           content={<WorkingDirectory agentId={agentId} onClose={() => setDirPopoverOpen(false)} />}
+          open={dirPopoverOpen}
+          placement="bottomRight"
+          trigger="click"
           onOpenChange={setDirPopoverOpen}
         >
           <div>
             {dirPopoverOpen ? (
-              <div className={styles.button}>
-                <Icon icon={effectiveWorkingDirectory ? FolderIcon : SquircleDashed} size={14} />
-                <span>{displayName}</span>
-                <Icon icon={ChevronDownIcon} size={12} />
-              </div>
+              dirButton
             ) : (
               <Tooltip
                 title={effectiveWorkingDirectory || tPlugin('localSystem.workingDirectory.notSet')}
               >
-                <div className={styles.button}>
-                  <Icon icon={effectiveWorkingDirectory ? FolderIcon : SquircleDashed} size={14} />
-                  <span>{displayName}</span>
-                  <Icon icon={ChevronDownIcon} size={12} />
-                </div>
+                {dirButton}
               </Tooltip>
             )}
           </div>
@@ -237,14 +246,18 @@ const RuntimeConfig = memo(() => {
       <Flexbox horizontal align={'center'} gap={4}>
         <Popover
           content={modeContent}
+          open={modePopoverOpen}
           placement="top"
           styles={{ content: { padding: 4 } }}
           trigger="click"
+          onOpenChange={setModePopoverOpen}
         >
-          <div className={styles.button}>
-            <Icon icon={ModeIcon} size={14} />
-            <span>{modeLabel}</span>
-            <Icon icon={ChevronDownIcon} size={12} />
+          <div>
+            {modePopoverOpen ? (
+              modeButton
+            ) : (
+              <Tooltip title={t('runtimeEnv.selectMode')}>{modeButton}</Tooltip>
+            )}
           </div>
         </Popover>
         {rightContent()}
