@@ -5,6 +5,7 @@ import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
   ChevronDownIcon,
   CloudIcon,
+  FolderIcon,
   LaptopIcon,
   MonitorOffIcon,
   SquircleDashed,
@@ -208,7 +209,7 @@ const RuntimeEnv = memo(() => {
           <div>
             {dirPopoverOpen ? (
               <div className={styles.button}>
-                <Icon icon={effectiveWorkingDirectory ? LaptopIcon : SquircleDashed} size={14} />
+                <Icon icon={effectiveWorkingDirectory ? FolderIcon : SquircleDashed} size={14} />
                 <span>{displayName}</span>
                 <Icon icon={ChevronDownIcon} size={12} />
               </div>
@@ -217,7 +218,7 @@ const RuntimeEnv = memo(() => {
                 title={effectiveWorkingDirectory || tPlugin('localSystem.workingDirectory.notSet')}
               >
                 <div className={styles.button}>
-                  <Icon icon={effectiveWorkingDirectory ? LaptopIcon : SquircleDashed} size={14} />
+                  <Icon icon={effectiveWorkingDirectory ? FolderIcon : SquircleDashed} size={14} />
                   <span>{displayName}</span>
                   <Icon icon={ChevronDownIcon} size={12} />
                 </div>
