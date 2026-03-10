@@ -1025,7 +1025,10 @@ export const createAgentExecutors = (context: {
             plugin: {
               ...toolPayload,
             },
-            pluginIntervention: { status: 'pending' },
+            pluginIntervention: {
+              auditType: toolPayload.intervention?.auditType,
+              status: 'pending',
+            },
             role: 'tool',
             agentId: effectiveAgentId!,
             threadId: opContext.threadId,
