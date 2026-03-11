@@ -218,6 +218,7 @@ export default {
   'header.sessionDesc': 'Agent Profile and session preferences',
   'header.sessionWithName': 'Session Settings · {{name}}',
   'header.title': 'Settings',
+  'hotkey.clearBinding': 'Clear binding',
   'hotkey.conflicts': 'Conflicts with existing hotkeys',
   'hotkey.errors.CONFLICT': 'Hotkey conflict: This hotkey is already assigned to another function',
   'hotkey.errors.INVALID_FORMAT':
@@ -640,6 +641,9 @@ export default {
   'settingSystem.oauth.signout.success': 'Sign out successful',
   'settingSystem.title': 'System Settings',
   'settingSystemTools.autoSelectDesc': 'The best available tool will be automatically selected',
+  'settingSystemTools.category.browserAutomation': 'Browser Automation',
+  'settingSystemTools.category.browserAutomation.desc':
+    'Tools for headless browser automation and web interaction',
   'settingSystemTools.category.contentSearch': 'Content Search',
   'settingSystemTools.category.contentSearch.desc': 'Tools for searching text content within files',
   'settingSystemTools.category.fileSearch': 'File Search',
@@ -650,6 +654,8 @@ export default {
   'settingSystemTools.status.notDetected': 'Not detected',
   'settingSystemTools.status.unavailable': 'Unavailable',
   'settingSystemTools.title': 'System Tools',
+  'settingSystemTools.tools.agentBrowser.desc':
+    'Agent-browser - headless browser automation CLI for AI agents',
   'settingSystemTools.tools.ag.desc': 'The Silver Searcher - fast code searching tool',
   'settingSystemTools.tools.fd.desc': 'fd - fast and user-friendly alternative to find',
   'settingSystemTools.tools.find.desc': 'Unix find - standard file search command',
@@ -793,8 +799,10 @@ When I am ___, I need ___
   'systemAgent.translation.modelDesc': 'Specify the model used for translation',
   'systemAgent.translation.title': 'Message Translation Agent',
   'tab.about': 'About',
+  'tab.advanced': 'Advanced',
   'tab.addAgentSkill': 'Add Agent Skill',
   'tab.beta': 'Beta',
+  'tab.beta.updateChannel.beta': 'Beta',
   'tab.beta.updateChannel.canary': 'Canary',
   'tab.beta.updateChannel.canaryDesc':
     'Triggered on every PR merge, multiple builds per day. Most unstable.',
