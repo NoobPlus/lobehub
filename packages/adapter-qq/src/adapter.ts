@@ -225,12 +225,12 @@ export class QQAdapter implements Adapter<QQThreadId, QQRawMessage> {
   }
 
   async editMessage(
-    _threadId: string,
+    threadId: string,
     _messageId: string,
-    _message: AdapterPostableMessage,
+    message: AdapterPostableMessage,
   ): Promise<RawMessage<QQRawMessage>> {
-    // QQ doesn't support editing messages
-    throw new Error('QQ does not support message editing');
+    // QQ doesn't support editing — fall back to posting a new message
+    return this.postMessage(threadId, message);
   }
 
   async deleteMessage(_threadId: string, _messageId: string): Promise<void> {
