@@ -39,7 +39,21 @@ export const defaultToolIds = [
  * Tool IDs that are always enabled regardless of user selection.
  * These are core system tools that the agent needs to function properly.
  */
-export const alwaysOnToolIds = [LobeToolsManifest.identifier, SkillsManifest.identifier];
+export const alwaysOnToolIds = [
+  LobeToolsManifest.identifier,
+  SkillsManifest.identifier,
+  SkillStoreManifest.identifier,
+];
+
+/**
+ * Tool IDs to exclude from defaults when in manual skill-activate mode.
+ * These are the tool/skill discovery tools that should be disabled when user wants precise control.
+ * Other default tools (sandbox, web browsing, etc.) remain available if enabled externally.
+ */
+export const manualModeExcludeToolIds = [
+  LobeToolsManifest.identifier,
+  SkillStoreManifest.identifier,
+];
 
 export const builtinTools: LobeBuiltinTool[] = [
   {

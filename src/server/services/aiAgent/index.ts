@@ -6,7 +6,7 @@ import {
   generateSystemPrompt,
   RemoteDeviceManifest,
 } from '@lobechat/builtin-tool-remote-device';
-import { builtinTools } from '@lobechat/builtin-tools';
+import { builtinTools, manualModeExcludeToolIds } from '@lobechat/builtin-tools';
 import { LOADING_FLAT } from '@lobechat/const';
 import type { LobeToolManifest } from '@lobechat/context-engine';
 import type { LobeChatDatabase } from '@lobechat/database';
@@ -407,13 +407,14 @@ export class AiAgentService {
     ];
     log('execAgent: agent configured plugins: %O', pluginIds);
 
-    // When skillActivateMode is 'manual', skip default tools to give user precise control
+    // When skillActivateMode is 'manual', exclude only discovery tools (lobe-tools, lobe-skill-store)
+    // so that externally enabled tools (sandbox, web browsing, etc.) remain available
     const isManualMode = agentConfig.chatConfig?.skillActivateMode === 'manual';
 
     const toolsResult = toolsEngine.generateToolsDetailed({
+      excludeDefaultToolIds: isManualMode ? manualModeExcludeToolIds : undefined,
       model,
       provider,
-      skipDefaultTools: isManualMode,
       toolIds: pluginIds,
     });
 
