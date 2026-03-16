@@ -180,9 +180,9 @@ export class AgentRuntimeService {
 
     const impl = this.queueService.getImpl();
     if (impl instanceof LocalQueueServiceImpl) {
-      log('Setting up local execution callback');
+      log('Setting up local execution mode');
       impl.setExecutionCallback(async (operationId, stepIndex, context) => {
-        log('[%s][%d] Local callback executing...', operationId, stepIndex);
+        log('[%s][%d] Local execution mode executing...', operationId, stepIndex);
         await this.executeStep({
           context,
           operationId,
