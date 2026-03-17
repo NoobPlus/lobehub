@@ -1,4 +1,6 @@
 import type {
+  RichTextEditorNode,
+  RichTextEditorState,
   RuntimeMentionedAgent,
   RuntimeSelectedSkill,
   RuntimeSelectedTool,
@@ -22,7 +24,7 @@ export interface ParsedCommand extends ParsedActionTag {}
  * Returns the extracted action tags in document order.
  */
 export const parseActionTagsFromEditorData = (
-  editorData: Record<string, any> | undefined,
+  editorData: RichTextEditorState | undefined,
 ): ParsedActionTag[] => {
   if (!editorData) return [];
 
@@ -32,11 +34,11 @@ export const parseActionTagsFromEditorData = (
 };
 
 export const parseCommandsFromEditorData = (
-  editorData: Record<string, any> | undefined,
+  editorData: RichTextEditorState | undefined,
 ): ParsedCommand[] => parseActionTagsFromEditorData(editorData);
 
 export const parseSelectedSkillsFromEditorData = (
-  editorData: Record<string, any> | undefined,
+  editorData: RichTextEditorState | undefined,
 ): RuntimeSelectedSkill[] => {
   const actionTags = parseActionTagsFromEditorData(editorData);
   const selectedSkills = actionTags.filter((tag) => tag.category === 'skill');
@@ -60,7 +62,7 @@ export const parseSelectedSkillsFromEditorData = (
 };
 
 export const parseSelectedToolsFromEditorData = (
-  editorData: Record<string, any> | undefined,
+  editorData: RichTextEditorState | undefined,
 ): RuntimeSelectedTool[] => {
   const actionTags = parseActionTagsFromEditorData(editorData);
   const selectedTools = actionTags.filter((tag) => tag.category === 'tool');
@@ -88,7 +90,7 @@ export const parseSelectedToolsFromEditorData = (
  * and extract agent info from their metadata.
  */
 export const parseMentionedAgentsFromEditorData = (
-  editorData: Record<string, any> | undefined,
+  editorData: RichTextEditorState | undefined,
 ): RuntimeMentionedAgent[] => {
   if (!editorData) return [];
 
@@ -112,14 +114,14 @@ export const parseMentionedAgentsFromEditorData = (
  * Check if editorData contains any meaningful text content
  * besides action-tag nodes (whitespace-only counts as empty).
  */
-export const hasNonActionContent = (editorData: Record<string, any> | undefined): boolean => {
+export const hasNonActionContent = (editorData: RichTextEditorState | undefined): boolean => {
   if (!editorData) return false;
   const parts: string[] = [];
   collectText(editorData.root, parts);
   return parts.join('').trim().length > 0;
 };
 
-function collectText(node: any, out: string[]): void {
+function collectText(node: RichTextEditorNode | undefined, out: string[]): void {
   if (!node) return;
   if (node.type === 'action-tag') return;
   if (node.type === 'text' && typeof node.text === 'string') {
@@ -133,12 +135,12 @@ function collectText(node: any, out: string[]): void {
 }
 
 function walkMentionNode(
-  node: any,
+  node: RichTextEditorNode | undefined,
   cb: (label: string, metadata: Record<string, unknown>) => void,
 ): void {
   if (!node) return;
-  if (node.type === 'mention' && node.metadata) {
-    cb(node.label ?? '', node.metadata);
+  if (node.type === 'mention' && node.metadata && typeof node.metadata === 'object') {
+    cb(typeof node.label === 'string' ? node.label : '', node.metadata as Record<string, unknown>);
   }
   if (Array.isArray(node.children)) {
     for (const child of node.children) {
@@ -147,14 +149,14 @@ function walkMentionNode(
   }
 }
 
-function walkNode(node: any, out: ParsedActionTag[]): void {
+function walkNode(node: RichTextEditorNode | undefined, out: ParsedActionTag[]): void {
   if (!node) return;
 
   if (node.type === 'action-tag') {
     out.push({
-      category: node.actionCategory,
-      label: node.actionLabel,
-      type: node.actionType,
+      category: String(node.actionCategory) as ActionTagCategory,
+      label: typeof node.actionLabel === 'string' ? node.actionLabel : '',
+      type: String(node.actionType) as ActionTagType,
     });
   }
 

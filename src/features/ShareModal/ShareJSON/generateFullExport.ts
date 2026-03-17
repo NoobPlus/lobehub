@@ -20,7 +20,7 @@ export const generateFullExport = ({
   systemRole,
   withSystemRole,
 }: FullExportParams): ExportedTopic => {
-  const exportedMessages: Record<string, any>[] = messages
+  const exportedMessages: ExportedTopic['messages'] = messages
     .filter((m) => m.content !== LOADING_FLAT)
     .map((m) =>
       cleanObject({

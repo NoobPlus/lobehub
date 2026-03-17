@@ -1,5 +1,6 @@
 'use client';
 
+import { type RichTextEditorState } from '@lobechat/types';
 import { Button, Flexbox } from '@lobehub/ui';
 import { Divider } from 'antd';
 import { useTheme } from 'antd-style';
@@ -38,7 +39,7 @@ const GroupProfile = memo(() => {
 
   // Create save callback that captures latest groupId
   const saveContent = useCallback(
-    async (payload: { content: string; editorData: Record<string, any> }) => {
+    async (payload: { content: string; editorData: RichTextEditorState }) => {
       if (!groupId) return;
       await updateGroup(groupId, {
         content: payload.content,

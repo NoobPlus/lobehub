@@ -1,5 +1,7 @@
 import {
+  type CreateMessageParams,
   CreateNewMessageParamsSchema,
+  type UpdateMessageParams,
   UpdateMessageParamsSchema,
   UpdateMessagePluginSchema,
   UpdateMessageRAGParamsSchema,
@@ -149,7 +151,10 @@ export const messageRouter = router({
       }
 
       // Create message with the resolved agentId
-      return ctx.messageService.createMessage({ ...input, agentId } as any);
+      return ctx.messageService.createMessage({
+        ...input,
+        agentId,
+      } as unknown as CreateMessageParams);
     }),
 
   /**
@@ -318,7 +323,7 @@ export const messageRouter = router({
       const { id, value, agentId, ...options } = input;
       const resolved = await resolveContext({ agentId, ...options }, ctx.serverDB, ctx.userId);
 
-      return ctx.messageService.updateMessage(id, value as any, resolved);
+      return ctx.messageService.updateMessage(id, value as UpdateMessageParams, resolved);
     }),
 
   /**

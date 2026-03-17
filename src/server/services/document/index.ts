@@ -2,12 +2,13 @@ import { type LobeChatDatabase } from '@lobechat/database';
 import { type DocumentItem } from '@lobechat/database/schemas';
 import { documents, files } from '@lobechat/database/schemas';
 import { loadFile } from '@lobechat/file-loaders';
+import { type RichTextEditorState } from '@lobechat/types';
 import debug from 'debug';
 import { and, eq } from 'drizzle-orm';
 
 import { DocumentModel } from '@/database/models/document';
 import { FileModel } from '@/database/models/file';
-import { type LobeDocument } from '@/types/document';
+import { type LobeDocument, type LobeDocumentMetadata } from '@/types/document';
 
 import { FileService } from '../file';
 
@@ -33,10 +34,10 @@ export class DocumentService {
    */
   async createDocument(params: {
     content?: string;
-    editorData: Record<string, any>;
+    editorData: RichTextEditorState;
     fileType?: string;
     knowledgeBaseId?: string;
-    metadata?: Record<string, any>;
+    metadata?: LobeDocumentMetadata;
     parentId?: string;
     rawData?: string;
     slug?: string;
@@ -109,10 +110,10 @@ export class DocumentService {
   async createDocuments(
     documents: Array<{
       content?: string;
-      editorData: Record<string, any>;
+      editorData: RichTextEditorState;
       fileType?: string;
       knowledgeBaseId?: string;
-      metadata?: Record<string, any>;
+      metadata?: LobeDocumentMetadata;
       parentId?: string;
       slug?: string;
       title: string;
@@ -195,9 +196,9 @@ export class DocumentService {
     id: string,
     params: {
       content?: string;
-      editorData?: Record<string, any>;
+      editorData?: RichTextEditorState;
       fileType?: string;
-      metadata?: Record<string, any>;
+      metadata?: LobeDocumentMetadata;
       parentId?: string | null;
       title?: string;
     },

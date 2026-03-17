@@ -18,7 +18,7 @@ import {
   MessageToolCallSchema,
   ModelReasoningSchema,
 } from '../common';
-import type { UIChatMessage } from '../ui';
+import type { RichTextEditorState, UIChatMessage } from '../ui';
 
 export interface QueryMessageParams {
   agentId?: string | null;
@@ -91,7 +91,7 @@ export interface NewMessage {
 
 export interface UpdateMessageParams {
   content?: string;
-  editorData?: Record<string, any> | null;
+  editorData?: RichTextEditorState | null;
   error?: ChatMessageError | null;
   imageList?: ChatImageItem[];
   metadata?: MessageMetadata;
@@ -118,7 +118,7 @@ export interface NewMessageQueryParams {
 export const UpdateMessageParamsSchema = z
   .object({
     content: z.string().optional(),
-    editorData: z.record(z.any()).nullable().optional(),
+    editorData: z.record(z.unknown()).nullable().optional(),
     error: ChatMessageErrorSchema.nullable().optional(),
     imageList: z.array(ChatImageItemSchema).optional(),
     metadata: MessageMetadataSchema.optional(),

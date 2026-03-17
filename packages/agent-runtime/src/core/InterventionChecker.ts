@@ -1,9 +1,10 @@
-import  {
+import {
   type ArgumentMatcher,
   type HumanInterventionPolicy,
   type HumanInterventionRule,
   type SecurityBlacklistRule,
   type ShouldInterveneParams,
+  type ToolArguments,
 } from '@lobechat/types';
 
 import { DEFAULT_SECURITY_BLACKLIST } from '../audit/defaultSecurityBlacklist';
@@ -38,7 +39,7 @@ export class InterventionChecker {
    */
   static checkSecurityBlacklist(
     securityBlacklist: SecurityBlacklistRule[] = [],
-    toolArgs: Record<string, any> = {},
+    toolArgs: ToolArguments = {},
   ): SecurityCheckResult {
     for (const rule of securityBlacklist) {
       if (this.matchesSecurityRule(rule, toolArgs)) {
@@ -102,7 +103,7 @@ export class InterventionChecker {
    */
   private static matchesSecurityRule(
     rule: SecurityBlacklistRule,
-    toolArgs: Record<string, any>,
+    toolArgs: ToolArguments,
   ): boolean {
     // Security rules must have match criteria
     if (!rule.match) return false;
@@ -130,7 +131,7 @@ export class InterventionChecker {
    * @param toolArgs - Tool call arguments
    * @returns true if matches
    */
-  private static matchesRule(rule: HumanInterventionRule, toolArgs: Record<string, any>): boolean {
+  private static matchesRule(rule: HumanInterventionRule, toolArgs: ToolArguments): boolean {
     // No match criteria means it's a default rule
     if (!rule.match) return true;
 
@@ -230,7 +231,7 @@ export class InterventionChecker {
    * @param args - Tool call arguments
    * @returns Hash string
    */
-  static hashArguments(args: Record<string, any>): string {
+  static hashArguments(args: ToolArguments): string {
     const sortedKeys = Object.keys(args).sort();
     const str = sortedKeys.map((key) => `${key}=${JSON.stringify(args[key])}`).join('&');
 

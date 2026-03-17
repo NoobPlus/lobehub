@@ -12,11 +12,14 @@ import type { UIChatMessage } from '@lobechat/types';
  */
 export interface PipelineContextMetadataOverrides {}
 
+export interface ContextEngineAgentStateOverrides {}
+
+export interface PipelineMessageOverrides {}
+
 /**
  * Agent state - inferred from original project types
  */
-export interface AgentState {
-  [key: string]: any;
+export interface AgentState extends ContextEngineAgentStateOverrides {
   messages: UIChatMessage[];
   model?: string;
   provider?: string;
@@ -45,9 +48,9 @@ export interface MessageToolCall {
   thoughtSignature?: string;
   type: 'function';
 }
-export interface Message {
-  [key: string]: any;
-  content: string | any[];
+
+export interface Message extends PipelineMessageOverrides {
+  content: string | unknown[];
   role: string;
 }
 
@@ -112,7 +115,7 @@ export interface PipelineResult {
   /** Whether aborted */
   isAborted: boolean;
   /** Final processed messages */
-  messages: any[];
+  messages: Message[];
   /** Metadata from processing */
   metadata: PipelineContextMetadata;
   /** Execution statistics */
@@ -164,7 +167,7 @@ export interface FileContext {
 export interface RetrievalChunk {
   content: string;
   id: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   similarity: number;
 }
 

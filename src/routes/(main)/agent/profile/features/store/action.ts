@@ -1,4 +1,5 @@
 import { EDITOR_DEBOUNCE_TIME, EDITOR_MAX_WAIT } from '@lobechat/const';
+import { type RichTextEditorState } from '@lobechat/types';
 import { debounce } from 'es-toolkit/compat';
 import { type StateCreator } from 'zustand';
 
@@ -6,7 +7,7 @@ import { type State } from './initialState';
 import { initialState } from './initialState';
 
 type SaveConfigPayload = {
-  editorData: Record<string, any>;
+  editorData: RichTextEditorState;
   systemRole: string;
 };
 
@@ -84,7 +85,7 @@ export const store: (initState?: Partial<State>) => StateCreator<Store> =
           try {
             finalContent =
               (editor.getDocument('markdown') as unknown as string) || streamingContent;
-            editorData = editor.getDocument('json') as unknown as Record<string, any>;
+            editorData = editor.getDocument('json') as unknown as RichTextEditorState;
           } catch {
             // Use streaming content if editor read fails
           }
@@ -120,7 +121,7 @@ export const store: (initState?: Partial<State>) => StateCreator<Store> =
 
         try {
           const markdownContent = (editor.getDocument('markdown') as unknown as string) || '';
-          const jsonContent = editor.getDocument('json') as unknown as Record<string, any>;
+          const jsonContent = editor.getDocument('json') as unknown as RichTextEditorState;
 
           debouncedSave({
             editorData: structuredClone(jsonContent || {}),

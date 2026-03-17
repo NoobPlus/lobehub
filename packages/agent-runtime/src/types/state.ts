@@ -1,7 +1,15 @@
-import type { ActivatedStepTool, OperationToolSet, ToolSource } from '@lobechat/context-engine';
+import type {
+  ActivatedStepTool,
+  LobeToolManifest,
+  OperationToolSet,
+  ToolSource,
+  UniformTool,
+} from '@lobechat/context-engine';
 import type {
   ChatToolPayload,
   SecurityBlacklistConfig,
+  ToolArguments,
+  UIChatMessage,
   UserInterventionConfig,
 } from '@lobechat/types';
 
@@ -27,7 +35,7 @@ export interface AgentState {
   costLimit?: CostLimit;
   // --- Metadata ---
   createdAt: string;
-  error?: any;
+  error?: unknown;
   /**
    * When true, the agent is in force-finish mode (maxSteps exceeded).
    * Tools are allowed to complete, but the next LLM call will have tools stripped
@@ -45,7 +53,7 @@ export interface AgentState {
     /** Timestamp when interruption occurred */
     interruptedAt: string;
     /** The instruction that was being executed when interrupted */
-    interruptedInstruction?: any;
+    interruptedInstruction?: unknown;
     /** Whether the interruption can be resumed */
     canResume: boolean;
   };
@@ -58,10 +66,10 @@ export interface AgentState {
   maxSteps?: number;
 
   // --- Core Context ---
-  messages: any[];
+  messages: UIChatMessage[];
 
   // --- Extensible metadata ---
-  metadata?: Record<string, any>;
+  metadata?: AgentStateMetadata;
 
   /**
    * Model runtime configuration
@@ -115,9 +123,9 @@ export interface AgentState {
   stepCount: number;
 
   systemRole?: string;
-  toolManifestMap: Record<string, any>;
+  toolManifestMap: Record<string, LobeToolManifest>;
 
-  tools?: any[];
+  tools?: UniformTool[];
 
   /** Tool source map for routing tool execution to correct handler */
   toolSourceMap?: Record<string, ToolSource>;
@@ -147,7 +155,18 @@ export interface ToolsCalling {
   type: 'function';
 }
 
+export interface AgentStateMetadataOverrides {}
+
+export interface AgentStateMetadata extends AgentStateMetadataOverrides {
+  activeDeviceId?: string;
+  agentId?: string;
+  securityBlacklist?: SecurityBlacklistConfig;
+  threadId?: string;
+  topicId?: string;
+  workingDirectory?: string;
+}
+
 /**
  * A registry for tools, mapping tool names to their implementation.
  */
-export type ToolRegistry = Record<string, (args: any) => Promise<any>>;
+export type ToolRegistry = Record<string, (args: ToolArguments) => Promise<unknown>>;

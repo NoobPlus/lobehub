@@ -323,7 +323,7 @@ export class PluginTypesActionImpl {
       {
         content: truncatedContent,
         pluginError: data.success ? undefined : data.error,
-        pluginState: data.success ? data.state : undefined,
+        pluginState: (data.success ? data.state : undefined) as Record<string, unknown> | undefined,
       },
       context,
     );
@@ -393,7 +393,7 @@ export class PluginTypesActionImpl {
       {
         content: remoteContent,
         pluginError: data.success ? undefined : data.error,
-        pluginState: data.success ? data.state : undefined,
+        pluginState: (data.success ? data.state : undefined) as Record<string, unknown> | undefined,
       },
       context,
     );

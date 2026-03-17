@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { AgentItem } from '../agent';
-import type { TaskDetail, UIChatMessage } from '../message';
+import type { RichTextEditorState, TaskDetail, UIChatMessage } from '../message';
 import type { ChatTopic } from '../topic';
 
 export interface LobeChatGroupMetaConfig {
@@ -42,7 +42,7 @@ export const InsertChatGroupSchema = z.object({
   config: ChatGroupConfigSchema.optional().nullable(),
   content: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
-  editorData: z.record(z.string(), z.any()).optional().nullable(),
+  editorData: z.record(z.string(), z.unknown()).optional().nullable(),
   groupId: z.string().optional().nullable(),
   id: z.string().optional(),
   marketIdentifier: z.string().optional().nullable(),
@@ -104,7 +104,7 @@ export interface ChatGroupItem {
   content?: string | null;
   createdAt: Date;
   description?: string | null;
-  editorData?: Record<string, any> | null;
+  editorData?: RichTextEditorState | null;
   groupId?: string | null;
   id: string;
   marketIdentifier?: string | null;

@@ -1,3 +1,27 @@
+import type { RichTextEditorState } from '../message';
+
+export interface LobeDocumentMetadata {
+  [key: string]: unknown;
+  author?: string;
+  emoji?: string;
+  error?: string;
+  knowledgeBaseId?: string;
+  title?: string;
+}
+
+export interface LobeDocumentPageMetadata {
+  [key: string]: unknown;
+  chunkIndex?: number;
+  error?: string;
+  lineNumberEnd?: number;
+  lineNumberStart?: number;
+  pageNumber?: number;
+  sectionTitle?: string;
+  sheetName?: string;
+  slideNumber?: number;
+  totalChunks?: number;
+}
+
 /**
  * Document object in LobeChat
  */
@@ -11,7 +35,7 @@ export interface LobeDocument {
    */
   createdAt: Date;
 
-  editorData: Record<string, any> | null;
+  editorData: RichTextEditorState | null;
 
   /**
    * Original filename
@@ -29,20 +53,7 @@ export interface LobeDocument {
    * File-level metadata
    * For example, title and author extracted from file properties, or errors when the entire file fails to load
    */
-  metadata: {
-    /**
-     * Allow adding other file-level metadata
-     */
-    [key: string]: any;
-    /**
-     * Document author (if available)
-     */
-    author?: string;
-    /**
-     * Error information if the entire file fails to load
-     */
-    error?: string;
-  };
+  metadata: LobeDocumentMetadata;
 
   /**
    * Array containing all logical pages/blocks in the document
@@ -105,57 +116,7 @@ export interface LobeDocumentPage {
   /**
    * Metadata related to this page/block
    */
-  metadata: {
-    /**
-     * Allow adding other page/block-specific metadata
-     */
-    [key: string]: any;
-
-    /**
-     * If the original file unit is further split into chunks, this is the index of the current chunk
-     */
-    chunkIndex?: number;
-
-    /**
-     * Errors that occurred while processing this page/block
-     */
-    error?: string;
-
-    /**
-     * Ending line number of this page/block in the original file
-     */
-    lineNumberEnd?: number;
-
-    /**
-     * Starting line number of this page/block in the original file
-     */
-    lineNumberStart?: number;
-
-    /**
-     * Page number (applicable to PDF, DOCX)
-     */
-    pageNumber?: number;
-
-    /**
-     * Section title related to this page/block
-     */
-    sectionTitle?: string;
-
-    /**
-     * Worksheet name (applicable to XLSX)
-     */
-    sheetName?: string;
-
-    /**
-     * Slide number (applicable to PPTX)
-     */
-    slideNumber?: number;
-
-    /**
-     * If the original file unit is further split into chunks, this is the total number of chunks for that unit
-     */
-    totalChunks?: number;
-  };
+  metadata: LobeDocumentPageMetadata;
 
   /**
    * Core text content of this page/block
@@ -224,7 +185,7 @@ export interface NotebookDocument {
   /**
    * Document metadata (e.g., todos for agent/plan documents)
    */
-  metadata: Record<string, any> | null;
+  metadata: Record<string, unknown> | null;
   /**
    * Document title
    */

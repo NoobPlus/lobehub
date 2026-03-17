@@ -1,20 +1,22 @@
+import type { RichTextEditorNode, RichTextEditorState } from '@lobechat/types';
+
 /**
  * Inject a refer-topic node at the beginning of editorData.
  * Prepends a new paragraph containing the refer-topic node before existing content.
  */
 export const injectReferTopicNode = (
-  editorData: Record<string, any> | undefined,
+  editorData: RichTextEditorState | undefined,
   topicId: string,
   topicTitle: string,
-): Record<string, any> => {
-  const referTopicNode = {
+): RichTextEditorState => {
+  const referTopicNode: RichTextEditorNode = {
     type: 'refer-topic',
     topicId,
     topicTitle,
     version: 1,
   };
 
-  const referParagraph = {
+  const referParagraph: RichTextEditorNode = {
     children: [referTopicNode],
     direction: 'ltr',
     format: '',
@@ -38,8 +40,22 @@ export const injectReferTopicNode = (
   }
 
   // Deep clone and prepend refer-topic paragraph
-  const cloned = structuredClone(editorData);
-  const existingChildren = cloned.root.children || [];
-  cloned.root.children = [referParagraph, ...existingChildren];
+  const cloned: RichTextEditorState = structuredClone(editorData);
+  const root = cloned.root;
+  if (!root) {
+    return {
+      root: {
+        children: [referParagraph],
+        direction: 'ltr',
+        format: '',
+        indent: 0,
+        type: 'root',
+        version: 1,
+      },
+    };
+  }
+
+  const existingChildren = root.children || [];
+  root.children = [referParagraph, ...existingChildren];
   return cloned;
 };

@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
 import type { AsyncTaskStatus } from '../asyncTask';
+import type { RichTextEditorState } from '../message';
+
+export interface FileListItemMetadata {
+  [key: string]: unknown;
+  emoji?: string;
+}
 
 export interface FileListItem {
   chunkCount: number | null;
@@ -11,7 +17,7 @@ export interface FileListItem {
    */
   content?: string | null;
   createdAt: Date;
-  editorData?: Record<string, any> | null;
+  editorData?: RichTextEditorState | null;
   embeddingError: any | null;
   embeddingStatus?: AsyncTaskStatus | null;
   fileType: string;
@@ -20,7 +26,7 @@ export interface FileListItem {
   /**
    * Metadata (for notes/documents)
    */
-  metadata?: Record<string, any> | null;
+  metadata?: FileListItemMetadata | null;
   name: string;
   /**
    * Parent folder ID (for folder hierarchy)

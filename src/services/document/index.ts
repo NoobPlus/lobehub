@@ -9,7 +9,7 @@ export interface CreateDocumentParams {
   editorData: string;
   fileType?: string;
   knowledgeBaseId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   parentId?: string;
   slug?: string;
   title: string;
@@ -20,7 +20,7 @@ export interface UpdateDocumentParams {
   editorData?: string;
   fileType?: string;
   id: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   parentId?: string | null;
   title?: string;
 }

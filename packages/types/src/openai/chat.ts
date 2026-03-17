@@ -1,6 +1,9 @@
 import type { LLMRoleType } from '../llm';
 import type { MessageToolCall } from '../message';
+import type { ToolSchema } from '../tool';
 import type { OpenAIFunctionCall } from './functionCall';
+
+export type ChatCompletionParameters = ToolSchema;
 
 export type ChatResponseFormat =
   | { type: 'json_object' }
@@ -13,7 +16,7 @@ export type ChatResponseFormat =
         /**
          * JSON schema definition used for validation.
          */
-        schema: Record<string, any>;
+        schema: ChatCompletionParameters;
         /**
          * Enforce strict schema validation when true.
          */
@@ -131,12 +134,10 @@ export interface ChatCompletionFunctions {
   name: string;
   /**
    * The parameters the functions accepts, described as a JSON Schema object. See the [guide](/docs/guides/gpt/function-calling) for examples, and the [JSON Schema reference](https://json-schema.org/understanding-json-schema/) for documentation about the format.
-   * @type {{ [key: string]: any }}
+   * @type {Record<string, unknown>}
    * @memberof ChatCompletionFunctions
    */
-  parameters?: {
-    [key: string]: any;
-  };
+  parameters?: ChatCompletionParameters;
 }
 
 export interface ChatCompletionTool {

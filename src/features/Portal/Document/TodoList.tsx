@@ -1,5 +1,6 @@
 'use client';
 
+import { type GTDTodoList } from '@lobechat/context-engine';
 import { Checkbox, Flexbox, Icon, Tag } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDown, ChevronUp, ListTodo } from 'lucide-react';
@@ -11,15 +12,12 @@ import { chatPortalSelectors } from '@/store/chat/selectors';
 import { useNotebookStore } from '@/store/notebook';
 import { notebookSelectors } from '@/store/notebook/selectors';
 
-interface TodoItem {
-  completed: boolean;
-  text: string;
-}
+const isTodoState = (value: unknown): value is GTDTodoList => {
+  if (!value || typeof value !== 'object') return false;
 
-interface TodoState {
-  items: TodoItem[];
-  updatedAt: string;
-}
+  const items = (value as { items?: unknown }).items;
+  return Array.isArray(items);
+};
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   collapsed: css`
@@ -116,17 +114,17 @@ const TodoList = memo(() => {
   // Only show for agent/plan documents with todos in metadata
   if (!document || document.fileType !== 'agent/plan') return null;
 
-  const todos: TodoState | undefined = document.metadata?.todos;
+  const todos = isTodoState(document.metadata?.todos) ? document.metadata.todos : undefined;
   const items = todos?.items || [];
 
   if (items.length === 0) return null;
 
   const total = items.length;
-  const completed = items.filter((item) => item.completed).length;
+  const completed = items.filter((item) => item.status === 'completed').length;
   const progressPercent = total > 0 ? (completed / total) * 100 : 0;
 
   // Find current pending task (first incomplete item)
-  const currentPendingTask = items.find((item) => !item.completed);
+  const currentPendingTask = items.find((item) => item.status !== 'completed');
 
   const toggleExpanded = () => setExpanded(!expanded);
 
@@ -164,16 +162,16 @@ const TodoList = memo(() => {
         {items.map((item, index) => (
           <Checkbox
             backgroundColor={cssVar.colorSuccess}
-            checked={item.completed}
+            checked={item.status === 'completed'}
             key={index}
             shape="circle"
             style={{ borderWidth: 1.5, cursor: 'default', pointerEvents: 'none' }}
             classNames={{
-              text: item.completed ? styles.textChecked : undefined,
+              text: item.status === 'completed' ? styles.textChecked : undefined,
               wrapper: styles.itemRow,
             }}
             textProps={{
-              type: item.completed ? 'secondary' : undefined,
+              type: item.status === 'completed' ? 'secondary' : undefined,
             }}
           >
             {item.text}

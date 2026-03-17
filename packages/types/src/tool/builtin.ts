@@ -1,3 +1,4 @@
+import type { PluginSchema } from '@lobehub/chat-plugin-sdk';
 import { type ReactNode } from 'react';
 import { z } from 'zod';
 
@@ -53,14 +54,23 @@ export type RenderDisplayControl = 'alwaysExpand' | 'collapsed' | 'expand';
 
 export const RenderDisplayControlSchema = z.enum(['collapsed', 'expand', 'alwaysExpand']);
 
+export type UnknownRecord = Record<string, unknown>;
+export type ToolArguments = UnknownRecord;
+export type ToolMessageMetadata = UnknownRecord;
+export type ToolSchema = PluginSchema | UnknownRecord;
+
+export interface DynamicInterventionMetadataOverrides {}
+
+export interface DynamicInterventionMetadata extends DynamicInterventionMetadataOverrides {}
+
 /**
  * Dynamic intervention resolver function type
  * Receives tool args and state metadata to determine if condition is met
  * @returns true if intervention is required, false otherwise
  */
 export type DynamicInterventionResolver = (
-  toolArgs: Record<string, any>,
-  metadata?: Record<string, any>,
+  toolArgs: ToolArguments,
+  metadata?: DynamicInterventionMetadata,
 ) => boolean;
 
 /**
@@ -152,7 +162,7 @@ export interface LobeChatPluginApi {
    */
   humanIntervention?: ExtendedHumanInterventionConfig;
   name: string;
-  parameters: Record<string, any>;
+  parameters: ToolSchema;
   /**
    * Control the render display behavior for tool results
    * - 'collapsed': Default collapsed, user can expand (default)
@@ -169,7 +179,7 @@ export const LobeChatPluginApiSchema = z.object({
   description: z.string(),
   humanIntervention: ExtendedHumanInterventionConfigSchema.optional(),
   name: z.string(),
-  parameters: z.record(z.string(), z.any()),
+  parameters: z.record(z.string(), z.unknown()),
   renderDisplayControl: RenderDisplayControlSchema.optional(),
   url: z.string().optional(),
 });
@@ -227,13 +237,13 @@ export const LobeBuiltinToolSchema = z.object({
   type: z.literal('builtin'),
 });
 
-export interface BuiltinRenderProps<Arguments = any, State = any, Content = any> {
+export interface BuiltinRenderProps<Arguments = ToolArguments, State = unknown, Content = unknown> {
   apiName?: string;
   args: Arguments;
   content: Content;
   identifier?: string;
   messageId: string;
-  pluginError?: any;
+  pluginError?: unknown;
   pluginState?: State;
   /**
    * The tool call ID from the assistant message
@@ -241,11 +251,11 @@ export interface BuiltinRenderProps<Arguments = any, State = any, Content = any>
   toolCallId?: string;
 }
 
-export type BuiltinRender = <A = any, S = any, C = any>(
+export type BuiltinRender = <A = ToolArguments, S = unknown, C = unknown>(
   props: BuiltinRenderProps<A, S, C>,
 ) => ReactNode;
 
-export interface BuiltinPortalProps<Arguments = Record<string, any>, State = any> {
+export interface BuiltinPortalProps<Arguments = ToolArguments, State = unknown> {
   apiName?: string;
   arguments: Arguments;
   identifier: string;
@@ -253,9 +263,11 @@ export interface BuiltinPortalProps<Arguments = Record<string, any>, State = any
   state: State;
 }
 
-export type BuiltinPortal = <T = any>(props: BuiltinPortalProps<T>) => ReactNode;
+export type BuiltinPortal = <A = ToolArguments, S = unknown>(
+  props: BuiltinPortalProps<A, S>,
+) => ReactNode;
 
-export interface BuiltinPlaceholderProps<T extends Record<string, any> = any> {
+export interface BuiltinPlaceholderProps<T extends ToolArguments = ToolArguments> {
   apiName: string;
   args?: T;
   identifier: string;
@@ -265,7 +277,7 @@ export type BuiltinPlaceholder = (props: BuiltinPlaceholderProps) => ReactNode;
 
 // ==================== Inspector Renderer Types ====================
 
-export interface BuiltinInspectorProps<Arguments = any, State = any> {
+export interface BuiltinInspectorProps<Arguments = ToolArguments, State = unknown> {
   apiName: string;
   args: Arguments;
   identifier: string;
@@ -277,10 +289,12 @@ export interface BuiltinInspectorProps<Arguments = any, State = any> {
   isLoading?: boolean;
   partialArgs?: Arguments;
   pluginState?: State;
-  result?: { content: string | null; error?: any };
+  result?: { content: string | null; error?: unknown };
 }
 
-export type BuiltinInspector = <A = any, S = any>(props: BuiltinInspectorProps<A, S>) => ReactNode;
+export type BuiltinInspector = <A = ToolArguments, S = unknown>(
+  props: BuiltinInspectorProps<A, S>,
+) => ReactNode;
 
 // ==================== Streaming Renderer Types ====================
 
@@ -289,7 +303,7 @@ export type BuiltinInspector = <A = any, S = any>(props: BuiltinInspectorProps<A
  * Note: During streaming phase, only basic info is available.
  * pluginState and streaming content should be fetched from store inside the component.
  */
-export interface BuiltinStreamingProps<Arguments = any> {
+export interface BuiltinStreamingProps<Arguments = ToolArguments> {
   apiName: string;
   args: Arguments;
   identifier: string;
@@ -297,16 +311,16 @@ export interface BuiltinStreamingProps<Arguments = any> {
   toolCallId: string;
 }
 
-export type BuiltinStreaming = <A = any>(props: BuiltinStreamingProps<A>) => ReactNode;
+export type BuiltinStreaming = <A = ToolArguments>(props: BuiltinStreamingProps<A>) => ReactNode;
 
 export interface BuiltinServerRuntimeOutput {
   content: string;
-  error?: any;
-  state?: any;
+  error?: unknown;
+  state?: unknown;
   success: boolean;
 }
 
-export interface BuiltinInterventionProps<Arguments = any> {
+export interface BuiltinInterventionProps<Arguments = ToolArguments> {
   apiName?: string;
   args: Arguments;
   identifier?: string;
@@ -345,7 +359,7 @@ export interface BuiltinToolResult {
    * Error information if the tool execution failed
    */
   error?: {
-    body?: any;
+    body?: unknown;
     message: string;
     type: string;
   };
@@ -354,12 +368,12 @@ export interface BuiltinToolResult {
    * Metadata to attach to the tool message
    * Used to mark messages for special handling (e.g., agentCouncil for parallel display)
    */
-  metadata?: Record<string, any>;
+  metadata?: ToolMessageMetadata;
 
   /**
    * Plugin state for UI rendering
    */
-  state?: any;
+  state?: unknown;
 
   /**
    * Whether to stop the current execution flow
@@ -629,7 +643,7 @@ export interface GroupOrchestrationCallbacks {
 /**
  * Builtin tool executor function type
  */
-export type BuiltinToolExecutor<TParams = any> = (
+export type BuiltinToolExecutor<TParams = ToolArguments> = (
   params: TParams,
   ctx: BuiltinToolContext,
 ) => Promise<BuiltinToolResult>;
@@ -667,7 +681,11 @@ export interface IBuiltinToolExecutor {
    * @param ctx - Execution context
    * @returns The execution result
    */
-  invoke: (apiName: string, params: any, ctx: BuiltinToolContext) => Promise<BuiltinToolResult>;
+  invoke: (
+    apiName: string,
+    params: ToolArguments,
+    ctx: BuiltinToolContext,
+  ) => Promise<BuiltinToolResult>;
 }
 
 /**
@@ -709,7 +727,7 @@ export abstract class BaseExecutor<
    */
   invoke = async (
     apiName: string,
-    params: any,
+    params: ToolArguments,
     ctx: BuiltinToolContext,
   ): Promise<BuiltinToolResult> => {
     // Validate API name
@@ -724,7 +742,7 @@ export abstract class BaseExecutor<
     }
 
     // Get the method from this instance
-    const method = (this as any)[apiName];
+    const method = (this as Record<string, unknown>)[apiName];
 
     if (typeof method !== 'function') {
       return {

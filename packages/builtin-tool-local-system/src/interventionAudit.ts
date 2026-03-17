@@ -1,6 +1,12 @@
-import { type DynamicInterventionResolver } from '@lobechat/types';
+import type { DynamicInterventionMetadata, DynamicInterventionResolver } from '@lobechat/types';
 
 import { normalizePathForScope, resolvePathWithScope } from './utils/path';
+
+declare module '@lobechat/types' {
+  interface DynamicInterventionMetadataOverrides {
+    workingDirectory?: string;
+  }
+}
 
 /**
  * Check if a path is within the working directory
@@ -24,7 +30,7 @@ const isPathWithinWorkingDirectory = (
  * Extract all path values from tool arguments
  * Looks for common path parameter names used in local-system tools
  */
-const extractPaths = (toolArgs: Record<string, any>): string[] => {
+const extractPaths = (toolArgs: Record<string, unknown>): string[] => {
   const paths: string[] = [];
   const pathParamNames = ['path', 'file_path', 'directory', 'oldPath', 'newPath'];
 
@@ -44,9 +50,10 @@ const extractPaths = (toolArgs: Record<string, any>): string[] => {
   // Handle 'items' array for moveLocalFiles (contains oldPath/newPath objects)
   if (Array.isArray(toolArgs.items)) {
     for (const item of toolArgs.items) {
-      if (typeof item === 'object') {
-        if (item.oldPath) paths.push(item.oldPath);
-        if (item.newPath) paths.push(item.newPath);
+      if (typeof item === 'object' && item !== null) {
+        const moveItem = item as { newPath?: string; oldPath?: string };
+        if (moveItem.oldPath) paths.push(moveItem.oldPath);
+        if (moveItem.newPath) paths.push(moveItem.newPath);
       }
     }
   }
@@ -59,11 +66,11 @@ const extractPaths = (toolArgs: Record<string, any>): string[] => {
  * Returns true if any path is outside the working directory (requires intervention)
  */
 export const pathScopeAudit: DynamicInterventionResolver = (
-  toolArgs: Record<string, any>,
-  metadata?: Record<string, any>,
+  toolArgs,
+  metadata?: DynamicInterventionMetadata,
 ): boolean => {
-  const workingDirectory = metadata?.workingDirectory as string | undefined;
-  const toolScope = toolArgs.scope as string | undefined;
+  const workingDirectory = metadata?.workingDirectory;
+  const toolScope = typeof toolArgs.scope === 'string' ? toolArgs.scope : undefined;
 
   // If no working directory is set, no intervention needed
   if (!workingDirectory) {

@@ -1,3 +1,4 @@
+import { type RichTextEditorState } from '@lobechat/types';
 import { memo } from 'react';
 
 import { EditorModal } from '@/features/EditorModal';
@@ -26,7 +27,7 @@ const EditState = memo<EditStateProps>(({ id, content, editorData }) => {
       }}
       onConfirm={async (value, newEditorData) => {
         if (!id) return;
-        await updateMessageContent(id, value, newEditorData as Record<string, any> | undefined);
+        await updateMessageContent(id, value, newEditorData as RichTextEditorState | undefined);
         toggleMessageEditing(id, false);
       }}
     />

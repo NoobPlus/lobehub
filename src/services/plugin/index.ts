@@ -5,10 +5,10 @@ import { lambdaClient } from '@/libs/trpc/client';
 import { type LobeToolCustomPlugin } from '@/types/tool/plugin';
 
 export interface InstallPluginParams {
-  customParams?: Record<string, any>;
+  customParams?: Record<string, unknown>;
   identifier: string;
   manifest: LobeChatPluginManifest;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
   type: 'plugin' | 'customPlugin';
 }
 
@@ -46,7 +46,11 @@ export class PluginService {
     await lambdaClient.plugin.removeAllPlugins.mutate();
   };
 
-  updatePluginSettings = async (id: string, settings: any, signal?: AbortSignal): Promise<void> => {
+  updatePluginSettings = async (
+    id: string,
+    settings: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<void> => {
     await lambdaClient.plugin.updatePlugin.mutate({ id, settings }, { signal });
   };
 }

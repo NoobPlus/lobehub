@@ -8,6 +8,7 @@ import {
   type ChatThreadType,
   type ChatVideoItem,
   type ConversationContext,
+  type CreateMessageParams,
   type SendMessageParams,
   type SendMessageServerResponse,
 } from '@lobechat/types';
@@ -597,13 +598,13 @@ export class ConversationLifecycleActionImpl {
    * Reuses the same service methods as the agent runtime's compress_context executor.
    */
   #executeCompression = async (
-    context: Record<string, any>,
+    context: Pick<ConversationContext, 'agentId' | 'groupId' | 'threadId' | 'topicId'>,
     parentOperationId: string,
   ): Promise<void> => {
     const { agentId, topicId } = context;
     if (!topicId) return;
 
-    const contextKey = messageMapKey(context as any);
+    const contextKey = messageMapKey(context);
     const dbMessages = dbMessageSelectors.getDbMessagesByKey(contextKey)(this.#get()) || [];
     const messageIds = getCompressionCandidateMessageIds(dbMessages);
 
@@ -627,7 +628,7 @@ export class ConversationLifecycleActionImpl {
           id: tempId,
           threadId: context.threadId,
           topicId,
-        }) as any,
+        }) as unknown as CreateMessageParams,
       },
       { operationId },
     );
@@ -642,7 +643,7 @@ export class ConversationLifecycleActionImpl {
       const { messageGroupId, messages: serverMessages, messagesToSummarize } = result;
 
       // Replace local pending group with server compression group
-      this.#get().replaceMessages(serverMessages, { context: context as any });
+      this.#get().replaceMessages(serverMessages, { context });
       this.#get().associateMessageWithOperation(messageGroupId, operationId);
 
       // 2. Generate summary via LLM
@@ -675,7 +676,7 @@ export class ConversationLifecycleActionImpl {
       });
 
       if (finalResult.messages) {
-        this.#get().replaceMessages(finalResult.messages, { context: context as any });
+        this.#get().replaceMessages(finalResult.messages, { context });
       }
 
       this.#get().completeOperation(operationId);

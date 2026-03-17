@@ -1,3 +1,4 @@
+import { type RichTextEditorState } from '@lobechat/types';
 import { debounce } from 'es-toolkit/compat';
 import { type StateCreator } from 'zustand';
 
@@ -9,7 +10,7 @@ import { initialState } from './initialState';
 
 type SaveContentPayload = {
   content: string;
-  editorData: Record<string, any>;
+  editorData: RichTextEditorState;
 };
 
 export type Action = Pick<ActionImpl, keyof ActionImpl>;
@@ -98,7 +99,7 @@ export class ActionImpl {
     if (editor) {
       try {
         finalContent = (editor.getDocument('markdown') as unknown as string) || streamingContent;
-        editorData = editor.getDocument('json') as unknown as Record<string, any>;
+        editorData = editor.getDocument('json') as unknown as RichTextEditorState;
       } catch {
         // Use streaming content if editor read fails
       }
@@ -140,7 +141,7 @@ export class ActionImpl {
 
     try {
       const markdownContent = (editor.getDocument('markdown') as unknown as string) || '';
-      const jsonContent = editor.getDocument('json') as unknown as Record<string, any>;
+      const jsonContent = editor.getDocument('json') as unknown as RichTextEditorState;
 
       this.#debouncedSave({
         content: markdownContent || '',

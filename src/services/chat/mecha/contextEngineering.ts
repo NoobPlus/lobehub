@@ -11,6 +11,7 @@ import type {
   GroupAgentBuilderContext,
   GroupOfficialToolItem,
   GTDConfig,
+  GTDTodoList,
   LobeToolManifest,
   MemoryContext,
   ToolDiscoveryConfig,
@@ -49,6 +50,13 @@ import { createSkillEngine } from './skillEngineering';
 import { stripActionTagsFromText } from './skillPreload';
 
 const log = debug('context-engine:contextEngineering');
+
+const isGTDTodoList = (value: unknown): value is GTDTodoList => {
+  if (!value || typeof value !== 'object') return false;
+
+  const items = (value as { items?: unknown }).items;
+  return Array.isArray(items);
+};
 
 interface ContextEngineeringContext {
   /** Agent Builder context for injecting current agent info */
@@ -365,7 +373,7 @@ export const contextEngineering = async ({
         };
 
         // Get todos from plan's metadata
-        const todos = planDoc.metadata?.todos;
+        const todos = isGTDTodoList(planDoc.metadata?.todos) ? planDoc.metadata.todos : undefined;
 
         gtdConfig = {
           enabled: true,

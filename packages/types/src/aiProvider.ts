@@ -298,7 +298,7 @@ export interface AiProviderDetailItem {
    */
   homeUrl?: string;
   id: string;
-  keyVaults?: Record<string, any>;
+  keyVaults?: Record<string, unknown>;
   logo?: string;
   /**
    * the url show the all models in the provider

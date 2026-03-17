@@ -24,9 +24,9 @@ export interface UpdateToolMessageParams {
    * Metadata to attach to the tool message
    * Used to mark messages for special handling (e.g., agentCouncil for parallel display)
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   pluginError?: ChatMessagePluginError | null;
-  pluginState?: any;
+  pluginState?: Record<string, unknown>;
 }
 
 /**
@@ -49,7 +49,7 @@ export class PluginOptimisticUpdateActionImpl {
 
   optimisticUpdatePluginState = async (
     id: string,
-    value: any,
+    value: Record<string, unknown>,
     context?: OptimisticUpdateContext,
   ): Promise<void> => {
     const { replaceMessages, internal_getConversationContext } = this.#get();
@@ -68,7 +68,7 @@ export class PluginOptimisticUpdateActionImpl {
     }
   };
 
-  optimisticUpdatePluginArguments = async <T = any>(
+  optimisticUpdatePluginArguments = async <T = unknown>(
     id: string,
     value: T,
     replace = false,
@@ -83,8 +83,8 @@ export class PluginOptimisticUpdateActionImpl {
     )(this.#get());
 
     const prevArguments = toolMessage?.plugin?.arguments;
-    const prevJson = safeParseJSON(prevArguments || '');
-    const nextValue = replace ? (value as any) : merge(prevJson || {}, value);
+    const prevJson = safeParseJSON<Record<string, unknown>>(prevArguments || '');
+    const nextValue = replace ? value : merge(prevJson || {}, value);
     if (isEqual(prevJson, nextValue)) return;
 
     // optimistic update
@@ -117,7 +117,7 @@ export class PluginOptimisticUpdateActionImpl {
     };
 
     await Promise.all([
-      messageService.updateMessagePluginArguments(id, nextValue),
+      messageService.updateMessagePluginArguments(id, nextValue as Record<string, unknown>),
       updateAssistantMessage(),
     ]);
 

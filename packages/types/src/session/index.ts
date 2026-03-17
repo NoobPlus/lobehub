@@ -11,7 +11,7 @@ export interface ChatSessionList {
 
 export interface UpdateSessionParams {
   group?: SessionGroupId;
-  meta?: any;
+  meta?: Record<string, unknown>;
   pinned?: boolean;
   updatedAt: Date;
 }

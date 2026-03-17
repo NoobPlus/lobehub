@@ -42,7 +42,7 @@ interface ErrorStateProps {
 /**
  * Extract displayable error content from various error structures
  */
-const getErrorContent = (error: Record<string, any> | undefined): string | null => {
+const getErrorContent = (error: TaskDetail['error']): string | null => {
   if (!error) return null;
 
   // Try common error structures

@@ -54,7 +54,7 @@ export interface NewUserMemoryIdentity {
   description?: string;
   episodicDate?: string;
   extractedLabels?: string[];
-  labels?: Record<string, any>;
+  labels?: Record<string, unknown>;
   relationship?: string;
   role?: string;
   type?: IdentityType;
@@ -65,7 +65,7 @@ export interface UpdateUserMemoryIdentity {
   description?: string;
   episodicDate?: string;
   extractedLabels?: string[];
-  labels?: Record<string, any>;
+  labels?: Record<string, unknown>;
   relationship?: string;
   role?: string;
   type?: IdentityType;
@@ -77,7 +77,7 @@ export const CreateUserMemoryIdentitySchema = z.object({
   description: z.string().optional(),
   episodicDate: z.string().optional(),
   extractedLabels: z.array(z.string()).optional(),
-  labels: z.record(z.any()).optional(),
+  labels: z.record(z.unknown()).optional(),
   relationship: z.string().optional(),
   role: z.string().optional(),
   type: IdentityTypeSchema.optional(),

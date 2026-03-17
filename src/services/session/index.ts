@@ -13,6 +13,8 @@ import {
   type UpdateSessionParams,
 } from '@/types/session';
 
+type CreateSessionInput = Parameters<typeof lambdaClient.session.createSession.mutate>[0];
+
 export class SessionService {
   hasSessions = async (): Promise<boolean> => {
     const result = await this.countSessions();
@@ -24,8 +26,10 @@ export class SessionService {
     data: Partial<LobeAgentSession>,
   ): Promise<string> => {
     const { config, group, meta, ...session } = data;
+    const configInput = { ...config, ...meta } as unknown as CreateSessionInput['config'];
+
     return lambdaClient.session.createSession.mutate({
-      config: { ...config, ...meta } as any,
+      config: configInput,
       session: { ...session, groupId: group },
       type,
     });

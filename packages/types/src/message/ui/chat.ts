@@ -9,6 +9,7 @@ import type {
   ModelUsage,
 } from '../common';
 import type {
+  ChatMessagePluginError,
   ChatPluginPayload,
   ChatToolPayload,
   ChatToolPayloadWithResult,
@@ -41,13 +42,25 @@ export interface ChatFileItem {
   url: string;
 }
 
+export interface RichTextEditorNode {
+  [key: string]: unknown;
+  children?: RichTextEditorNode[];
+  type?: string;
+  version?: number;
+}
+
+export interface RichTextEditorState {
+  [key: string]: unknown;
+  root?: RichTextEditorNode;
+}
+
 export interface AssistantContentBlock {
   content: string;
   error?: ChatMessageError | null;
   fileList?: ChatFileItem[];
   id: string;
   imageList?: ChatImageItem[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   performance?: ModelPerformance;
   reasoning?: ModelReasoning;
   tools?: ChatToolPayloadWithResult[];
@@ -72,7 +85,16 @@ export interface TaskDetail {
   /** Execution duration in milliseconds */
   duration?: number;
   /** Error message if task failed */
-  error?: Record<string, any>;
+  error?: {
+    body?: unknown;
+    error?: {
+      body?: unknown;
+      message?: string;
+      type?: string;
+    };
+    message?: string;
+    [key: string]: unknown;
+  };
   /** Task start time (ISO string) */
   startedAt?: string;
   /** Task status */
@@ -114,7 +136,7 @@ export interface UIChatMessage {
   content: string;
   createdAt: number;
   /** Lexical editor JSON state for rich text rendering */
-  editorData?: Record<string, any> | null;
+  editorData?: RichTextEditorState | null;
   error?: ChatMessageError | null;
   // Extended fields
   extra?: ChatMessageExtra;
@@ -158,7 +180,7 @@ export interface UIChatMessage {
     role: string;
   }[];
   plugin?: ChatPluginPayload;
-  pluginError?: any;
+  pluginError?: ChatMessagePluginError | null;
   pluginIntervention?: ToolIntervention;
   pluginState?: any;
   provider?: string | null;

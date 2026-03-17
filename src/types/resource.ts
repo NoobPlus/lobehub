@@ -1,4 +1,11 @@
+import type { RichTextEditorState } from '@lobechat/types';
+
 import { type FilesTabs, type SortType } from '@/types/files';
+
+export interface ResourceMetadata {
+  [key: string]: unknown;
+  emoji?: string;
+}
 
 /**
  * Unified resource item that represents both files and documents
@@ -23,7 +30,7 @@ export interface ResourceItem {
   // Timestamps
   createdAt: Date;
 
-  editorData?: Record<string, any> | null;
+  editorData?: RichTextEditorState | null;
   embeddingError?: any | null;
 
   embeddingStatus?: string | null;
@@ -34,7 +41,7 @@ export interface ResourceItem {
   id: string;
   knowledgeBaseId?: string;
   // Metadata
-  metadata?: Record<string, any>;
+  metadata?: ResourceMetadata;
   // Real ID or temp-resource-{timestamp}-{random}
   // Common fields
   name: string;
@@ -92,7 +99,7 @@ export interface ResourceQueryParams {
 export interface CreateFileParams {
   fileType: string;
   knowledgeBaseId?: string;
-  metadata?: Record<string, any>;
+  metadata?: ResourceMetadata;
   name: string;
   parentId?: string;
   size: number;
@@ -105,10 +112,10 @@ export interface CreateFileParams {
  */
 export interface CreateDocumentParams {
   content: string;
-  editorData?: Record<string, any>;
+  editorData?: RichTextEditorState;
   fileType: 'custom/document' | 'custom/folder';
   knowledgeBaseId?: string;
-  metadata?: Record<string, any>;
+  metadata?: ResourceMetadata;
   parentId?: string;
   slug?: string;
   sourceType: 'document';
@@ -125,8 +132,8 @@ export type CreateResourceParams = CreateFileParams | CreateDocumentParams;
  */
 export interface UpdateResourceParams {
   content?: string;
-  editorData?: Record<string, any>;
-  metadata?: Record<string, any>;
+  editorData?: RichTextEditorState;
+  metadata?: ResourceMetadata;
   name?: string;
   parentId?: string | null;
   title?: string;

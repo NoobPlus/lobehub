@@ -1,4 +1,12 @@
-import type { ExtendedHumanInterventionConfig } from '@/types/index';
+import type { ExtendedHumanInterventionConfig, ToolSchema } from '@/types/index';
+
+interface LobeToolManifestMeta {
+  avatar?: string;
+  description?: string;
+  readme?: string;
+  tags?: string[];
+  title?: string;
+}
 
 export interface LobeChatPluginApi {
   description: string;
@@ -16,14 +24,14 @@ export interface LobeChatPluginApi {
    */
   humanIntervention?: ExtendedHumanInterventionConfig;
   name: string;
-  parameters: Record<string, any>;
+  parameters: ToolSchema;
   url?: string;
 }
 
 export interface LobeToolManifest {
   api: LobeChatPluginApi[];
   identifier: string;
-  meta: any;
+  meta: LobeToolManifestMeta;
   systemRole?: string;
   type?: 'default' | 'standalone' | 'markdown' | 'mcp' | 'builtin';
 }
@@ -31,13 +39,15 @@ export interface LobeToolManifest {
 /**
  * Tools generation context
  */
-export interface ToolsGenerationContext {
-  /** Additional extension context */
-  [key: string]: any;
+export interface ToolsGenerationContextOverrides {}
+
+export interface ToolsGenerationContext extends ToolsGenerationContextOverrides {
   /** Whether image generation is allowed */
   allowImageGeneration?: boolean;
   /** Environment information */
   environment?: 'desktop' | 'web';
+  /** Whether the tool was explicitly activated and should bypass normal filters */
+  isExplicitActivation?: boolean;
   /** Whether search is enabled */
   isSearchEnabled?: boolean;
   /** Model name for context-aware plugin filtering */
@@ -135,12 +145,10 @@ export interface UniformFunctions {
   name: string;
   /**
    * The parameters the functions accepts, described as a JSON Schema object. See the [guide](/docs/guides/gpt/function-calling) for examples, and the [JSON Schema reference](https://json-schema.org/understanding-json-schema/) for documentation about the format.
-   * @type {{ [key: string]: any }}
+   * @type {Record<string, unknown>}
    * @memberof UniformFunctions
    */
-  parameters?: {
-    [key: string]: any;
-  };
+  parameters?: ToolSchema;
 }
 
 export interface UniformTool {

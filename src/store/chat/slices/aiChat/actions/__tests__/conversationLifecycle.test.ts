@@ -404,8 +404,8 @@ describe('ConversationLifecycle actions', () => {
           expect.any(AbortController),
         );
         expect(
-          sendMessageInServerSpy.mock.calls[0]?.[0].newUserMessage.editorData?.root.children[0]
-            .children,
+          sendMessageInServerSpy.mock.calls[0]?.[0].newUserMessage.editorData?.root?.children?.[0]
+            ?.children,
         ).toEqual(
           expect.arrayContaining([
             expect.objectContaining({

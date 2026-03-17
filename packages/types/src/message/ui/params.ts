@@ -9,7 +9,7 @@ import { ChatMessageErrorSchema } from '../common/base';
 import type { PageSelection } from '../common/pageSelection';
 import type { ChatPluginPayload } from '../common/tools';
 import { ToolInterventionSchema } from '../common/tools';
-import type { UIChatMessage } from './chat';
+import type { RichTextEditorState, UIChatMessage } from './chat';
 import { SemanticSearchChunkSchema } from './rag';
 
 export type CreateMessageRoleType = 'user' | 'assistant' | 'tool' | 'task' | 'supervisor';
@@ -109,7 +109,7 @@ export interface SendMessageParams {
    */
   createThread?: boolean;
   /** Lexical editor JSON state for rich text rendering */
-  editorData?: Record<string, any>;
+  editorData?: RichTextEditorState;
   files?: UploadFileItem[];
   /**
    *
@@ -127,7 +127,7 @@ export interface SendMessageParams {
   /**
    * Additional metadata for the message (e.g., mentioned users)
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 
   onlyAddUserMessage?: boolean;
   /**
@@ -149,7 +149,7 @@ export interface SendGroupMessageParams {
   /**
    * Additional metadata for the message (e.g., mentioned users)
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   /**
    * for group chat
    */

@@ -15,7 +15,7 @@ class CloudSandboxService {
    */
   async callTool(
     toolName: string,
-    params: Record<string, any>,
+    params: Record<string, unknown>,
     context: { topicId: string; userId?: string },
   ): Promise<CallToolResult> {
     const input: ExecInSandboxInput = {

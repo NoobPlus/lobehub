@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { UIChatMessage } from './message';
 import type { MessageMetadata } from './message/common';
 import { ChatToolPayloadSchema, MessageMetadataSchema } from './message/common';
+import type { RichTextEditorState } from './message/ui/chat';
 import type { CreateMessageParams, PageSelection } from './message/ui/params';
 import { PageSelectionSchema } from './message/ui/params';
 import type { OpenAIChatMessage } from './openai/chat';
@@ -15,7 +16,7 @@ import { ThreadType } from './topic/thread';
 export interface SendNewMessage {
   content: string;
   /** Lexical editor JSON state for rich text rendering */
-  editorData?: Record<string, any>;
+  editorData?: RichTextEditorState;
   // if message has attached with files, then add files to message and the agent
   files?: string[];
   /** Page selections attached to this message (for Ask AI functionality) */
@@ -150,7 +151,7 @@ export const StructureSchema = z.object({
   schema: z.object({
     $defs: z.any().optional(),
     additionalProperties: z.boolean().optional(),
-    properties: z.record(z.string(), z.any()),
+    properties: z.record(z.string(), z.unknown()),
     required: z.array(z.string()).optional(),
     type: z.literal('object'),
   }),
@@ -172,7 +173,7 @@ interface IStructureSchema {
   name: string;
   schema: {
     additionalProperties?: boolean;
-    properties: Record<string, any>;
+    properties: Record<string, unknown>;
     required?: string[];
     type: 'object';
   };

@@ -1,16 +1,17 @@
+import { type RichTextEditorState } from '@lobechat/types';
 import { type StateCreator } from 'zustand/vanilla';
 
 import { type PublicState, type State } from './initialState';
 import { initialState } from './initialState';
 
 export interface Action {
-  getJSONState: () => Record<string, any> | undefined;
+  getJSONState: () => RichTextEditorState | undefined;
   getMarkdownContent: () => string;
   handleSendButton: () => void;
   handleStop: () => void;
   setDocument: (type: string, content: any, options?: Record<string, unknown>) => void;
   setExpand: (expend: boolean) => void;
-  setJSONState: (content: any) => void;
+  setJSONState: (content: RichTextEditorState) => void;
   setShowTypoBar: (show: boolean) => void;
   updateMarkdownContent: () => void;
 }
@@ -26,7 +27,7 @@ export const store: CreateStore = (publicState) => (set, get) => ({
   ...publicState,
 
   getJSONState: () => {
-    return get().editor?.getDocument('json') as Record<string, any> | undefined;
+    return get().editor?.getDocument('json') as RichTextEditorState | undefined;
   },
   getMarkdownContent: () => {
     return String(get().editor?.getDocument('markdown') || '').trimEnd();

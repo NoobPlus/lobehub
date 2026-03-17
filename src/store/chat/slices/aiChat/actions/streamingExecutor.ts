@@ -12,6 +12,8 @@ import { isDesktop } from '@lobechat/const';
 import { type ToolsEngine } from '@lobechat/context-engine';
 import {
   type ConversationContext,
+  type RichTextEditorNode,
+  type RichTextEditorState,
   type RuntimeInitialContext,
   type UIChatMessage,
 } from '@lobechat/types';
@@ -43,9 +45,9 @@ import {
 
 const log = debug('lobe-store:streaming-executor');
 
-const hasReferTopicNode = (editorData: Record<string, any> | null | undefined): boolean => {
+const hasReferTopicNode = (editorData: RichTextEditorState | null | undefined): boolean => {
   if (!editorData) return false;
-  const walk = (node: any): boolean => {
+  const walk = (node: RichTextEditorNode | undefined): boolean => {
     if (!node) return false;
     if (node.type === 'refer-topic') return true;
     if (Array.isArray(node.children)) return node.children.some(walk);
@@ -173,7 +175,6 @@ export class StreamingExecutorActionImpl {
     );
     // When skillActivateMode is 'manual', skipDefaultTools gives user precise control
     const isManualMode = agentConfig.chatConfig?.skillActivateMode === 'manual';
-
 
     const toolsDetailed = toolsEngine.generateToolsDetailed({
       model: agentConfigData.model,

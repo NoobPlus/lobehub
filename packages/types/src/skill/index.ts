@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { RichTextEditorState } from '../message';
+
 // ===== Manifest Schema =====
 
 export const skillAuthorSchema = z.object({
@@ -116,7 +118,7 @@ export interface SkillItem {
   content?: string | null;
   createdAt: Date;
   description?: string | null;
-  editorData?: Record<string, any> | null;
+  editorData?: RichTextEditorState | null;
   id: string;
   identifier: string;
   manifest: SkillManifest;

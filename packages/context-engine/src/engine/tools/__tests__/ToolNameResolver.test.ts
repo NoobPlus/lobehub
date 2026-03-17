@@ -1,3 +1,4 @@
+import type { ToolSchema } from '@lobechat/types';
 import { describe, expect, it } from 'vitest';
 
 import { ToolNameResolver } from '../ToolNameResolver';
@@ -635,11 +636,11 @@ describe('ToolNameResolver', () => {
               name: apiName,
               parameters: {
                 properties: {
-                  prompt: { type: 'string' },
-                  size: { type: 'string' },
+                  prompt: { type: 'string' as const },
+                  size: { type: 'string' as const },
                 },
-                type: 'object',
-              },
+                type: 'object' as const,
+              } as ToolSchema,
             },
           ],
           identifier,

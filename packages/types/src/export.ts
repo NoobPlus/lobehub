@@ -1,3 +1,15 @@
+import type {
+  ChatMessageError,
+  ChatMessagePluginError,
+  ChatPluginPayload,
+  ChatToolPayload,
+  MessageMetadata,
+  ModelReasoning,
+  ToolIntervention,
+  UIMessageRoleType,
+} from './message';
+import type { GroundingSearch } from './search';
+
 export interface ExportDatabaseData {
   data: Record<string, object[]>;
   schemaHash: string;
@@ -27,7 +39,7 @@ export interface ExportedTopic {
   /** ISO timestamp when the export was created */
   exportedAt: string;
   /** All messages in the topic (UIChatMessage with cleaned null/undefined values) */
-  messages: Record<string, any>[];
+  messages: ImportedMessage[];
   /** Topic title (optional, not present for non-topic exports) */
   title?: string;
   /** Export format version for forward compatibility */
@@ -45,34 +57,34 @@ export interface ImportedMessage {
   /** ISO timestamp or Unix timestamp (ms) */
   createdAt?: number | string;
   /** Error information */
-  error?: Record<string, any>;
+  error?: ChatMessageError | null;
   /** Original message ID (used for parentId mapping) */
   id?: string;
   /** Metadata */
-  metadata?: Record<string, any>;
+  metadata?: MessageMetadata | null;
   /** Model used */
-  model?: string;
+  model?: string | null;
   /** Parent message ID (for conversation tree) */
   parentId?: string | null;
   /** Plugin information */
-  plugin?: Record<string, any>;
+  plugin?: ChatPluginPayload;
   /** Plugin error */
-  pluginError?: Record<string, any>;
+  pluginError?: ChatMessagePluginError | null;
   /** Plugin intervention state */
-  pluginIntervention?: Record<string, any>;
+  pluginIntervention?: ToolIntervention;
   /** Plugin state */
-  pluginState?: Record<string, any>;
+  pluginState?: Record<string, unknown>;
   /** Provider used */
-  provider?: string;
+  provider?: string | null;
   /** Reasoning content */
-  reasoning?: Record<string, any>;
-  role: 'user' | 'assistant' | 'system' | 'tool';
+  reasoning?: ModelReasoning | null;
+  role: UIMessageRoleType;
   /** Search results */
-  search?: Record<string, any>;
+  search?: GroundingSearch | null;
   /** Tool call ID */
   tool_call_id?: string;
   /** Tool calls */
-  tools?: Record<string, any>[];
+  tools?: ChatToolPayload[];
   /** Trace ID */
   traceId?: string;
   /** ISO timestamp or Unix timestamp (ms) */

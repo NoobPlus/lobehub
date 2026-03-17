@@ -2,21 +2,22 @@ import { nanoid } from '@lobechat/utils';
 import debug from 'debug';
 import { produce } from 'immer';
 
-import { type ChatStore } from '@/store/chat/store';
-import { type MessageMapKeyInput } from '@/store/chat/utils/messageMapKey';
+import type { ChatStore } from '@/store/chat/store';
+import type { MessageMapKeyInput } from '@/store/chat/utils/messageMapKey';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
-import { type StoreSetter } from '@/store/types';
+import type { StoreSetter } from '@/store/types';
 import { setNamespace } from '@/utils/storeDebug';
 
-import {
-  type AfterCompletionCallback,
-  type Operation,
-  type OperationCancelContext,
-  type OperationContext,
-  type OperationFilter,
-  type OperationMetadata,
-  type OperationStatus,
-  type OperationType,
+import type {
+  AfterCompletionCallback,
+  Operation,
+  OperationCancelContext,
+  OperationContext,
+  OperationError,
+  OperationFilter,
+  OperationMetadata,
+  OperationStatus,
+  OperationType,
 } from './types';
 
 const n = setNamespace('operation');
@@ -441,10 +442,7 @@ export class OperationActionsImpl {
     }
   };
 
-  failOperation = (
-    operationId: string,
-    error: { code?: string; details?: any; message: string; type: string },
-  ): void => {
+  failOperation = (operationId: string, error: OperationError): void => {
     const operation = this.#get().operations[operationId];
     if (operation) {
       log(

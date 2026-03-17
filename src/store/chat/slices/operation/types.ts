@@ -116,39 +116,54 @@ export interface RuntimeHooks {
 /**
  * Operation metadata
  */
-export interface OperationMetadata {
-  // Other metadata (extensible)
-  [key: string]: any;
+export interface OperationError {
+  code?: string;
+  details?: unknown;
+  message: string;
+  type: string;
+}
 
+export interface OperationProgress {
+  current: number;
+  percentage?: number;
+  total: number;
+}
+
+/**
+ * Extend via module augmentation to keep ownership local to the feature.
+ */
+export interface OperationMetadataExtension {}
+
+export interface OperationMetadata extends OperationMetadataExtension {
   // Cancel information
   cancelReason?: string;
-  duration?: number;
-  endTime?: number;
+  // IDs created during the operation
+  createdThreadId?: string;
+  createdTopicId?: string;
 
+  duration?: number;
+
+  endTime?: number;
   // Error information
-  error?: {
-    type: string;
-    message: string;
-    code?: string;
-    details?: any;
-  };
+  error?: OperationError;
 
   // UI state (for sendMessage operation)
-  inputEditorTempState?: any | null; // Editor state snapshot for cancel restoration
-
+  inputEditorTempState?: unknown | null; // Editor state snapshot for cancel restoration
   inputSendErrorMsg?: string; // Error message to display in UI
+  // Flags/flow markers
+  inThread?: boolean;
+
+  isAborting?: boolean;
   // Progress information
-  progress?: {
-    current: number;
-    total: number;
-    percentage?: number;
-  };
+  progress?: OperationProgress;
 
   // Runtime hooks (collected during execution, executed after completion)
   runtimeHooks?: RuntimeHooks;
 
   // Performance information
   startTime: number;
+
+  tempMessageId?: string;
 }
 
 /**

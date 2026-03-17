@@ -1,5 +1,6 @@
 'use client';
 
+import { type RichTextEditorState } from '@lobechat/types';
 import { Alert, Button, Flexbox, Icon } from '@lobehub/ui';
 import { Divider } from 'antd';
 import isEqual from 'fast-deep-equal';
@@ -60,7 +61,7 @@ const MemberProfile = memo(() => {
 
   // Wrap updateAgentConfigById for saving editor content
   const updateContent = useCallback(
-    async (payload: { content: string; editorData: Record<string, any> }) => {
+    async (payload: { content: string; editorData: RichTextEditorState }) => {
       await updateAgentConfigById(agentId, {
         editorData: payload.editorData,
         systemRole: payload.content,

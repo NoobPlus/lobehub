@@ -19,6 +19,11 @@ import { lambdaClient } from '@/libs/trpc/client';
 
 import { abortableRequest } from '../utils/abortableRequest';
 
+type CreateMessageInput = Parameters<typeof lambdaClient.message.createMessage.mutate>[0];
+type UpdatePluginErrorInput = Parameters<
+  typeof lambdaClient.message.updatePluginError.mutate
+>[0]['value'];
+
 /**
  * Query context for message operations
  * Contains identifiers needed for querying/filtering messages after mutations
@@ -33,7 +38,7 @@ export interface MessageQueryContext {
 
 export class MessageService {
   createMessage = async (params: CreateMessageParams): Promise<CreateMessageResult> => {
-    return lambdaClient.message.createMessage.mutate(params as any);
+    return lambdaClient.message.createMessage.mutate(params as unknown as CreateMessageInput);
   };
 
   getMessages = async (params: MessageQueryContext): Promise<UIChatMessage[]> => {
@@ -78,7 +83,7 @@ export class MessageService {
     });
   };
 
-  updateMessagePluginArguments = async (id: string, value: string | Record<string, any>) => {
+  updateMessagePluginArguments = async (id: string, value: string | Record<string, unknown>) => {
     const args = typeof value === 'string' ? value : JSON.stringify(value);
     return lambdaClient.message.updateMessagePlugin.mutate({ id, value: { arguments: args } });
   };
@@ -131,7 +136,7 @@ export class MessageService {
 
   updateMessagePluginState = async (
     id: string,
-    value: Record<string, any>,
+    value: Record<string, unknown>,
     ctx?: MessageQueryContext,
   ): Promise<UpdateMessageResult> => {
     return lambdaClient.message.updatePluginState.mutate({ ...ctx, id, value });
@@ -142,7 +147,11 @@ export class MessageService {
     error: ChatMessagePluginError | null,
     ctx?: MessageQueryContext,
   ): Promise<UpdateMessageResult> => {
-    return lambdaClient.message.updatePluginError.mutate({ ...ctx, id, value: error as any });
+    return lambdaClient.message.updatePluginError.mutate({
+      ...ctx,
+      id,
+      value: error as UpdatePluginErrorInput,
+    });
   };
 
   updateMessagePlugin = async (
@@ -170,9 +179,9 @@ export class MessageService {
     id: string,
     value: {
       content?: string;
-      metadata?: Record<string, any>;
-      pluginError?: any;
-      pluginState?: Record<string, any>;
+      metadata?: Record<string, unknown>;
+      pluginError?: ChatMessagePluginError | null;
+      pluginState?: Record<string, unknown>;
     },
     ctx?: MessageQueryContext,
   ): Promise<UpdateMessageResult> => {

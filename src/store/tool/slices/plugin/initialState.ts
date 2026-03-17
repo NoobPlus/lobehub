@@ -1,6 +1,6 @@
 import { type LobeTool } from '@lobechat/types';
 
-export type PluginsSettings = Record<string, any>;
+export type PluginsSettings = Record<string, unknown>;
 
 export interface PluginState {
   installedPlugins: LobeTool[];

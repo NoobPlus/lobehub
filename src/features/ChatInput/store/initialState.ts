@@ -1,3 +1,4 @@
+import { type RichTextEditorState } from '@lobechat/types';
 import { type IEditor, type SlashOptions } from '@lobehub/editor';
 import { type ChatInputProps } from '@lobehub/editor/react';
 import { type MenuProps } from '@lobehub/ui';
@@ -7,7 +8,7 @@ import { type ActionKeys } from '@/features/ChatInput';
 export type SendButtonHandler = (params: {
   clearContent: () => void;
   editor: IEditor;
-  getEditorData: () => Record<string, any> | undefined;
+  getEditorData: () => RichTextEditorState | undefined;
   getMarkdownContent: () => string;
 }) => Promise<void> | void;
 

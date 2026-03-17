@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { ToolArguments } from './builtin';
+
 /**
  * Human Intervention Policy
  */
@@ -205,7 +207,7 @@ export interface ShouldInterveneParams {
    * Tool call arguments to check against rules
    * @default {}
    */
-  toolArgs?: Record<string, any>;
+  toolArgs?: ToolArguments;
 
   /**
    * Tool key to check against confirmed history
@@ -218,6 +220,6 @@ export const ShouldInterveneParamsSchema = z.object({
   config: HumanInterventionConfigSchema.optional(),
   confirmedHistory: z.array(z.string()).optional(),
   securityBlacklist: SecurityBlacklistConfigSchema.optional(),
-  toolArgs: z.record(z.string(), z.any()).optional(),
+  toolArgs: z.record(z.string(), z.unknown()).optional(),
   toolKey: z.string().optional(),
 });

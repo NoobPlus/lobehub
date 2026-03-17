@@ -1,3 +1,4 @@
+import { type RichTextEditorState } from '@lobechat/types';
 import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { type ReactNode } from 'react';
@@ -98,7 +99,7 @@ const MessageContent = memo<MessageContentProps>(
               onCancel={() => onEditingChange(false)}
               onConfirm={async (value, newEditorData) => {
                 await updateMessageContent(id, value, {
-                  editorData: newEditorData as Record<string, any> | undefined,
+                  editorData: newEditorData as RichTextEditorState | undefined,
                 });
                 onEditingChange(false);
               }}

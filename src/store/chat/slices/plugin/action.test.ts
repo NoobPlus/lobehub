@@ -41,7 +41,7 @@ describe('ChatPluginAction', () => {
         id: messageId,
         role: 'tool',
         content: 'Tool content to summarize',
-      } as UIChatMessage;
+      } as unknown as UIChatMessage;
 
       const internal_execAgentRuntimeMock = vi.fn();
 
@@ -87,7 +87,7 @@ describe('ChatPluginAction', () => {
         id: messageId,
         role: 'user',
         content: 'User message',
-      } as UIChatMessage;
+      } as unknown as UIChatMessage;
 
       const internal_execAgentRuntimeMock = vi.fn();
 
@@ -762,7 +762,7 @@ describe('ChatPluginAction', () => {
           arguments: '{}',
         },
         tool_call_id: 'tool-id',
-      } as UIChatMessage;
+      } as unknown as UIChatMessage;
 
       const internal_invokeDifferentTypePluginMock = vi.fn();
       act(() => {
@@ -800,7 +800,7 @@ describe('ChatPluginAction', () => {
         },
         tool_call_id: 'tool-id',
         pluginError: { message: 'Previous error', type: 'ProviderBizError' },
-      } as UIChatMessage;
+      } as unknown as UIChatMessage;
 
       const internal_updateMessageErrorMock = vi.fn();
 
