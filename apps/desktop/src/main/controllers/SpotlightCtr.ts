@@ -99,7 +99,7 @@ export default class SpotlightCtr extends ControllerModule {
   private setupCrashRecovery() {
     const spotlight = this.app.browserManager.browsers.get(BrowsersIdentifiers.spotlight);
     if (spotlight) {
-      spotlight.browserWindow.webContents.on('crashed', () => {
+      spotlight.browserWindow.webContents.on('render-process-gone', () => {
         console.error('[SpotlightCtr] Spotlight renderer crashed, recreating...');
         spotlight.resetReady();
         spotlight.destroy();
