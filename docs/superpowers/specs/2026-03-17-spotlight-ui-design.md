@@ -128,9 +128,11 @@ Set to `true` (revised from original). Heavy components (markdown renderer, shik
 **Model Chip:**
 
 - Displays current model name + ▼ indicator
-- Click triggers IPC to main process → main process builds `Menu` from `useEnabledChatModels()` data → `Menu.popup()`
+- Click: renderer calls `useEnabledChatModels()` to get model list, serializes to `{ label, value, group }[]`, sends via IPC `spotlight.openModelMenu(items)` to main process
+- Main process builds `Menu` from the serialized items and calls `Menu.popup()`
 - During menu display, blur→hide is suppressed via popup callback
-- User selection returned via IPC callback → renderer updates `currentModel`
+- User selects → main process returns `{ model, provider }` via IPC response → renderer updates `currentModel`
+- Note: `useEnabledChatModels()` is a renderer-side React hook reading `useAiInfraStore`; main process has no React environment and cannot call it directly
 
 **Plugin Chips:**
 
@@ -232,6 +234,10 @@ interface SpotlightState {
   // Active plugins
   activePlugins: string[];
 
+  // Agent context (needed for topic creation and "open in main window")
+  agentId: string; // default agent or last-used agent
+  groupId?: string; // if group topic
+
   // Chat
   topicId: string | null;
   messages: ChatMessage[];
@@ -243,23 +249,34 @@ interface SpotlightState {
 
 **Send message:**
 
+The send flow must be atomic — topic creation, user message, assistant message, and streaming are handled as a single transaction, consistent with the main window's `conversationLifecycle.ts` pattern (`sendMessageInServer` combines newTopic + newUserMessage + newAssistantMessage + runtime start). Spotlight should reuse or mirror this service layer to avoid orphaned topics on failure.
+
 ```
 Enter pressed
   → viewState: 'input' → 'chat'
   → IPC: spotlight.resize({ width: 680, height: 480 })  // one-time expand
-  → Create topic in DB
-  → Start streaming request
+  → Call sendMessage service (atomic: topic + userMsg + assistantMsg + stream)
+    - If no topicId yet: creates topic as part of the atomic operation
+    - Optimistic: user message shown immediately
+    - Stream chunks update assistant message content
   → SpotlightMessage renders stream content
-  → Stream ends → store:invalidate broadcast to main window
+  → Stream ends → notify main window to revalidate (see Cross-window sync)
+  → On failure: error shown in chat area, no orphan topic created
 ```
+
+The spotlight renderer needs access to the same TRPC/service endpoints as the main window. Since both renderers share the same Electron session (cookies, auth), TRPC calls work identically. The spotlight may either:
+
+- Import a minimal subset of the chat service layer (preferred: reuse `chatService.createAssistantMessage` etc.)
+- Or implement a thin wrapper that calls the same TRPC endpoints directly
 
 **Model selection:**
 
 ```
 Click model chip
-  → IPC: spotlight.openModelMenu()
-  → Main process reads enabledModels from store
-  → Builds Menu items (provider groups + model names)
+  → Renderer calls useEnabledChatModels() to get model list
+  → Serializes to plain objects: { items: [{ label, value, provider, group }] }
+  → IPC: spotlight.openModelMenu({ items })
+  → Main process builds Menu from serialized items (provider groups as separators)
   → Menu.popup() with blur suppression
   → User selects → callback returns { model, provider }
   → IPC response → renderer updates currentModel
@@ -267,19 +284,35 @@ Click model chip
 
 **Open in main window:**
 
+Navigation in the main window requires `agentId` + `topicId` (route: `/agent/:agentId?topic=:topicId`). Group topics additionally need `groupId`. The spotlight store must track the active agent context.
+
 ```
 Click expand button
-  → IPC: spotlight.expandToMain({ topicId })
-  → Main process: main window navigate to topic
+  → IPC: spotlight.expandToMain({ agentId, topicId, groupId? })
+  → Main process: main window broadcast 'navigate' with full path
+    - Agent topic: /agent/{agentId}?topic={topicId}
+    - Group topic: /group/{groupId}?topic={topicId}
   → Main process: spotlight.hide()
 ```
 
 **Cross-window sync:**
 
 - DB as source of truth
-- After spotlight writes messages to DB → `store:invalidate` broadcast
-- Main window SWR revalidates affected keys
-- Fallback: SWR periodic revalidation (30s)
+- New IPC broadcast event `syncData` must be added to `@lobechat/electron-client-ipc` `MainBroadcastEvents`:
+
+```typescript
+// packages/electron-client-ipc/src/events/spotlight.ts
+export interface SpotlightBroadcastEvents {
+  spotlightFocus: () => void;
+  syncData: (data: { keys: string[]; source: string }) => void;
+}
+```
+
+- After spotlight writes messages to DB → renderer sends IPC `spotlight.notifySync({ keys })` to main process → main process broadcasts `syncData` to all other windows via `broadcastToOtherWindows`
+- Receiving window's renderer listens via `useWatchBroadcast('syncData', ({ keys }) => { keys.forEach(k => mutate(k)) })`
+- Keys are SWR cache keys (e.g. `['chat/messages', 'chat/topics']`)
+- Fallback: SWR periodic revalidation (30s) ensures eventual consistency if broadcast lost
+- This same mechanism benefits any future multi-window scenario, not just spotlight
 
 ## Error Handling
 
