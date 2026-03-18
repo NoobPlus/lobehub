@@ -149,7 +149,7 @@ export const chunkRouter = router({
           let document:
             | {
                 content: string | null;
-                metadata: Record<string, any> | null;
+                metadata: Record<string, unknown> | null;
               }
             | undefined = await ctx.documentModel.findByFileId(fileId);
 

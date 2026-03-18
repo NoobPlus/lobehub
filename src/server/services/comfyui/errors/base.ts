@@ -7,9 +7,9 @@
  */
 export abstract class ComfyUIInternalError extends Error {
   public readonly reason: string;
-  public readonly details?: Record<string, any>;
+  public readonly details?: Record<string, unknown>;
 
-  constructor(message: string, reason: string, details?: Record<string, any>) {
+  constructor(message: string, reason: string, details?: Record<string, unknown>) {
     super(message);
     this.reason = reason;
     this.details = details;

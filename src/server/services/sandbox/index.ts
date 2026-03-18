@@ -47,7 +47,10 @@ export class ServerSandboxService implements ISandboxService {
   /**
    * Call a sandbox tool via MarketService
    */
-  async callTool(toolName: string, params: Record<string, any>): Promise<SandboxCallToolResult> {
+  async callTool(
+    toolName: string,
+    params: Record<string, unknown>,
+  ): Promise<SandboxCallToolResult> {
     log('Calling sandbox tool: %s with params: %O, topicId: %s', toolName, params, this.topicId);
 
     try {

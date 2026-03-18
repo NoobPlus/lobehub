@@ -511,7 +511,7 @@ export const createRuntimeExecutors = (
 
       try {
         // Build metadata object
-        const metadata: Record<string, any> = {};
+        const metadata: Record<string, unknown> = {};
         if (currentStepUsage && typeof currentStepUsage === 'object') {
           Object.assign(metadata, currentStepUsage);
         }

@@ -29,7 +29,7 @@ export interface StreamConnectionOptions {
 
 export interface AgentOperationRequest {
   agentConfig?: {
-    [key: string]: any;
+    [key: string]: unknown;
     costLimit?: {
       currency: string;
       maxTotalCost: number;
@@ -44,7 +44,7 @@ export interface AgentOperationRequest {
   autoStart?: boolean;
   messages: OpenAIChatMessage[];
   modelRuntimeConfig: {
-    [key: string]: any;
+    [key: string]: unknown;
     model: string;
     provider: string;
   };

@@ -52,7 +52,7 @@ export const oauthDeviceFlowRouter = router({
         return { isAuthenticated: false };
       }
 
-      const keyVaults = providerDetail.keyVaults as Record<string, any>;
+      const keyVaults = providerDetail.keyVaults as Record<string, unknown>;
 
       // Check for OAuth token
       if (keyVaults.oauthAccessToken) {

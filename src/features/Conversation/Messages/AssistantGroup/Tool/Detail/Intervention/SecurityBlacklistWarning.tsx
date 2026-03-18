@@ -4,7 +4,7 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface SecurityBlacklistWarningProps {
-  args: Record<string, any>;
+  args: Record<string, unknown>;
 }
 
 const SecurityBlacklistWarning = memo<SecurityBlacklistWarningProps>(({ args }) => {

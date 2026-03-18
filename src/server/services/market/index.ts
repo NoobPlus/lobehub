@@ -24,7 +24,7 @@ export function extractAccessToken(req: NextRequest): string | undefined {
 }
 
 export interface LobehubSkillExecuteParams {
-  args: Record<string, any>;
+  args: Record<string, unknown>;
   provider: string;
   toolName: string;
 }
@@ -248,7 +248,7 @@ export class MarketService {
   /**
    * Call a skill tool
    */
-  async callSkillTool(provider: string, params: { args: Record<string, any>; tool: string }) {
+  async callSkillTool(provider: string, params: { args: Record<string, unknown>; tool: string }) {
     return this.market.skills.callTool(provider, params);
   }
 
@@ -266,7 +266,7 @@ export class MarketService {
    */
   async callCloudMcpEndpoint(
     params: {
-      apiParams: Record<string, any>;
+      apiParams: Record<string, unknown>;
       identifier: string;
       toolName: string;
     },

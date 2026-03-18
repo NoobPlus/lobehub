@@ -46,7 +46,7 @@ const DatasetImportModal = memo<DatasetImportModalProps>(
 
     // Parse result
     const [headers, setHeaders] = useState<string[]>([]);
-    const [preview, setPreview] = useState<Record<string, any>[]>([]);
+    const [preview, setPreview] = useState<Record<string, unknown>[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [format, setFormat] = useState<'csv' | 'json' | 'jsonl' | 'xlsx'>();
 

@@ -112,7 +112,7 @@ const createAuthTokenWithPayload = (payload = {}) => {
 
 interface AuthParams {
   headers?: HeadersInit;
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
   provider?: string;
 }
 

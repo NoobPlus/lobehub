@@ -39,12 +39,12 @@ export class SearXNGClient {
 
   async search(
     query: string,
-    optionalParams: Record<string, any> = {},
+    optionalParams: Record<string, unknown> = {},
   ): Promise<SearXNGSearchResponse> {
     try {
       const { time_range, ...otherParams } = optionalParams;
 
-      const processedParams = Object.entries(otherParams).reduce<Record<string, any>>(
+      const processedParams = Object.entries(otherParams).reduce<Record<string, unknown>>(
         (acc, [key, value]) => {
           acc[key] = Array.isArray(value) ? value.join(',') : value;
           return acc;

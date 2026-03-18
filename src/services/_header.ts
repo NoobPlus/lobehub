@@ -6,14 +6,13 @@ import { useUserStore } from '@/store/user';
  * TODO: Need to be removed after tts refactor
  * @deprecated
  */
- 
+
 export const createHeaderWithOpenAI = (header?: HeadersInit): HeadersInit => {
   const state = useUserStore.getState();
 
-  const keyVaults: Record<string, any> =
+  const keyVaults =
     aiProviderSelectors.providerKeyVaults('openai')(useAiInfraStore.getState()) || {};
 
-   
   return {
     ...header,
     [LOBE_USER_ID]: state.user?.id || '',

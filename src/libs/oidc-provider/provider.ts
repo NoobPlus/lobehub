@@ -196,9 +196,9 @@ export const createOIDCProvider = async (db: LobeChatDatabase): Promise<Provider
 
         return {
           accountId: user.id,
-          async claims(use, scope): Promise<{ [key: string]: any; sub: string }> {
+          async claims(use, scope): Promise<{ [key: string]: unknown; sub: string }> {
             logProvider('claims function called for user %s with scope: %s', user.id, scope);
-            const claims: { [key: string]: any; sub: string } = {
+            const claims: { [key: string]: unknown; sub: string } = {
               sub: user.id,
             };
 

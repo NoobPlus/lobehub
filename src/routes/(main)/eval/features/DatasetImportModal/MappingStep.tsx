@@ -58,7 +58,7 @@ interface MappingStepProps {
   mapping: Record<string, MappingTarget>;
   onDelimiterChange: (delimiter: string) => void;
   onMappingChange: (mapping: Record<string, MappingTarget>) => void;
-  preview: Record<string, any>[];
+  preview: Record<string, unknown>[];
   totalCount: number;
 }
 

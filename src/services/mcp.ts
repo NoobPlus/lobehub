@@ -52,7 +52,7 @@ class MCPService {
 
     const connection = plugin.customParams?.mcp;
     const settingsEntries = plugin.settings
-      ? Object.entries(plugin.settings as Record<string, any>).filter(
+      ? Object.entries(plugin.settings as Record<string, unknown>).filter(
           ([, value]) => value !== undefined && value !== null,
         )
       : [];

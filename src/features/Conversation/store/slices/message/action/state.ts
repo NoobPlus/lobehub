@@ -35,7 +35,7 @@ export interface MessageStateAction {
   modifyMessageContent: (
     id: string,
     content: string,
-    editorData?: Record<string, any> | null,
+    editorData?: Record<string, unknown> | null,
   ) => Promise<void>;
 
   /**

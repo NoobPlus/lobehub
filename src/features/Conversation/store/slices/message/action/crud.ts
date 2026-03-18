@@ -99,7 +99,7 @@ export interface MessageCRUDAction {
     id: string,
     content: string,
     extra?: {
-      editorData?: Record<string, any> | null;
+      editorData?: Record<string, unknown> | null;
       imageList?: ChatImageItem[];
       metadata?: MessageMetadata;
       model?: string;

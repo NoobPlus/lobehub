@@ -7,7 +7,6 @@ import { type ElectronStore } from '../store';
 export interface HistoryEntry {
   icon?: string;
   metadata?: {
-    [key: string]: any;
     sessionId?: string;
     timestamp: number;
   };

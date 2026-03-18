@@ -4,7 +4,6 @@ import type { AsyncTaskStatus } from '../asyncTask';
 import type { RichTextEditorState } from '../message';
 
 export interface FileListItemMetadata {
-  [key: string]: unknown;
   emoji?: string;
 }
 

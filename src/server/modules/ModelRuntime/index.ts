@@ -163,7 +163,7 @@ export const buildPayloadFromKeyVaults = (
  * @returns The options object.
  */
 const getParamsFromPayload = (provider: string, payload: ClientSecretPayload) => {
-  const llmConfig = getLLMConfig() as Record<string, any>;
+  const llmConfig = getLLMConfig() as Record<string, unknown>;
 
   switch (provider) {
     case ModelProvider.LobeHub: {

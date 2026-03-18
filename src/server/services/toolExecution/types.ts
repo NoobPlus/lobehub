@@ -23,7 +23,7 @@ export interface ToolExecutionContext {
 export interface ToolExecutionResult {
   content: string;
   error?: any;
-  state?: Record<string, any>;
+  state?: Record<string, unknown>;
   success: boolean;
 }
 

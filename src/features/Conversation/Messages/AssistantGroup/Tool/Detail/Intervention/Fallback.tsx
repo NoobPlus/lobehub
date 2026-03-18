@@ -32,7 +32,7 @@ const FallbackIntervention = memo<FallbackInterventionProps>(
     }, []);
 
     const handleFinish = useCallback(
-      async (editedObject: Record<string, any>) => {
+      async (editedObject: Record<string, unknown>) => {
         if (!toolCallId) return;
 
         try {

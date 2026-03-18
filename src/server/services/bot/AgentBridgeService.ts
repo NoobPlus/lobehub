@@ -38,7 +38,7 @@ function extractErrorMessage(err: unknown): string {
   if (!err) return 'Agent execution failed';
   if (typeof err === 'string') return err;
 
-  const e = err as Record<string, any>;
+  const e = err as Record<string, unknown>;
 
   // { message: '...' }
   if (typeof e.message === 'string') return e.message;
@@ -686,7 +686,7 @@ export class AgentBridgeService {
     }
 
     // 2. Attachments from referenced (quoted/replied-to) message (Discord raw payload)
-    const raw = (message as any).raw as Record<string, any> | undefined;
+    const raw = (message as any).raw as Record<string, unknown> | undefined;
     const refAttachments = raw?.referenced_message?.attachments as AttachmentLike[] | undefined;
     if (refAttachments?.length) {
       for (const att of refAttachments) {

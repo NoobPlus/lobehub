@@ -180,7 +180,7 @@ export const createAgentExecutors = (context: {
         }
 
         // Build metadata
-        const metadata: Record<string, any> = {};
+        const metadata: Record<string, unknown> = {};
         if (opContext.isSupervisor) {
           metadata.isSupervisor = true;
         }

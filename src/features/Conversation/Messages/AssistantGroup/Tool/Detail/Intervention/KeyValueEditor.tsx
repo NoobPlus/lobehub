@@ -38,12 +38,12 @@ interface KeyValueItem {
 }
 
 interface KeyValueEditorProps {
-  initialValue?: Record<string, any>;
+  initialValue?: Record<string, unknown>;
   onCancel?: () => void;
-  onFinish?: (value: Record<string, any>) => Promise<void>;
+  onFinish?: (value: Record<string, unknown>) => Promise<void>;
 }
 
-const recordToFormList = (record: Record<string, any>): KeyValueItem[] =>
+const recordToFormList = (record: Record<string, unknown>): KeyValueItem[] =>
   Object.entries(record)
     .map(([key, val], index) => ({
       id: `${key}-${index}`,
@@ -52,8 +52,8 @@ const recordToFormList = (record: Record<string, any>): KeyValueItem[] =>
     }))
     .filter((item) => item.key);
 
-const formListToRecord = (list: KeyValueItem[]): Record<string, any> => {
-  const record: Record<string, any> = {};
+const formListToRecord = (list: KeyValueItem[]): Record<string, unknown> => {
+  const record: Record<string, unknown> = {};
   list.forEach((item) => {
     if (item.key) {
       try {

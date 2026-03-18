@@ -1,4 +1,5 @@
 import { type DocumentItem } from '@lobechat/database/schemas';
+import { type LobeDocumentMetadata } from '@lobechat/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
 
@@ -9,7 +10,7 @@ export interface CreateDocumentParams {
   editorData: string;
   fileType?: string;
   knowledgeBaseId?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Partial<LobeDocumentMetadata>;
   parentId?: string;
   slug?: string;
   title: string;
@@ -20,7 +21,7 @@ export interface UpdateDocumentParams {
   editorData?: string;
   fileType?: string;
   id: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Partial<LobeDocumentMetadata>;
   parentId?: string | null;
   title?: string;
 }

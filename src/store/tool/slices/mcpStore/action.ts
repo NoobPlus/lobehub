@@ -51,7 +51,7 @@ const doesConfigSchemaRequireInput = (configSchema?: any) => {
   return hasRequiredArray || hasRequiredProperty;
 };
 
-const toNonEmptyStringRecord = (input?: Record<string, any>) => {
+const toNonEmptyStringRecord = (input?: Record<string, unknown>) => {
   if (!input) return undefined;
 
   const entries = Object.entries(input).filter(
@@ -195,7 +195,7 @@ export class PluginMCPStoreActionImpl {
 
   installMCPPlugin = async (
     identifier: string,
-    options: { config?: Record<string, any>; resume?: boolean; skipDepsCheck?: boolean } = {},
+    options: { config?: Record<string, unknown>; resume?: boolean; skipDepsCheck?: boolean } = {},
   ): Promise<boolean | undefined> => {
     const { resume = false, config, skipDepsCheck } = options;
     const normalizedConfig = toNonEmptyStringRecord(config);

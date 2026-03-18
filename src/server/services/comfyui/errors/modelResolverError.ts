@@ -14,9 +14,9 @@
  */
 export class ModelResolverError extends Error {
   public readonly reason: string;
-  public readonly details?: Record<string, any>;
+  public readonly details?: Record<string, unknown>;
 
-  constructor(reason: string, message: string, details?: Record<string, any>) {
+  constructor(reason: string, message: string, details?: Record<string, unknown>) {
     super(message);
     this.name = 'ModelResolverError';
     this.reason = reason;

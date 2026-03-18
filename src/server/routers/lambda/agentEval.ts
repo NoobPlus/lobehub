@@ -954,7 +954,7 @@ export const agentEvalRouter = router({
 
       // Only allow changing dataset/agent when run hasn't started
       const canChangeConfig = run.status === 'idle';
-      const value: Record<string, any> = {};
+      const value: Record<string, unknown> = {};
 
       if (updates.name !== undefined) value.name = updates.name;
       if (canChangeConfig && updates.datasetId !== undefined) value.datasetId = updates.datasetId;

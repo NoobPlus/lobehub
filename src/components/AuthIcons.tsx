@@ -11,8 +11,9 @@ import {
   Zitadel,
 } from '@lobehub/ui/icons';
 import { User } from 'lucide-react';
+import type { ComponentType } from 'react';
 
-const iconComponents: { [key: string]: any } = {
+const iconComponents: Record<string, unknown> = {
   'apple': Apple,
   'auth0': Auth0,
   'authelia': Authelia.Color,
@@ -32,7 +33,7 @@ const iconComponents: { [key: string]: any } = {
  * Get the auth icons component for the given provider id
  */
 const AuthIcons = (id: string, size = 36) => {
-  const IconComponent = iconComponents[id];
+  const IconComponent = iconComponents[id] as ComponentType<{ size?: number }> | undefined;
   if (IconComponent) {
     return <IconComponent size={size} />;
   }

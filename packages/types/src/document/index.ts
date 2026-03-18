@@ -1,8 +1,9 @@
 import type { RichTextEditorState } from '../message';
 
 export interface LobeDocumentMetadata {
-  [key: string]: unknown;
   author?: string;
+  createdAt?: number;
+  duplicatedFrom?: string;
   emoji?: string;
   error?: string;
   knowledgeBaseId?: string;
@@ -10,7 +11,6 @@ export interface LobeDocumentMetadata {
 }
 
 export interface LobeDocumentPageMetadata {
-  [key: string]: unknown;
   chunkIndex?: number;
   error?: string;
   lineNumberEnd?: number;

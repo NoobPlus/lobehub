@@ -817,7 +817,7 @@ export const aiAgentRouter = router({
         // Note: realtimeStatus may be null if operation expired from Redis
         if (realtimeStatus) {
           const redisState = realtimeStatus.currentState;
-          const updatedMetadata: Record<string, any> = {
+          const updatedMetadata: Record<string, unknown> = {
             ...metadata,
             operationId: resolvedOperationId,
           };

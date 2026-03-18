@@ -17,7 +17,7 @@ interface ProviderSpecificConfig {
 export const genServerAiProvidersConfig = async (
   specificConfig: Record<any, ProviderSpecificConfig>,
 ) => {
-  const llmConfig = getLLMConfig() as Record<string, any>;
+  const llmConfig = getLLMConfig() as Record<string, unknown>;
 
   // Process all providers concurrently
   const providerConfigs = await Promise.all(

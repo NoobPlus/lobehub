@@ -21,7 +21,7 @@ export interface LobehubSkillTool {
   /** JSON Schema for tool input */
   inputSchema: {
     additionalProperties?: boolean;
-    properties?: Record<string, any>;
+    properties?: Record<string, unknown>;
     required?: string[];
     type: string;
   };

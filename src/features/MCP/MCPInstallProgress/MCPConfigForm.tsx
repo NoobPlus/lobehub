@@ -13,7 +13,7 @@ interface MCPConfigFormProps {
   configSchema: any;
   identifier: string;
   onCancel?: () => void;
-  onSubmit?: (config: Record<string, any>) => Promise<void>;
+  onSubmit?: (config: Record<string, unknown>) => Promise<void>;
 }
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -50,7 +50,7 @@ const MCPConfigForm = memo<MCPConfigFormProps>(({ configSchema, identifier, onCa
 
   const items = transformPluginSettings(configSchema);
 
-  const handleSubmit = async (values: Record<string, any>) => {
+  const handleSubmit = async (values: Record<string, unknown>) => {
     setLoading(true);
     try {
       await installMCPPlugin(identifier, { config: values, resume: true });

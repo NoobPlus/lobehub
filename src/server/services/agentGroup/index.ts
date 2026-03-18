@@ -104,7 +104,7 @@ export class AgentGroupService {
    * @param agents - Array of agents to merge
    * @returns Merged agents array
    */
-  mergeAgentsDefaultConfig<T extends Record<string, any>>(
+  mergeAgentsDefaultConfig<T extends Record<string, unknown>>(
     defaultAgentConfig: DefaultAgentConfig,
     agents: T[],
   ) {

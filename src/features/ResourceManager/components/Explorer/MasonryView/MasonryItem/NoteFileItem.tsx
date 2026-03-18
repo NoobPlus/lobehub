@@ -123,7 +123,7 @@ interface NoteFileItemProps {
   id: string;
   isLoadingMarkdown: boolean;
   markdownContent: string;
-  metadata?: Record<string, any> | null;
+  metadata?: { emoji?: string } | null;
   name: string;
 }
 

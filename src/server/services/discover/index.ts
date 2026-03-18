@@ -151,7 +151,7 @@ export class DiscoverService {
   // ============================== Call Cloud Mcp Endpoint Methods ==============================
 
   async callCloudMcpEndpoint(params: {
-    apiParams: Record<string, any>;
+    apiParams: Record<string, unknown>;
     identifier: string;
     toolName: string;
     userAccessToken?: string;

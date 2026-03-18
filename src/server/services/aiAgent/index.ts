@@ -54,7 +54,7 @@ const log = debug('lobe-server:ai-agent-service');
  * Format error for storage in thread metadata
  * Handles Error objects which don't serialize properly with JSON.stringify
  */
-function formatErrorForMetadata(error: unknown): Record<string, any> | undefined {
+function formatErrorForMetadata(error: unknown): Record<string, unknown> | undefined {
   if (!error) return undefined;
 
   // Handle Error objects
@@ -67,7 +67,7 @@ function formatErrorForMetadata(error: unknown): Record<string, any> | undefined
 
   // Handle objects with message property (like ChatMessageError)
   if (typeof error === 'object' && 'message' in error) {
-    return error as Record<string, any>;
+    return error as Record<string, unknown>;
   }
 
   // Fallback: wrap in object
@@ -441,7 +441,7 @@ export class AiAgentService {
 
     // Get manifest map and convert from Map to Record
     const manifestMap = toolsEngine.getEnabledPluginManifests(pluginIds);
-    const toolManifestMap: Record<string, any> = {};
+    const toolManifestMap: Record<string, unknown> = {};
     manifestMap.forEach((manifest, id) => {
       toolManifestMap[id] = manifest;
     });

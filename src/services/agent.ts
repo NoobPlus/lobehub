@@ -30,7 +30,7 @@ const normalizeMarketAgentModel = (config?: PartialDeep<AgentItem>): PartialDeep
 
   // Extract model info and merge parameters
   const { model: modelName, provider: modelProvider, parameters } = model;
-  const existingParams = (config.params ?? {}) as Record<string, any>;
+  const existingParams = (config.params ?? {}) as Record<string, unknown>;
   const mergedParams = { ...parameters, ...existingParams };
 
   return {

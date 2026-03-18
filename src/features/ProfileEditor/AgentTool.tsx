@@ -302,7 +302,9 @@ const AgentTool = memo<AgentToolProps>(
     // Handle plugin remove via Tag close - use byId actions
     const handleRemovePlugin =
       (
-        pluginId: string | { enabled: boolean; identifier: string; settings: Record<string, any> },
+        pluginId:
+          | string
+          | { enabled: boolean; identifier: string; settings: Record<string, unknown> },
       ) =>
       async (e: React.MouseEvent) => {
         e.preventDefault();

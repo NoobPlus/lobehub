@@ -78,7 +78,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 export interface PluginTagProps {
   onRemove: (e: React.MouseEvent) => void;
-  pluginId: string | { enabled: boolean; identifier: string; settings: Record<string, any> };
+  pluginId: string | { enabled: boolean; identifier: string; settings: Record<string, unknown> };
   /**
    * Whether to show "Desktop Only" label for tools not available in web
    * @default false

@@ -11,7 +11,7 @@ import { ComfyUIInternalError } from './base';
  * - Service availability issues
  */
 export class UtilsError extends ComfyUIInternalError {
-  constructor(message: string, reason: string, details?: Record<string, any>) {
+  constructor(message: string, reason: string, details?: Record<string, unknown>) {
     super(message, reason, details);
     this.name = 'UtilsError';
   }

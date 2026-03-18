@@ -42,7 +42,7 @@ export interface PlatformDescriptor {
   createAdapter: (
     credentials: Record<string, string>,
     applicationId: string,
-  ) => Record<string, any>;
+  ) => Record<string, unknown>;
 
   /** Create a PlatformMessenger for sending/editing messages via REST API. */
   createMessenger: (

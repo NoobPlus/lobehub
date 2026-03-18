@@ -18,11 +18,11 @@ interface SlashMenuOption {
   icon?: any;
   key: string;
   label: string;
-  metadata?: Record<string, any>;
+  metadata?: { category: string; type: string };
   onSelect?: (editor: IEditor, matchingString: string) => void;
 }
 
-const COMMAND_ICONS: Record<string, any> = {
+const COMMAND_ICONS: Record<string, unknown> = {
   compact: ArchiveIcon,
   newTopic: MessageSquarePlusIcon,
 };

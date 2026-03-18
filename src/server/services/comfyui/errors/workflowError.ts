@@ -10,7 +10,7 @@ import { ComfyUIInternalError } from './base';
  * - Invalid workflow parameters
  */
 export class WorkflowError extends ComfyUIInternalError {
-  constructor(message: string, reason: string, details?: Record<string, any>) {
+  constructor(message: string, reason: string, details?: Record<string, unknown>) {
     super(message, reason, details);
     this.name = 'WorkflowError';
   }

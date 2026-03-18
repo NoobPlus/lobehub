@@ -166,7 +166,7 @@ export const fileRouter = router({
         fileType: item.fileType,
         finishEmbedding: embeddingTask?.status === AsyncTaskStatus.Success,
         id: item.id,
-        metadata: item.metadata as Record<string, any> | null | undefined,
+        metadata: item.metadata as { emoji?: string } | null | undefined,
         name: item.name,
         size: item.size,
         sourceType: 'file' as const,

@@ -126,7 +126,7 @@ export class CrudActionImpl {
     knowledgeBaseId?: string;
     parentId?: string;
     title: string;
-  }): Promise<{ [key: string]: any; id: string }> => {
+  }) => {
     const now = Date.now();
 
     const newPage = await documentService.createDocument({
@@ -153,7 +153,7 @@ export class CrudActionImpl {
     }
   };
 
-  duplicatePage = async (pageId: string): Promise<{ [key: string]: any; id: string }> => {
+  duplicatePage = async (pageId: string) => {
     // Fetch the source page
     const sourcePage = await documentService.getDocumentById(pageId);
 

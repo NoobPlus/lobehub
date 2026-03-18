@@ -18,7 +18,7 @@ export interface KlavisTool {
   description?: string;
   /** JSON Schema for tool input */
   inputSchema: {
-    properties?: Record<string, any>;
+    properties?: Record<string, unknown>;
     required?: string[];
     type: string;
   };

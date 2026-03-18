@@ -165,7 +165,7 @@ class OIDCAdapter {
     const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000) : undefined;
     log('[%s] expiresAt set to: %s', this.name, expiresAt ? expiresAt.toISOString() : 'undefined');
 
-    const record: Record<string, any> = {
+    const record: Record<string, unknown> = {
       data: payload,
       expiresAt,
       id,

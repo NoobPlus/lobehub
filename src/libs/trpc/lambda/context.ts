@@ -27,9 +27,9 @@ const extractClientIp = (request: NextRequest): string | undefined => {
 
 export interface OIDCAuth {
   // Other OIDC information that might be needed (optional, as payload contains all info)
-  [key: string]: any;
+  [key: string]: unknown;
   // OIDC token data (now the complete payload)
-  payload: any;
+  payload: unknown;
   // User ID
   sub: string;
 }

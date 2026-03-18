@@ -294,7 +294,7 @@ export class BotMessageRouter {
   // Helpers
   // ------------------------------------------------------------------
 
-  private createBot(adapters: Record<string, any>, label: string): Chat<any> {
+  private createBot(adapters: Record<string, unknown>, label: string): Chat<any> {
     const config: any = {
       adapters,
       userName: `lobehub-bot-${label}`,

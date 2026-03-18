@@ -8,7 +8,7 @@ import { type ModelParamsSchema } from 'model-bank';
  */
 export const calculateInitialAspectRatio = (
   parametersSchema: ModelParamsSchema,
-  defaultValues: Record<string, any>,
+  defaultValues: Record<string, unknown>,
 ): string | null => {
   // If model has native aspect ratio or size parameters, don't use virtual ratio control
   if (parametersSchema?.aspectRatio || parametersSchema?.size) {

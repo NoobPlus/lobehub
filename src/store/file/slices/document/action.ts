@@ -52,7 +52,7 @@ export class DocumentActionImpl {
     knowledgeBaseId?: string;
     parentId?: string;
     title: string;
-  }): Promise<{ [key: string]: any; id: string }> => {
+  }) => {
     const now = Date.now();
 
     // Create page with markdown content, leave editorData as empty JSON object
@@ -137,7 +137,7 @@ export class DocumentActionImpl {
     return tempId;
   };
 
-  duplicateDocument = async (documentId: string): Promise<{ [key: string]: any; id: string }> => {
+  duplicateDocument = async (documentId: string) => {
     // Fetch the source page
     const sourcePage = await documentService.getDocumentById(documentId);
 
