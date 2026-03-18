@@ -1,8 +1,20 @@
-import { type ChatToolPayload, type GlobalInterventionAuditConfig } from '@lobechat/types';
+import type { LobeToolManifest } from '@lobechat/context-engine';
+import {
+  type ChatToolPayload,
+  type GlobalInterventionAuditConfig,
+  type LobeChatPluginApi,
+} from '@lobechat/types';
 import { describe, expect, it } from 'vitest';
 
 import { type AgentRuntimeContext, type AgentState } from '../../types';
 import { GeneralChatAgent } from '../GeneralChatAgent';
+
+/**
+ * Test helper: partial manifests are fine for unit tests.
+ * We cast at the boundary so every test doesn't need explicit casts.
+ */
+
+type TestOverrides = Record<string, any>;
 
 describe('GeneralChatAgent', () => {
   const mockModelRuntimeConfig = {
@@ -10,7 +22,7 @@ describe('GeneralChatAgent', () => {
     provider: 'openai',
   };
 
-  const createMockState = (overrides?: Partial<AgentState>): AgentState => ({
+  const createMockState = (overrides?: TestOverrides): AgentState => ({
     operationId: 'test-session',
     status: 'running',
     messages: [],
@@ -168,7 +180,7 @@ describe('GeneralChatAgent', () => {
           'test-plugin': {
             identifier: 'test-plugin',
             // No humanIntervention config = no intervention needed
-          },
+          } as LobeToolManifest,
         },
       });
 
@@ -217,8 +229,8 @@ describe('GeneralChatAgent', () => {
 
       const state = createMockState({
         toolManifestMap: {
-          'plugin-1': { identifier: 'plugin-1' },
-          'plugin-2': { identifier: 'plugin-2' },
+          'plugin-1': { identifier: 'plugin-1' } as LobeToolManifest,
+          'plugin-2': { identifier: 'plugin-2' } as LobeToolManifest,
         },
       });
 
@@ -261,7 +273,7 @@ describe('GeneralChatAgent', () => {
           'test-plugin': {
             identifier: 'test-plugin',
             // No humanIntervention config
-          },
+          } as LobeToolManifest,
         },
       });
 
@@ -304,8 +316,8 @@ describe('GeneralChatAgent', () => {
         toolManifestMap: {
           'dangerous-plugin': {
             identifier: 'dangerous-plugin',
-            humanIntervention: 'require', // Always require approval
-          },
+            humanIntervention: 'required', // Always require approval
+          } as LobeToolManifest,
         },
       });
 
@@ -354,11 +366,11 @@ describe('GeneralChatAgent', () => {
           'safe-plugin': {
             identifier: 'safe-plugin',
             // No intervention
-          },
+          } as LobeToolManifest,
           'dangerous-plugin': {
             identifier: 'dangerous-plugin',
-            humanIntervention: 'require',
-          },
+            humanIntervention: 'required',
+          } as LobeToolManifest,
         },
       });
 
@@ -1385,7 +1397,7 @@ describe('GeneralChatAgent', () => {
             content:
               'All tasks above have been completed. Please summarize the results or continue with your response following user query language.',
             role: 'user',
-          },
+          } as any,
         ]),
       );
     });
@@ -1457,7 +1469,9 @@ describe('GeneralChatAgent', () => {
         agentConfig: { maxSteps: 100 },
         dynamicInterventionAudits: {
           pathScopeAudit: (toolArgs, metadata) => {
-            const workingDirectory = metadata?.workingDirectory as string | undefined;
+            const workingDirectory = (metadata as Record<string, unknown>)?.workingDirectory as
+              | string
+              | undefined;
             if (!workingDirectory) return false;
             const path = toolArgs.path as string;
             return !path.startsWith(workingDirectory);
@@ -1490,9 +1504,9 @@ describe('GeneralChatAgent', () => {
                     type: 'pathScopeAudit',
                   },
                 },
-              },
+              } as LobeChatPluginApi,
             ],
-          },
+          } as LobeToolManifest,
         },
       });
 
@@ -1518,7 +1532,9 @@ describe('GeneralChatAgent', () => {
         agentConfig: { maxSteps: 100 },
         dynamicInterventionAudits: {
           pathScopeAudit: (toolArgs, metadata) => {
-            const workingDirectory = metadata?.workingDirectory as string | undefined;
+            const workingDirectory = (metadata as Record<string, unknown>)?.workingDirectory as
+              | string
+              | undefined;
             if (!workingDirectory) return false;
             const path = toolArgs.path as string;
             return !path.startsWith(workingDirectory);
@@ -1551,9 +1567,9 @@ describe('GeneralChatAgent', () => {
                     type: 'pathScopeAudit',
                   },
                 },
-              },
+              } as LobeChatPluginApi,
             ],
-          },
+          } as LobeToolManifest,
         },
       });
 
@@ -1601,14 +1617,14 @@ describe('GeneralChatAgent', () => {
               {
                 name: 'safe-api',
                 // Safe API
-              },
+              } as LobeChatPluginApi,
               {
                 name: 'dangerous-api',
                 // API-level config overrides tool-level
-                humanIntervention: 'require',
-              },
+                humanIntervention: 'required',
+              } as LobeChatPluginApi,
             ],
-          },
+          } as LobeToolManifest,
         },
       });
 
@@ -1650,7 +1666,7 @@ describe('GeneralChatAgent', () => {
           'dangerous-tool': {
             identifier: 'dangerous-tool',
             humanIntervention: 'required', // Tool requires approval
-          },
+          } as LobeToolManifest,
         },
         userInterventionConfig: {
           approvalMode: 'auto-run', // But user config overrides
@@ -1706,7 +1722,7 @@ describe('GeneralChatAgent', () => {
           bash: {
             identifier: 'bash',
             humanIntervention: 'never', // Tool doesn't require approval by default
-          },
+          } as LobeToolManifest,
         },
         userInterventionConfig: {
           approvalMode: 'allow-list',
@@ -1767,11 +1783,11 @@ describe('GeneralChatAgent', () => {
           'web-search': {
             identifier: 'web-search',
             humanIntervention: 'never', // Safe tool
-          },
+          } as LobeToolManifest,
           'bash': {
             identifier: 'bash',
             humanIntervention: 'required', // Dangerous tool
-          },
+          } as LobeToolManifest,
         },
         userInterventionConfig: {
           approvalMode: 'manual', // Use tool's own config
@@ -1826,9 +1842,9 @@ describe('GeneralChatAgent', () => {
               {
                 name: 'installPlugin',
                 humanIntervention: 'always', // Always requires intervention
-              },
+              } as LobeChatPluginApi,
             ],
-          },
+          } as LobeToolManifest,
         },
         userInterventionConfig: {
           approvalMode: 'auto-run', // User has auto-run enabled
@@ -1874,7 +1890,7 @@ describe('GeneralChatAgent', () => {
           'sensitive-plugin': {
             identifier: 'sensitive-plugin',
             humanIntervention: 'always', // Tool-level always policy
-          },
+          } as LobeToolManifest,
         },
         userInterventionConfig: {
           approvalMode: 'auto-run',
@@ -1928,16 +1944,16 @@ describe('GeneralChatAgent', () => {
           'web-search': {
             identifier: 'web-search',
             humanIntervention: 'required', // Would be bypassed by auto-run
-          },
+          } as LobeToolManifest,
           'agent-builder': {
             identifier: 'agent-builder',
             api: [
               {
                 name: 'installPlugin',
                 humanIntervention: 'always', // Cannot be bypassed
-              },
+              } as LobeChatPluginApi,
             ],
-          },
+          } as LobeToolManifest,
         },
         userInterventionConfig: {
           approvalMode: 'auto-run',
@@ -1994,9 +2010,9 @@ describe('GeneralChatAgent', () => {
                 name: 'writeFile',
                 // Rule-based config with 'always' policy
                 humanIntervention: [{ policy: 'always' }],
-              },
+              } as LobeChatPluginApi,
             ],
-          },
+          } as LobeToolManifest,
         },
         userInterventionConfig: {
           approvalMode: 'auto-run',
@@ -2048,7 +2064,7 @@ describe('GeneralChatAgent', () => {
 
       const state = createMockState({
         toolManifestMap: {
-          'my-tool': { identifier: 'my-tool', humanIntervention: 'never' },
+          'my-tool': { identifier: 'my-tool', humanIntervention: 'never' } as LobeToolManifest,
         },
       });
 
@@ -2093,7 +2109,7 @@ describe('GeneralChatAgent', () => {
 
       const state = createMockState({
         toolManifestMap: {
-          'my-tool': { identifier: 'my-tool', humanIntervention: 'never' },
+          'my-tool': { identifier: 'my-tool', humanIntervention: 'never' } as LobeToolManifest,
         },
         userInterventionConfig: { approvalMode: 'auto-run' },
       });
@@ -2138,7 +2154,7 @@ describe('GeneralChatAgent', () => {
 
       const state = createMockState({
         toolManifestMap: {
-          'my-tool': { identifier: 'my-tool' },
+          'my-tool': { identifier: 'my-tool' } as LobeToolManifest,
         },
         userInterventionConfig: { approvalMode: 'headless' },
       });
@@ -2179,7 +2195,7 @@ describe('GeneralChatAgent', () => {
 
       const state = createMockState({
         toolManifestMap: {
-          'my-tool': { identifier: 'my-tool' },
+          'my-tool': { identifier: 'my-tool' } as LobeToolManifest,
         },
         userInterventionConfig: { approvalMode: 'headless' },
       });
@@ -2225,7 +2241,7 @@ describe('GeneralChatAgent', () => {
 
       const state = createMockState({
         toolManifestMap: {
-          'my-tool': { identifier: 'my-tool', humanIntervention: 'never' },
+          'my-tool': { identifier: 'my-tool', humanIntervention: 'never' } as LobeToolManifest,
         },
       });
 
@@ -2276,7 +2292,7 @@ describe('GeneralChatAgent', () => {
       const state = createMockState({
         metadata: { workingDirectory: '/workspace' },
         toolManifestMap: {
-          'my-tool': { identifier: 'my-tool', humanIntervention: 'never' },
+          'my-tool': { identifier: 'my-tool', humanIntervention: 'never' } as LobeToolManifest,
         },
         userInterventionConfig: { approvalMode: 'auto-run' },
       });
@@ -2333,7 +2349,7 @@ describe('GeneralChatAgent', () => {
       };
 
       const state = createMockState({
-        toolManifestMap: { 'my-tool': { identifier: 'my-tool' } },
+        toolManifestMap: { 'my-tool': { identifier: 'my-tool' } as LobeToolManifest },
       });
 
       const context = createMockContext('llm_result', {
@@ -2366,7 +2382,7 @@ describe('GeneralChatAgent', () => {
 
       const state = createMockState({
         toolManifestMap: {
-          bash: { identifier: 'bash', humanIntervention: 'never' },
+          bash: { identifier: 'bash', humanIntervention: 'never' } as LobeToolManifest,
         },
       });
 
@@ -2410,7 +2426,7 @@ describe('GeneralChatAgent', () => {
           'dangerous-tool': {
             identifier: 'dangerous-tool',
             humanIntervention: 'required', // Tool requires approval
-          },
+          } as LobeToolManifest,
         },
         userInterventionConfig: {
           approvalMode: 'headless', // Headless mode for async tasks
@@ -2460,9 +2476,9 @@ describe('GeneralChatAgent', () => {
               {
                 name: 'installPlugin',
                 humanIntervention: 'always', // Always requires intervention normally
-              },
+              } as LobeChatPluginApi,
             ],
-          },
+          } as LobeToolManifest,
         },
         userInterventionConfig: {
           approvalMode: 'headless', // Headless mode bypasses even 'always'
@@ -2509,7 +2525,7 @@ describe('GeneralChatAgent', () => {
           bash: {
             identifier: 'bash',
             humanIntervention: 'never',
-          },
+          } as LobeToolManifest,
         },
         userInterventionConfig: {
           approvalMode: 'headless',
@@ -2565,19 +2581,19 @@ describe('GeneralChatAgent', () => {
           'web-search': {
             identifier: 'web-search',
             humanIntervention: 'required',
-          },
+          } as LobeToolManifest,
           'bash': {
             identifier: 'bash',
-          },
+          } as LobeToolManifest,
           'agent-builder': {
             identifier: 'agent-builder',
             api: [
               {
                 name: 'installPlugin',
                 humanIntervention: 'always',
-              },
+              } as LobeChatPluginApi,
             ],
-          },
+          } as LobeToolManifest,
         },
         userInterventionConfig: {
           approvalMode: 'headless',
@@ -2629,8 +2645,8 @@ describe('GeneralChatAgent', () => {
 
       const state = createMockState({
         toolManifestMap: {
-          search: { identifier: 'search', humanIntervention: 'required' },
-          crawl: { identifier: 'crawl', humanIntervention: 'always' },
+          search: { identifier: 'search', humanIntervention: 'required' } as LobeToolManifest,
+          crawl: { identifier: 'crawl', humanIntervention: 'always' } as LobeToolManifest,
         },
         userInterventionConfig: {
           approvalMode: 'headless',

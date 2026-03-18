@@ -100,7 +100,7 @@ describe('WebBrowsingExecutor', () => {
 
       expect(result.success).toBe(false);
       expect(result.error?.type).toBe('PluginSettingsInvalid');
-      expect(result.error?.body?.provider).toBe('searxng');
+      expect((result.error?.body as Record<string, unknown>)?.provider).toBe('searxng');
     });
 
     it('should handle generic search errors', async () => {
@@ -154,7 +154,7 @@ describe('WebBrowsingExecutor', () => {
 
       expect(result.success).toBe(false);
       expect(result.error?.type).toBe('PluginSettingsInvalid');
-      expect(result.error?.body?.provider).toBe('searxng');
+      expect((result.error?.body as Record<string, unknown>)?.provider).toBe('searxng');
     });
 
     it('should return runtime error that returns success false', async () => {

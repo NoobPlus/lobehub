@@ -186,7 +186,10 @@ export class MessageService {
     ctx?: MessageQueryContext,
   ): Promise<UpdateMessageResult> => {
     return abortableRequest.execute(`tool-message-${id}`, (signal) =>
-      lambdaClient.message.updateToolMessage.mutate({ ...ctx, id, value }, { signal }),
+      lambdaClient.message.updateToolMessage.mutate(
+        { ...ctx, id, value: value as Record<string, unknown> },
+        { signal },
+      ),
     );
   };
 

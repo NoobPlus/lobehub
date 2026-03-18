@@ -160,7 +160,7 @@ class WebBrowsingExecutor extends BaseExecutor<typeof WebBrowsingApiName> {
         return {
           content,
           state: {
-            ...result.state,
+            ...(result.state as Record<string, unknown>),
             savedDocuments,
           },
           success: true,

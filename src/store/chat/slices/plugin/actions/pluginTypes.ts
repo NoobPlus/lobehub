@@ -158,7 +158,7 @@ export class PluginTypesActionImpl {
                 type: result.error.type as any,
               }
             : undefined,
-          pluginState: result.state,
+          pluginState: result.state as Record<string, unknown> | undefined,
         },
         context,
       );

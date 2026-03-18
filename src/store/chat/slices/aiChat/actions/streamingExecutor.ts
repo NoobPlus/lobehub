@@ -231,9 +231,9 @@ export class StreamingExecutorActionImpl {
         maxSteps: 400,
         messages,
         metadata: {
-          sessionId: agentId,
+          agentId,
           threadId,
-          topicId,
+          topicId: topicId ?? undefined,
           workingDirectory,
         },
         modelRuntimeConfig,
@@ -449,7 +449,7 @@ export class StreamingExecutorActionImpl {
         if (!op) throw new Error(`Operation not found: ${opId}`);
         return {
           abortController: op.abortController,
-          context: op.context,
+          context: op.context as Record<string, unknown>,
         };
       },
       operationId,

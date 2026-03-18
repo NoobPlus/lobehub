@@ -135,35 +135,77 @@ export interface OperationProgress {
 export interface OperationMetadataExtension {}
 
 export interface OperationMetadata extends OperationMetadataExtension {
+  // Tool calling metadata
+  apiName?: string;
+  // Completion metadata (set via completeOperation)
+  cancelled?: boolean;
   // Cancel information
   cancelReason?: string;
+  cost?: number;
   // IDs created during the operation
   createdThreadId?: string;
+
   createdTopicId?: string;
 
+  // Promise for awaiting message creation in cancel handlers
+  createMessagePromise?: Promise<{ id: string; messages?: unknown[] } | undefined>;
   duration?: number;
-
   endTime?: number;
   // Error information
   error?: OperationError;
+  // Client task execution mode
+  executionMode?: string;
+
+  // Agent runtime final status
+  finalStatus?: string;
+  groupId?: string;
+  // Tool calling identifier
+  identifier?: string;
 
   // UI state (for sendMessage operation)
   inputEditorTempState?: unknown | null; // Editor state snapshot for cancel restoration
   inputSendErrorMsg?: string; // Error message to display in UI
   // Flags/flow markers
   inThread?: boolean;
-
   isAborting?: boolean;
+  // SSE stream tracking
+  lastEventId?: string;
+  // Context compression
+  messageCount?: number;
+  // Human intervention state
+  needsHumanInput?: boolean;
+  parentMessageId?: string;
+
+  pendingApproval?: unknown;
+
+  pendingPrompt?: unknown;
+  pendingSelect?: unknown;
   // Progress information
   progress?: OperationProgress;
-
   // Runtime hooks (collected during execution, executed after completion)
   runtimeHooks?: RuntimeHooks;
-
   // Performance information
   startTime: number;
 
+  // Agent step tracking
+  stepCount?: number;
+  // Client task metadata
+  taskDescription?: string;
+  taskIndex?: number;
+  taskMessageId?: string;
   tempMessageId?: string;
+  // Tool call association
+  tool_call_id?: string;
+  // Usage/cost tracking
+  totalCost?: number;
+  totalInputTokens?: number;
+  totalMessages?: number;
+
+  totalOutputTokens?: number;
+  totalTokens?: number;
+  totalToolCalls?: number;
+  // Trace ID for observability
+  traceId?: string;
 }
 
 /**
