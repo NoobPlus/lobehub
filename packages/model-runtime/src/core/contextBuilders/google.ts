@@ -291,7 +291,7 @@ const sanitizeSchemaForGoogle = (schema: Record<string, unknown>): Record<string
 
     // Recursively process nested objects
     if (value && typeof value === 'object') {
-      result[key] = sanitizeSchemaForGoogle(value);
+      result[key] = sanitizeSchemaForGoogle(value as Record<string, unknown>);
     } else {
       result[key] = value;
     }

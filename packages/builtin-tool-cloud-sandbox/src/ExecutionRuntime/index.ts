@@ -360,7 +360,7 @@ export class CloudSandboxExecutionRuntime {
         success: true,
       };
     } catch (error) {
-      console.log('executeCode error', error);
+      console.error('executeCode error', error);
       return this.handleError(error);
     }
   }

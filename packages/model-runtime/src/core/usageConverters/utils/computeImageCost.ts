@@ -6,7 +6,7 @@ const log = debug('lobe-cost:computeImagePricing');
 
 export interface ImageGenerationParams {
   // Other possible parameters for future extensions
-  [key: string]: any;
+  [key: string]: unknown;
   quality?: 'standard' | 'hd';
   size?: string;
 }
@@ -40,7 +40,7 @@ export const computeImageCost = (
     return undefined;
   }
 
-  let pricePerImageInUSD = 0;
+  let pricePerImageInUSD: number;
   let lookupKey: string | undefined;
 
   switch (imageGenUnit.strategy) {

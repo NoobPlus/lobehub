@@ -29,7 +29,7 @@ async function generateByImageMode(
     ['imageUrls', 'image'],
     ['imageUrl', 'image'],
   ]);
-  const userInput: Record<string, any> = Object.fromEntries(
+  const userInput: Record<string, unknown> = Object.fromEntries(
     Object.entries(params).map(([key, value]) => [
       paramsMap.get(key as RuntimeImageGenParamsValue) ?? key,
       value,
@@ -54,7 +54,7 @@ async function generateByImageMode(
       // According to official docs, if there are multiple images, pass an array; if only one, pass a single File
       userInput.image = imageFiles.length === 1 ? imageFiles[0] : imageFiles;
     } catch (error) {
-      throw new Error(`Failed to convert image URLs to File objects: ${error}`);
+      throw new Error(`Failed to convert image URLs to File objects: ${error}`, { cause: error });
     }
   } else {
     delete userInput.image;
@@ -180,7 +180,7 @@ async function generateByChatModel(
       });
       log('Successfully processed image URL for chat input');
     } catch (error) {
-      throw new Error(`Failed to process image URL: ${error}`);
+      throw new Error(`Failed to process image URL: ${error}`, { cause: error });
     }
   }
 
