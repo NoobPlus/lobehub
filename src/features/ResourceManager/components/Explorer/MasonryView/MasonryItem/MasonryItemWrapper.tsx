@@ -7,8 +7,9 @@ import MasonryFileItem from '.';
 interface MasonryItemWrapperProps {
   context: {
     knowledgeBaseId?: string;
+    onSelectedChange: (id: string, checked: boolean) => void;
+    selectAllState: 'all' | 'loaded' | 'none';
     selectFileIds: string[];
-    setSelectedFileIds: (ids: string[]) => void;
   };
   data: FileListItem;
   index: number;
@@ -24,14 +25,8 @@ const MasonryItemWrapper = memo<MasonryItemWrapperProps>(({ data: item, context 
     <div style={{ padding: '8px 4px' }}>
       <MasonryFileItem
         knowledgeBaseId={context.knowledgeBaseId}
-        selected={context.selectFileIds.includes(item.id)}
-        onSelectedChange={(id, checked) => {
-          if (checked) {
-            context.setSelectedFileIds([...context.selectFileIds, id]);
-          } else {
-            context.setSelectedFileIds(context.selectFileIds.filter((item) => item !== id));
-          }
-        }}
+        selected={context.selectAllState === 'all' || context.selectFileIds.includes(item.id)}
+        onSelectedChange={context.onSelectedChange}
         {...item}
       />
     </div>

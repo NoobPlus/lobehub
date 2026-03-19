@@ -12,6 +12,7 @@ import { KnowledgeRepo } from '@/database/repositories/knowledge';
 import { appEnv } from '@/envs/app';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { DocumentService } from '@/server/services/document';
 import { FileService } from '@/server/services/file';
 import { AsyncTaskStatus, AsyncTaskType } from '@/types/asyncTask';
 import { type FileListItem } from '@/types/files';
@@ -23,6 +24,20 @@ import { QueryFileListSchema, UploadFileSchema } from '@/types/files';
  */
 const getFileProxyUrl = (fileId: string): string => `${appEnv.APP_URL}/f/${fileId}`;
 
+const filterKnowledgeItems = <
+  T extends {
+    fileType: string;
+    sourceType: string;
+  },
+>(
+  items: T[],
+  knowledgeBaseId?: string,
+) => {
+  return !knowledgeBaseId
+    ? items.filter((item) => !(item.sourceType === 'document' && item.fileType === 'custom/folder'))
+    : items;
+};
+
 const fileProcedure = authedProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
 
@@ -31,6 +46,7 @@ const fileProcedure = authedProcedure.use(serverDatabase).use(async (opts) => {
       asyncTaskModel: new AsyncTaskModel(ctx.serverDB, ctx.userId),
       chunkModel: new ChunkModel(ctx.serverDB, ctx.userId),
       documentModel: new DocumentModel(ctx.serverDB, ctx.userId),
+      documentService: new DocumentService(ctx.serverDB, ctx.userId),
       fileModel: new FileModel(ctx.serverDB, ctx.userId),
       fileService: new FileService(ctx.serverDB, ctx.userId),
       knowledgeRepo: new KnowledgeRepo(ctx.serverDB, ctx.userId),
@@ -232,11 +248,7 @@ export const fileRouter = router({
     const itemsToProcess = hasMore ? knowledgeItems.slice(0, limit) : knowledgeItems;
 
     // Filter out folders from Documents category when in Inbox (no knowledgeBaseId)
-    const filteredItems = !input.knowledgeBaseId
-      ? itemsToProcess.filter(
-          (item) => !(item.sourceType === 'document' && item.fileType === 'custom/folder'),
-        )
-      : itemsToProcess;
+    const filteredItems = filterKnowledgeItems(itemsToProcess, input.knowledgeBaseId);
 
     // Process files (add chunk info and async task status)
     const fileItems = filteredItems.filter((item) => item.sourceType === 'file');
@@ -296,6 +308,84 @@ export const fileRouter = router({
       items: resultItems,
     };
   }),
+
+  resolveKnowledgeItemIds: fileProcedure
+    .input(QueryFileListSchema)
+    .query(async ({ ctx, input }): Promise<{ ids: string[]; total: number }> => {
+      const ids: string[] = [];
+      const batchSize = 500;
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const knowledgeItems = await ctx.knowledgeRepo.query({
+          ...input,
+          limit: batchSize + 1,
+          offset,
+        });
+
+        const currentHasMore = knowledgeItems.length > batchSize;
+        const itemsToProcess = currentHasMore ? knowledgeItems.slice(0, batchSize) : knowledgeItems;
+        const filteredItems = filterKnowledgeItems(itemsToProcess, input.knowledgeBaseId);
+
+        ids.push(...filteredItems.map((item) => item.id));
+
+        offset += itemsToProcess.length;
+        hasMore = currentHasMore;
+      }
+
+      return { ids, total: ids.length };
+    }),
+
+  deleteKnowledgeItemsByQuery: fileProcedure
+    .input(QueryFileListSchema)
+    .mutation(async ({ ctx, input }): Promise<{ count: number }> => {
+      const fileIds: string[] = [];
+      const documentIds: string[] = [];
+      const batchSize = 500;
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const knowledgeItems = await ctx.knowledgeRepo.query({
+          ...input,
+          limit: batchSize + 1,
+          offset,
+        });
+
+        const currentHasMore = knowledgeItems.length > batchSize;
+        const itemsToProcess = currentHasMore ? knowledgeItems.slice(0, batchSize) : knowledgeItems;
+        const filteredItems = filterKnowledgeItems(itemsToProcess, input.knowledgeBaseId);
+
+        for (const item of filteredItems) {
+          if (item.sourceType === 'file') {
+            fileIds.push(item.id);
+          } else {
+            documentIds.push(item.id);
+          }
+        }
+
+        offset += itemsToProcess.length;
+        hasMore = currentHasMore;
+      }
+
+      if (documentIds.length > 0) {
+        await ctx.documentService.deleteDocuments(documentIds);
+      }
+
+      if (fileIds.length > 0) {
+        const needToRemoveFileList = await ctx.fileModel.deleteMany(
+          fileIds,
+          serverDBEnv.REMOVE_GLOBAL_FILE,
+        );
+
+        if (needToRemoveFileList && needToRemoveFileList.length > 0) {
+          await ctx.fileService.deleteFiles(needToRemoveFileList.map((file) => file.url!));
+        }
+      }
+
+      return { count: fileIds.length + documentIds.length };
+    }),
 
   recentFiles: fileProcedure
     .input(z.object({ limit: z.number().optional() }).optional())
@@ -369,7 +459,20 @@ export const fileRouter = router({
     }),
 
   removeAllFiles: fileProcedure.mutation(async ({ ctx }) => {
-    return ctx.fileModel.clear();
+    // Get all file IDs for this user
+    const allFiles = await ctx.fileModel.query();
+    const fileIds = allFiles.map((f) => f.id);
+
+    // Use deleteMany to properly handle shared files (globalFiles reference counting)
+    const needToRemoveFileList = await ctx.fileModel.deleteMany(
+      fileIds,
+      serverDBEnv.REMOVE_GLOBAL_FILE,
+    );
+
+    // Delete S3 files only if no other users reference them
+    if (needToRemoveFileList && needToRemoveFileList.length > 0) {
+      await ctx.fileService.deleteFiles(needToRemoveFileList.map((file) => file.url!));
+    }
   }),
 
   removeFile: fileProcedure.input(z.object({ id: z.string() })).mutation(async ({ input, ctx }) => {

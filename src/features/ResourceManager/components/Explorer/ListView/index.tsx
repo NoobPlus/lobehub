@@ -1,6 +1,6 @@
 'use client';
 
-import { Center, Checkbox, Flexbox } from '@lobehub/ui';
+import { Button, Center, Checkbox, Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import debug from 'debug';
 import { type DragEvent } from 'react';
@@ -9,13 +9,17 @@ import { useTranslation } from 'react-i18next';
 import { type VirtuosoHandle } from 'react-virtuoso';
 import { Virtuoso } from 'react-virtuoso';
 
+import { useEventCallback } from '@/hooks/useEventCallback';
 import { useDragActive } from '@/routes/(main)/resource/features/DndContextWrapper';
 import { useFolderPath } from '@/routes/(main)/resource/features/hooks/useFolderPath';
 import {
   useResourceManagerFetchFolderBreadcrumb,
   useResourceManagerStore,
 } from '@/routes/(main)/resource/features/store';
-import { sortFileList } from '@/routes/(main)/resource/features/store/selectors';
+import {
+  getExplorerSelectAllUiState,
+  sortFileList,
+} from '@/routes/(main)/resource/features/store/selectors';
 import { useFileStore } from '@/store/file';
 import { useFetchResources } from '@/store/file/slices/resource/hooks';
 import { useGlobalStore } from '@/store/global';
@@ -54,29 +58,51 @@ const styles = createStaticStyles(({ css }) => ({
     overflow: auto hidden;
     flex: 1;
   `,
+  selectAllHint: css`
+    position: sticky;
+    z-index: 1;
+    inset-block-start: 40px;
+
+    min-width: 800px;
+    padding-block: 8px;
+    padding-inline: 16px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+
+    font-size: 12px;
+    color: ${cssVar.colorTextDescription};
+
+    background: ${cssVar.colorFillTertiary};
+  `,
 }));
 
 const ListView = memo(function ListView() {
   const [
+    clearSelectAllState,
+    selectAllState,
     libraryId,
     category,
     selectFileIds,
+    selectAllLoadedResources,
+    selectAllResources,
     setSelectedFileIds,
     pendingRenameItemId,
     sorter,
     sortType,
     storeIsTransitioning,
   ] = useResourceManagerStore((s) => [
+    s.clearSelectAllState,
+    s.selectAllState,
     s.libraryId,
     s.category,
     s.selectedFileIds,
+    s.selectAllLoadedResources,
+    s.selectAllResources,
     s.setSelectedFileIds,
     s.pendingRenameItemId,
     s.sorter,
     s.sortType,
     s.isTransitioning,
   ]);
-
   // Access column widths from Global store
   const columnWidths = useGlobalStore(
     (s) => s.status.resourceManagerColumnWidths || INITIAL_STATUS.resourceManagerColumnWidths,
@@ -114,6 +140,7 @@ const ListView = memo(function ListView() {
 
   const { isLoading, isValidating } = useFetchResources(queryParams);
   const { queryParams: currentQueryParams, hasMore, loadMoreResources } = useFileStore();
+  const total = useFileStore((s) => s.total);
 
   const isNavigating = useMemo(() => {
     if (!currentQueryParams || !queryParams) return false;
@@ -128,20 +155,26 @@ const ListView = memo(function ListView() {
   const resourceList = useFileStore((s) => s.resourceList);
 
   // Map ResourceItem[] to FileListItem[] for compatibility
-  const rawData =
-    resourceList?.map<FileListItemType>((item) => ({
-      ...item,
-      chunkCount: item.chunkCount ?? null,
-      chunkingError: item.chunkingError ?? null,
-      chunkingStatus: (item.chunkingStatus ?? null) as AsyncTaskStatus | null,
-      embeddingError: item.embeddingError ?? null,
-      embeddingStatus: (item.embeddingStatus ?? null) as AsyncTaskStatus | null,
-      finishEmbedding: item.finishEmbedding ?? false,
-      url: item.url ?? '',
-    })) ?? [];
+  const rawData = useMemo(() => {
+    return (
+      resourceList?.map<FileListItemType>((item) => ({
+        ...item,
+        chunkCount: item.chunkCount ?? null,
+        chunkingError: item.chunkingError ?? null,
+        chunkingStatus: (item.chunkingStatus ?? null) as AsyncTaskStatus | null,
+        embeddingError: item.embeddingError ?? null,
+        embeddingStatus: (item.embeddingStatus ?? null) as AsyncTaskStatus | null,
+        finishEmbedding: item.finishEmbedding ?? false,
+        url: item.url ?? '',
+      })) ?? []
+    );
+  }, [resourceList]);
 
   // Sort data using current sort settings
-  const data = sortFileList(rawData, sorter, sortType) || [];
+  const data = useMemo(
+    () => sortFileList(rawData, sorter, sortType) || [],
+    [rawData, sorter, sortType],
+  );
 
   const dataLength = data.length;
   const effectiveIsLoading = isLoading ?? false;
@@ -160,9 +193,36 @@ const ListView = memo(function ListView() {
     dataRef.current = data;
   }, [data]);
 
+  const { allSelected, indeterminate, showSelectAllHint } = useMemo(
+    () =>
+      getExplorerSelectAllUiState({
+        data,
+        hasMore,
+        selectAllState,
+        selectedIds: selectFileIds,
+      }),
+    [data, hasMore, selectAllState, selectFileIds],
+  );
+
+  const handleSelectAll = useEventCallback(() => {
+    if (selectAllState === 'all' || allSelected) {
+      setSelectedFileIds([]);
+      clearSelectAllState();
+      return;
+    }
+
+    selectAllLoadedResources(data.map((item) => item.id));
+  });
+
+  const handleSelectAllResources = useCallback(() => {
+    selectAllResources();
+  }, [selectAllResources]);
+
   // Handle selection change with shift-click support for range selection
   const handleSelectionChange = useCallback(
     (id: string, checked: boolean, shiftKey: boolean, clickedIndex: number) => {
+      clearSelectAllState();
+
       // Always get the latest state from the store to avoid stale closure issues
       const currentSelected = useResourceManagerStore.getState().selectedFileIds;
       const lastIndex = lastSelectedIndexRef.current;
@@ -191,19 +251,8 @@ const ListView = memo(function ListView() {
       }
       lastSelectedIndexRef.current = clickedIndex;
     },
-    [setSelectedFileIds],
+    [clearSelectAllState, setSelectedFileIds],
   );
-
-  // Clean up invalid selections when data changes
-  useEffect(() => {
-    if (selectFileIds.length > 0) {
-      const validFileIds = new Set(data.map((item) => item?.id).filter(Boolean));
-      const filteredSelection = selectFileIds.filter((id) => validFileIds.has(id));
-      if (filteredSelection.length !== selectFileIds.length) {
-        setSelectedFileIds(filteredSelection);
-      }
-    }
-  }, [data, selectFileIds, setSelectedFileIds]);
 
   // Reset last selected index when all selections are cleared
   useEffect(() => {
@@ -211,25 +260,6 @@ const ListView = memo(function ListView() {
       lastSelectedIndexRef.current = null;
     }
   }, [selectFileIds.length]);
-
-  // Calculate select all checkbox state
-  const { allSelected, indeterminate } = useMemo(() => {
-    const fileCount = data.length;
-    const selectedCount = selectFileIds.length;
-    return {
-      allSelected: fileCount > 0 && selectedCount === fileCount,
-      indeterminate: selectedCount > 0 && selectedCount < fileCount,
-    };
-  }, [data, selectFileIds]);
-
-  // Handle select all checkbox change
-  const handleSelectAll = () => {
-    if (allSelected) {
-      setSelectedFileIds([]);
-    } else {
-      setSelectedFileIds(data.map((item) => item.id));
-    }
-  };
 
   // Handle automatic load more when reaching the end
   const handleEndReached = useCallback(async () => {
@@ -243,7 +273,7 @@ const ListView = memo(function ListView() {
     } finally {
       setIsLoadingMore(false);
     }
-  }, [hasMore, loadMoreResources, isLoadingMore]);
+  }, [hasMore, isLoadingMore, loadMoreResources]);
 
   // Clear auto-scroll timers
   const clearScrollTimers = useCallback(() => {
@@ -369,11 +399,18 @@ const ListView = memo(function ListView() {
               width: columnWidths.name,
             }}
           >
-            {selectFileIds.length > 0
-              ? t('FileManager.total.selectedCount', {
-                  count: selectFileIds.length,
-                  ns: 'components',
-                })
+            {selectFileIds.length > 0 || selectAllState === 'all'
+              ? t(
+                  selectAllState === 'all'
+                    ? total
+                      ? 'FileManager.total.allSelectedCount'
+                      : 'FileManager.total.allSelectedFallback'
+                    : 'FileManager.total.selectedCount',
+                  {
+                    count: selectAllState === 'all' ? total : selectFileIds.length,
+                    ns: 'components',
+                  },
+                )
               : t('FileManager.title.title')}
             <ColumnResizeHandle
               column="name"
@@ -414,6 +451,41 @@ const ListView = memo(function ListView() {
             />
           </Flexbox>
         </Flexbox>
+        {showSelectAllHint && (
+          <Flexbox
+            horizontal
+            align={'center'}
+            className={styles.selectAllHint}
+            gap={6}
+            wrap={'wrap'}
+          >
+            <span>
+              {t(
+                selectAllState === 'all'
+                  ? total
+                    ? 'FileManager.total.allSelectedCount'
+                    : 'FileManager.total.allSelectedFallback'
+                  : 'FileManager.total.loadedSelectedCount',
+                {
+                  count: selectAllState === 'all' ? total : selectFileIds.length,
+                  ns: 'components',
+                },
+              )}
+            </span>
+            {selectAllState !== 'all' && (
+              <Button size={'small'} type={'link'} onClick={handleSelectAllResources}>
+                {total && total > dataLength
+                  ? t('FileManager.total.selectAll', {
+                      count: total,
+                      ns: 'components',
+                    })
+                  : t('FileManager.total.selectAllFallback', {
+                      ns: 'components',
+                    })}
+              </Button>
+            )}
+          </Flexbox>
+        )}
         <div
           data-drop-target-id={currentFolderId || undefined}
           data-is-folder="true"
@@ -450,7 +522,7 @@ const ListView = memo(function ListView() {
                   isAnyRowHovered={isAnyRowHovered}
                   key={item.id}
                   pendingRenameItemId={pendingRenameItemId}
-                  selected={selectFileIds.includes(item.id)}
+                  selected={selectAllState === 'all' || selectFileIds.includes(item.id)}
                   onHoverChange={setIsAnyRowHovered}
                   onSelectedChange={handleSelectionChange}
                   {...item}

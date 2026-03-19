@@ -26,17 +26,19 @@ const Header = memo(() => {
   const { modal, message } = App.useApp();
 
   // Get state and actions from store
-  const [libraryId, category, onActionClick, selectFileIds] = useResourceManagerStore((s) => [
-    s.libraryId,
-    s.category,
-    s.onActionClick,
-    s.selectedFileIds,
-  ]);
+  const [libraryId, category, onActionClick, selectAllState, selectFileIds] =
+    useResourceManagerStore((s) => [
+      s.libraryId,
+      s.category,
+      s.onActionClick,
+      s.selectAllState,
+      s.selectedFileIds,
+    ]);
   const selectCount = selectFileIds.length;
-  const isMultiSelected = selectCount > 1;
+  const hasSelected = selectCount > 0;
 
   // If no libraryId, show category name or "Resource" for All
-  const leftContent = isMultiSelected ? (
+  const leftContent = hasSelected ? (
     <Flexbox horizontal align={'center'} gap={8} style={{ marginLeft: 0 }}>
       {libraryId ? (
         <ActionIcon
@@ -79,7 +81,12 @@ const Header = memo(() => {
               await onActionClick('delete');
               message.success(t('FileManager.actions.deleteSuccess'));
             },
-            title: t('FileManager.actions.confirmDeleteMultiFiles', { count: selectCount }),
+            title: t(
+              selectAllState === 'all'
+                ? 'FileManager.actions.confirmDeleteAllFiles'
+                : 'FileManager.actions.confirmDeleteMultiFiles',
+              { count: selectCount },
+            ),
           });
         }}
       />

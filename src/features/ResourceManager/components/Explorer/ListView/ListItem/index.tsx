@@ -45,6 +45,7 @@ const styles = createStaticStyles(({ css }) => {
     container: css`
       cursor: pointer;
       min-width: 800px;
+      transition: background ${cssVar.motionDurationMid} ${cssVar.motionEaseInOut};
 
       &:hover {
         background: ${cssVar.colorFillTertiary};

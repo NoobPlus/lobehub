@@ -2,7 +2,7 @@ import { fileManagerSelectors, useFileStore } from '@/store/file';
 import { type FileListItem } from '@/types/files';
 import { SortType } from '@/types/files';
 
-import { type State } from './initialState';
+import { type SelectAllState, type State } from './initialState';
 
 /**
  * Sort a file list based on sort settings
@@ -68,6 +68,29 @@ const getCurrentFile = (s: State): FileListItem | undefined => {
 };
 
 const isFilePreviewMode = (s: State) => s.mode === 'editor' && !!s.currentViewItemId;
+
+export const getExplorerSelectAllUiState = ({
+  data,
+  hasMore,
+  selectAllState,
+  selectedIds,
+}: {
+  data: Array<{ id: string }>;
+  hasMore: boolean;
+  selectAllState: SelectAllState;
+  selectedIds: string[];
+}) => {
+  const fileCount = data.length;
+  const selectedCount = selectedIds.length;
+  const allLoadedSelected = fileCount > 0 && data.every((item) => selectedIds.includes(item.id));
+  const allSelected = selectAllState === 'all' || allLoadedSelected;
+
+  return {
+    allSelected,
+    indeterminate: selectAllState !== 'all' && selectedCount > 0 && !allSelected,
+    showSelectAllHint: selectAllState !== 'none' && (hasMore || selectAllState === 'all'),
+  };
+};
 
 export const selectors = {
   category: (s: State) => s.category,

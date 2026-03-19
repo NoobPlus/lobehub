@@ -1,5 +1,6 @@
 import { debounce } from 'es-toolkit';
 import { type DebouncedFunc } from 'es-toolkit/compat';
+import { produce } from 'immer';
 import pMap from 'p-map';
 
 import { resourceService } from '@/services/resource';
@@ -148,9 +149,11 @@ export class ResourceSyncEngine {
     const { resourceId, type, payload } = operation;
 
     // Mark as syncing
-    const { syncingIds } = this.stateManager.getState();
-    syncingIds.add(resourceId);
-    this.stateManager.setState({ syncingIds: new Set(syncingIds) });
+    const state = this.stateManager.getState();
+    const nextState = produce(state, (draft) => {
+      draft.syncingIds.add(resourceId);
+    });
+    this.stateManager.setState(nextState);
 
     try {
       let realId: string | undefined;
@@ -190,9 +193,11 @@ export class ResourceSyncEngine {
       operation.resolve?.(realId);
     } finally {
       // Unmark as syncing
-      const { syncingIds: currentSyncingIds } = this.stateManager.getState();
-      currentSyncingIds.delete(resourceId);
-      this.stateManager.setState({ syncingIds: new Set(currentSyncingIds) });
+      const state = this.stateManager.getState();
+      const nextState = produce(state, (draft) => {
+        draft.syncingIds.delete(resourceId);
+      });
+      this.stateManager.setState(nextState);
     }
   }
 
@@ -230,65 +235,52 @@ export class ResourceSyncEngine {
    * Replace temp resource with real resource from server
    */
   private replaceTempResource(tempId: string, realResource: ResourceItem): void {
-    const { resourceMap, resourceList } = this.stateManager.getState();
-
-    // Remove temp from map, add real
-    resourceMap.delete(tempId);
-    resourceMap.set(realResource.id, realResource);
-
-    // Replace in list
-    const listIndex = resourceList.findIndex((r) => r.id === tempId);
-    if (listIndex >= 0) {
-      resourceList[listIndex] = realResource;
-    }
-
-    this.stateManager.setState({
-      resourceList: [...resourceList],
-      resourceMap: new Map(resourceMap),
+    const state = this.stateManager.getState();
+    const nextState = produce(state, (draft) => {
+      draft.resourceMap.delete(tempId);
+      draft.resourceMap.set(realResource.id, realResource);
+      const listIndex = draft.resourceList.findIndex((r) => r.id === tempId);
+      if (listIndex >= 0) {
+        draft.resourceList[listIndex] = realResource;
+      }
     });
+    this.stateManager.setState(nextState);
   }
 
   /**
    * Update resource in store with fresh data from server
    */
   private updateResourceInStore(resource: ResourceItem): void {
-    const { resourceMap, resourceList } = this.stateManager.getState();
-
-    resourceMap.set(resource.id, resource);
-
-    const listIndex = resourceList.findIndex((r) => r.id === resource.id);
-    if (listIndex >= 0) {
-      resourceList[listIndex] = resource;
-    }
-
-    this.stateManager.setState({
-      resourceList: [...resourceList],
-      resourceMap: new Map(resourceMap),
+    const state = this.stateManager.getState();
+    const nextState = produce(state, (draft) => {
+      draft.resourceMap.set(resource.id, resource);
+      const listIndex = draft.resourceList.findIndex((r) => r.id === resource.id);
+      if (listIndex >= 0) {
+        draft.resourceList[listIndex] = resource;
+      }
     });
+    this.stateManager.setState(nextState);
   }
 
   /**
    * Clear optimistic state from resource
    */
   private clearOptimisticState(resourceId: string): void {
-    const { resourceMap, resourceList } = this.stateManager.getState();
-    const resource = resourceMap.get(resourceId);
+    const state = this.stateManager.getState();
+    const resource = state.resourceMap.get(resourceId);
 
     if (resource?._optimistic) {
       const updated = { ...resource };
       delete updated._optimistic;
 
-      resourceMap.set(resourceId, updated);
-
-      const listIndex = resourceList.findIndex((r) => r.id === resourceId);
-      if (listIndex >= 0) {
-        resourceList[listIndex] = updated;
-      }
-
-      this.stateManager.setState({
-        resourceList: [...resourceList],
-        resourceMap: new Map(resourceMap),
+      const nextState = produce(state, (draft) => {
+        draft.resourceMap.set(resourceId, updated);
+        const listIndex = draft.resourceList.findIndex((r) => r.id === resourceId);
+        if (listIndex >= 0) {
+          draft.resourceList[listIndex] = updated;
+        }
       });
+      this.stateManager.setState(nextState);
     }
   }
 
@@ -296,8 +288,8 @@ export class ResourceSyncEngine {
    * Mark resource with error state
    */
   private markResourceError(resourceId: string, error: Error): void {
-    const { resourceMap, resourceList } = this.stateManager.getState();
-    const resource = resourceMap.get(resourceId);
+    const state = this.stateManager.getState();
+    const resource = state.resourceMap.get(resourceId);
 
     if (resource) {
       const updated = {
@@ -310,17 +302,14 @@ export class ResourceSyncEngine {
         },
       };
 
-      resourceMap.set(resourceId, updated);
-
-      const listIndex = resourceList.findIndex((r) => r.id === resourceId);
-      if (listIndex >= 0) {
-        resourceList[listIndex] = updated;
-      }
-
-      this.stateManager.setState({
-        resourceList: [...resourceList],
-        resourceMap: new Map(resourceMap),
+      const nextState = produce(state, (draft) => {
+        draft.resourceMap.set(resourceId, updated);
+        const listIndex = draft.resourceList.findIndex((r) => r.id === resourceId);
+        if (listIndex >= 0) {
+          draft.resourceList[listIndex] = updated;
+        }
       });
+      this.stateManager.setState(nextState);
     }
   }
 }

@@ -89,6 +89,28 @@ export class ResourceService {
     };
   }
 
+  async resolveSelectionIds(
+    params: ResourceQueryParams,
+  ): Promise<{ ids: string[]; total: number }> {
+    const backendParams = {
+      ...params,
+      knowledgeBaseId: params.libraryId,
+      libraryId: undefined,
+    };
+
+    return fileService.resolveKnowledgeItemIds(backendParams);
+  }
+
+  async deleteResourcesByQuery(params: ResourceQueryParams): Promise<{ count: number }> {
+    const backendParams = {
+      ...params,
+      knowledgeBaseId: params.libraryId,
+      libraryId: undefined,
+    };
+
+    return fileService.deleteKnowledgeItemsByQuery(backendParams);
+  }
+
   /**
    * Get a single resource by ID
    */

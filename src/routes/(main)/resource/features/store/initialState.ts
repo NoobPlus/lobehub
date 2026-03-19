@@ -2,6 +2,7 @@ import { type ResourceManagerMode } from '@/features/ResourceManager';
 import { FilesTabs, SortType } from '@/types/files';
 
 export type ViewMode = 'list' | 'masonry';
+export type SelectAllState = 'all' | 'loaded' | 'none';
 
 export interface State {
   /**
@@ -29,6 +30,10 @@ export interface State {
    */
   isMasonryReady: boolean;
   /**
+   * Whether the explorer is currently loading remaining pages for select-all
+   */
+  isSelectingAllItems: boolean;
+  /**
    * View transition state
    */
   isTransitioning: boolean;
@@ -48,6 +53,10 @@ export interface State {
    * Search query for filtering files
    */
   searchQuery: string | null;
+  /**
+   * Current select-all mode shared across explorer views
+   */
+  selectAllState: SelectAllState;
   /**
    * Selected file IDs in the file explorer
    */
@@ -73,11 +82,13 @@ export const initialState: State = {
   fileListHasMore: false,
   fileListOffset: 0,
   isMasonryReady: false,
+  isSelectingAllItems: false,
   isTransitioning: false,
   libraryId: undefined,
   mode: 'explorer',
   pendingRenameItemId: null,
   searchQuery: null,
+  selectAllState: 'none',
   selectedFileIds: [],
   sortType: SortType.Desc,
   sorter: 'createdAt',

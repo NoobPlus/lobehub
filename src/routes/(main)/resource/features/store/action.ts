@@ -3,7 +3,7 @@ import { type StateCreator } from 'zustand/vanilla';
 import { type ResourceManagerMode } from '@/features/ResourceManager';
 import { type FilesTabs, type SortType } from '@/types/files';
 
-import { type State, type ViewMode } from './initialState';
+import { type SelectAllState, type State, type ViewMode } from './initialState';
 import { initialState } from './initialState';
 
 export type MultiSelectActionType =
@@ -21,6 +21,7 @@ export interface FolderCrumb {
 }
 
 export interface Action {
+  clearSelectAllState: () => void;
   /**
    * Handle navigating back to list from file preview
    */
@@ -33,6 +34,13 @@ export interface Action {
    * Handle multi-select actions (delete, chunking, KB operations, etc.)
    */
   onActionClick: (type: MultiSelectActionType) => Promise<void>;
+  /**
+   * Resolve effective selection IDs. When select-all is active, this asks the server
+   * to expand the current query into a full ID list.
+   */
+  resolveSelectedResourceIds: () => Promise<string[]>;
+  selectAllLoadedResources: (ids: string[]) => void;
+  selectAllResources: () => void;
   /**
    * Set the current file category filter
    */
@@ -58,6 +66,10 @@ export interface Action {
    */
   setIsMasonryReady: (value: boolean) => void;
   /**
+   * Set whether select-all is currently loading all remaining items
+   */
+  setIsSelectingAllItems: (value: boolean) => void;
+  /**
    * Set view transition state
    */
   setIsTransitioning: (value: boolean) => void;
@@ -77,6 +89,10 @@ export interface Action {
    * Set search query
    */
   setSearchQuery: (query: string | null) => void;
+  /**
+   * Set the current shared select-all state
+   */
+  setSelectAllState: (state: SelectAllState) => void;
   /**
    * Set selected file IDs
    */
@@ -105,6 +121,10 @@ export const store: CreateStore = (publicState) => (set, get) => ({
   ...initialState,
   ...publicState,
 
+  clearSelectAllState: () => {
+    set({ isSelectingAllItems: false, selectAllState: 'none' });
+  },
+
   handleBackToList: () => {
     set({ currentViewItemId: undefined, mode: 'explorer' });
   },
@@ -129,16 +149,29 @@ export const store: CreateStore = (publicState) => (set, get) => ({
   },
 
   onActionClick: async (type) => {
-    const { selectedFileIds, libraryId } = get();
+    const { libraryId } = get();
     const { useFileStore } = await import('@/store/file');
     const { useKnowledgeBaseStore } = await import('@/store/library');
     const { isChunkingUnsupported } = await import('@/utils/isChunkingUnsupported');
 
     const fileStore = useFileStore.getState();
     const kbStore = useKnowledgeBaseStore.getState();
+    const { selectAllState } = get();
 
     switch (type) {
       case 'delete': {
+        if (selectAllState === 'all' && fileStore.queryParams) {
+          const { resourceService } = await import('@/services/resource');
+          const { revalidateResources } = await import('@/store/file/slices/resource/hooks');
+
+          await resourceService.deleteResourcesByQuery(fileStore.queryParams as any);
+          await revalidateResources(fileStore.queryParams);
+
+          set({ isSelectingAllItems: false, selectAllState: 'none', selectedFileIds: [] });
+          return;
+        }
+
+        const selectedFileIds = get().selectedFileIds;
         await fileStore.deleteResources(selectedFileIds);
 
         set({ selectedFileIds: [] });
@@ -146,6 +179,7 @@ export const store: CreateStore = (publicState) => (set, get) => ({
       }
 
       case 'removeFromKnowledgeBase': {
+        const selectedFileIds = await get().resolveSelectedResourceIds();
         if (!libraryId) return;
         await kbStore.removeFilesFromKnowledgeBase(libraryId, selectedFileIds);
         set({ selectedFileIds: [] });
@@ -167,6 +201,7 @@ export const store: CreateStore = (publicState) => (set, get) => ({
       }
 
       case 'batchChunking': {
+        const selectedFileIds = await get().resolveSelectedResourceIds();
         const chunkableFileIds = selectedFileIds.filter((id) => {
           const resource = fileStore.resourceMap?.get(id);
           return resource && !isChunkingUnsupported(resource.fileType);
@@ -189,6 +224,28 @@ export const store: CreateStore = (publicState) => (set, get) => ({
     }
   },
 
+  selectAllLoadedResources: (selectedFileIds) => {
+    set({ selectedFileIds, selectAllState: 'loaded' });
+  },
+
+  selectAllResources: () => {
+    set({ selectAllState: 'all' });
+  },
+
+  resolveSelectedResourceIds: async () => {
+    const { selectAllState, selectedFileIds } = get();
+    if (selectAllState !== 'all') return selectedFileIds;
+
+    const { resourceService } = await import('@/services/resource');
+    const { useFileStore } = await import('@/store/file');
+    const queryParams = useFileStore.getState().queryParams;
+
+    if (!queryParams) return selectedFileIds;
+
+    const result = await resourceService.resolveSelectionIds(queryParams as any);
+    return result.ids;
+  },
+
   setCategory: (category) => {
     set({ category });
   },
@@ -207,6 +264,10 @@ export const store: CreateStore = (publicState) => (set, get) => ({
 
   setFileListOffset: (fileListOffset) => {
     set({ fileListOffset });
+  },
+
+  setIsSelectingAllItems: (isSelectingAllItems) => {
+    set({ isSelectingAllItems });
   },
 
   setIsMasonryReady: (isMasonryReady) => {
@@ -238,12 +299,20 @@ export const store: CreateStore = (publicState) => (set, get) => ({
     set({ pendingRenameItemId });
   },
 
+  setSelectAllState: (selectAllState) => {
+    set({ selectAllState });
+  },
+
   setSearchQuery: (searchQuery) => {
     set({ searchQuery });
   },
 
   setSelectedFileIds: (selectedFileIds) => {
-    set({ selectedFileIds });
+    set({
+      isSelectingAllItems: selectedFileIds.length === 0 ? false : get().isSelectingAllItems,
+      selectAllState: selectedFileIds.length === 0 ? 'none' : get().selectAllState,
+      selectedFileIds,
+    });
   },
 
   setSortType: (sortType) => {

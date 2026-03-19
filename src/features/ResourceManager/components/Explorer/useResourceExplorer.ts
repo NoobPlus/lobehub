@@ -14,7 +14,6 @@ import { selectors, sortFileList } from '@/routes/(main)/resource/features/store
 import { fileManagerSelectors, useFileStore } from '@/store/file';
 import { type FilesTabs } from '@/types/files';
 
-import { useFileSelection } from './hooks/useFileSelection';
 import { useCheckTaskStatus } from './useCheckTaskStatus';
 
 interface UseFileExplorerProps {
@@ -43,7 +42,11 @@ export const useResourceExplorer = ({
     pendingRenameItemId,
     loadMoreKnowledgeItems,
     fileListHasMore,
+    resolveSelectedResourceIds,
     sorter,
+    setSelectedFileIds,
+    selectAllState,
+    selectedFileIds,
     sortType,
   ] = useResourceManagerStore((s) => [
     s.viewMode,
@@ -59,7 +62,11 @@ export const useResourceExplorer = ({
     s.pendingRenameItemId,
     s.loadMoreKnowledgeItems,
     s.fileListHasMore,
+    s.resolveSelectedResourceIds,
     s.sorter,
+    s.setSelectedFileIds,
+    s.selectAllState,
+    s.selectedFileIds,
     s.sortType,
   ]);
 
@@ -89,8 +96,6 @@ export const useResourceExplorer = ({
   // Sort data using current sort settings
   const data = sortFileList(rawData, sorter, sortType);
 
-  const { handleSelectionChange, selectFileIds, setSelectedFileIds } = useFileSelection(data);
-
   useCheckTaskStatus(data);
 
   // Get modal handler for knowledge base operations
@@ -102,17 +107,23 @@ export const useResourceExplorer = ({
       // Handle modal-based actions here (can't be in store due to React hooks)
       if (type === 'addToKnowledgeBase') {
         openAddModal({
-          fileIds: selectFileIds,
+          fileIds: selectedFileIds,
           onClose: () => setSelectedFileIds([]),
+          resolveFileIds: selectAllState === 'all' ? resolveSelectedResourceIds : undefined,
+          selectedCount:
+            selectAllState === 'all' ? useFileStore.getState().total : selectedFileIds.length,
         });
         return;
       }
 
       if (type === 'moveToOtherKnowledgeBase') {
         openAddModal({
-          fileIds: selectFileIds,
+          fileIds: selectedFileIds,
           knowledgeBaseId: libraryId,
           onClose: () => setSelectedFileIds([]),
+          resolveFileIds: selectAllState === 'all' ? resolveSelectedResourceIds : undefined,
+          selectedCount:
+            selectAllState === 'all' ? useFileStore.getState().total : selectedFileIds.length,
         });
         return;
       }
@@ -120,7 +131,15 @@ export const useResourceExplorer = ({
       // Delegate other actions to store
       await onActionClick(type);
     },
-    [onActionClick, openAddModal, selectFileIds, setSelectedFileIds, libraryId],
+    [
+      libraryId,
+      onActionClick,
+      openAddModal,
+      resolveSelectedResourceIds,
+      selectAllState,
+      setSelectedFileIds,
+      selectedFileIds,
+    ],
   );
 
   // Wrap handleBackToList to also update URL params
@@ -186,8 +205,6 @@ export const useResourceExplorer = ({
     // Handlers
     handleBackToList: handleBackToListWithUrl,
 
-    handleSelectionChange,
-
     hasMore: fileListHasMore,
 
     isFilePreviewMode,
@@ -206,7 +223,7 @@ export const useResourceExplorer = ({
 
     pendingRenameItemId,
 
-    selectFileIds,
+    selectFileIds: selectedFileIds,
     setSelectedFileIds,
     showEmptyStatus,
     viewMode,

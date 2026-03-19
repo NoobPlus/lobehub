@@ -34,9 +34,10 @@ const BatchActionsDropdown = memo<BatchActionsDropdownProps>(({ selectCount, onA
   const { t } = useTranslation(['components', 'common', 'file', 'knowledgeBase']);
   const { modal, message } = App.useApp();
 
-  const [libraryId, selectedFileIds] = useResourceManagerStore((s) => [
-    s.libraryId,
-    s.selectedFileIds,
+  const libraryId = useResourceManagerStore((s) => s.libraryId);
+  const [resolveSelectedResourceIds, selectAllState] = useResourceManagerStore((s) => [
+    s.resolveSelectedResourceIds,
+    s.selectAllState,
   ]);
   const [useFetchKnowledgeBaseList, addFilesToKnowledgeBase] = useKnowledgeBaseStore((s) => [
     s.useFetchKnowledgeBaseList,
@@ -79,10 +80,11 @@ const BatchActionsDropdown = memo<BatchActionsDropdownProps>(({ selectCount, onA
       label: <span style={{ marginLeft: 8 }}>{kb.name}</span>,
       onClick: async () => {
         try {
-          await addFilesToKnowledgeBase(kb.id, selectedFileIds);
+          const effectiveSelectedIds = await resolveSelectedResourceIds();
+          await addFilesToKnowledgeBase(kb.id, effectiveSelectedIds);
           message.success(
             t('addToKnowledgeBase.addSuccess', {
-              count: selectCount,
+              count: selectAllState === 'all' ? effectiveSelectedIds.length : selectCount,
               ns: 'knowledgeBase',
             }),
           );
@@ -172,9 +174,10 @@ const BatchActionsDropdown = memo<BatchActionsDropdownProps>(({ selectCount, onA
   }, [
     libraryId,
     selectCount,
-    selectedFileIds,
+    selectAllState,
     onActionClick,
     addFilesToKnowledgeBase,
+    resolveSelectedResourceIds,
     t,
     modal,
     message,

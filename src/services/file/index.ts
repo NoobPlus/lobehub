@@ -58,6 +58,14 @@ export class FileService {
     return lambdaClient.file.getKnowledgeItems.query(params as QueryFileListSchemaType);
   };
 
+  resolveKnowledgeItemIds = async (params: QueryFileListParams) => {
+    return lambdaClient.file.resolveKnowledgeItemIds.query(params as QueryFileListSchemaType);
+  };
+
+  deleteKnowledgeItemsByQuery = async (params: QueryFileListParams) => {
+    return lambdaClient.file.deleteKnowledgeItemsByQuery.mutate(params as QueryFileListSchemaType);
+  };
+
   // V2.0 Migrate from getFileItem to getKnowledgeItem
   // This method handles both files (file_ prefix) and documents (docs_ prefix)
   getKnowledgeItem = async (id: string) => {
