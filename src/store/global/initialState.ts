@@ -50,6 +50,7 @@ export enum SettingsTabs {
   /** @deprecated Use Appearance instead */
   Common = 'common',
   Credits = 'credits',
+  Creds = 'creds',
   Hotkey = 'hotkey',
   /** @deprecated Use ServiceModel instead */
   Image = 'image',

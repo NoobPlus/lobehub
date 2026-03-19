@@ -14,6 +14,7 @@ import {
   Info,
   KeyboardIcon,
   KeyIcon,
+  KeyRound,
   Map,
   PaletteIcon,
   Sparkles,
@@ -145,6 +146,11 @@ export const useCategory = () => {
         icon: BrainCircuit,
         key: SettingsTabs.Memory,
         label: t('tab.memory'),
+      },
+      enableBusinessFeatures && {
+        icon: KeyRound,
+        key: SettingsTabs.Creds,
+        label: t('tab.creds'),
       },
       showApiKeyManage && {
         icon: KeyIcon,
