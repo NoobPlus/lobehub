@@ -182,7 +182,7 @@ export class AgentRuntimeService {
     if (impl instanceof LocalQueueServiceImpl) {
       log('Setting up local execution callback');
       impl.setExecutionCallback(async (operationId, stepIndex, context) => {
-        log('[%s][%d] Local callback executing...', operationId, stepIndex);
+        log('[%s][%d] Local step executing...', operationId, stepIndex);
         await this.executeStep({
           context,
           operationId,
@@ -767,24 +767,81 @@ export class AgentRuntimeService {
           }
 
           if (!partial.steps) partial.steps = [];
+
+          // Incremental diff: only store message delta + baseline at reset points
+          const prevMessages = agentState?.messages ?? [];
+          const afterMessages = stepResult.newState.messages;
+          const isCompression = stepResult.events?.some(
+            (e: any) => e.type === 'compression_complete',
+          );
+          const isBaseline = stepIndex === 0 || isCompression;
+          // Always store only the newly added messages, even for baseline steps
+          const messagesDelta = afterMessages.slice(prevMessages.length);
+
+          // Strip heavy/redundant data from events before persisting to snapshot
+          const snapshotEvents = (stepResult.events as any[])
+            ?.filter((e) => e.type !== 'llm_stream')
+            .map((e) => {
+              if (e.type === 'done' && e.finalState) {
+                // Remove reconstructible fields from finalState:
+                // - messages: from messagesBaseline + messagesDelta chain
+                // - operationToolSet: from toolsetBaseline (step 0)
+                // - toolManifestMap/tools/toolSourceMap: backward-compat copies of operationToolSet
+                const {
+                  messages: _msgs,
+                  operationToolSet: _ots,
+                  toolManifestMap: _tmm,
+                  toolSourceMap: _tsm,
+                  tools: _tools,
+                  // activatedStepTools is kept since it's the cumulative record
+                  ...restState
+                } = e.finalState;
+                return { ...e, finalState: restState };
+              }
+              return e;
+            });
+
+          // Strip toolResults from payload (already in step.toolsResult)
+          let snapshotPayload: unknown = currentContext?.payload;
+          if (
+            snapshotPayload &&
+            typeof snapshotPayload === 'object' &&
+            'toolResults' in snapshotPayload
+          ) {
+            const { toolResults: _tr, ...restPayload } = snapshotPayload as Record<string, unknown>;
+            snapshotPayload = restPayload;
+          }
+
+          // Compute activatedStepTools delta (newly discovered tools in this step)
+          const prevActivated = agentState?.activatedStepTools ?? [];
+          const afterActivated = stepResult.newState.activatedStepTools ?? [];
+          const activatedStepToolsDelta =
+            afterActivated.length > prevActivated.length
+              ? afterActivated.slice(prevActivated.length)
+              : undefined;
+
           partial.steps.push({
+            activatedStepToolsDelta,
             completedAt: Date.now(),
             content: stepPresentationData.content,
             context: {
-              payload: currentContext?.payload,
+              payload: snapshotPayload,
               phase: currentContext?.phase ?? 'unknown',
               stepContext: currentContext?.stepContext,
             },
-            events: stepResult.events as any,
+            events: snapshotEvents,
             executionTimeMs: stepPresentationData.executionTimeMs,
             inputTokens: stepPresentationData.stepInputTokens,
-            messages: agentState?.messages,
-            messagesAfter: stepResult.newState.messages,
+            isCompressionReset: isCompression || undefined,
+            messagesBaseline: isBaseline ? prevMessages : undefined,
+            messagesDelta,
             outputTokens: stepPresentationData.stepOutputTokens,
             reasoning: stepPresentationData.reasoning,
             startedAt: startAt,
             stepIndex,
             stepType: stepPresentationData.stepType,
+            // Store operation-level toolset once at step 0
+            toolsetBaseline: stepIndex === 0 ? agentState?.operationToolSet : undefined,
             toolsCalling: stepPresentationData.toolsCalling,
             toolsResult: stepPresentationData.toolsResult,
             totalCost: stepPresentationData.totalCost,
