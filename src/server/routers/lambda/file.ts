@@ -495,7 +495,7 @@ export const fileRouter = router({
 
   removeAllFiles: fileProcedure.mutation(async ({ ctx }) => {
     // Get all file IDs for this user
-    const allFiles = await ctx.fileModel.query();
+    const allFiles = await ctx.fileModel.query({ showFilesInKnowledgeBase: true });
     const fileIds = allFiles.map((f) => f.id);
 
     // Use deleteMany to properly handle shared files (globalFiles reference counting)
