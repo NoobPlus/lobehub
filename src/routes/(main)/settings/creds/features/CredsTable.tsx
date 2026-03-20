@@ -6,7 +6,7 @@ import { Button } from '@lobehub/ui';
 import { useMutation } from '@tanstack/react-query';
 import { Avatar, Popconfirm, Space, Tag, Tooltip } from 'antd';
 import { createStaticStyles } from 'antd-style';
-import { File, Globe, Key, Pencil, TerminalSquare, Trash } from 'lucide-react';
+import { Eye, File, Globe, Key, Pencil, TerminalSquare, Trash } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -14,6 +14,7 @@ import { lambdaClient } from '@/libs/trpc/client';
 
 import CredDisplay from './CredDisplay';
 import EditCredModal from './EditCredModal';
+import ViewCredModal from './ViewCredModal';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   table: css`
@@ -57,6 +58,7 @@ const typeColors: Record<string, string> = {
 const CredsTable: FC<CredsTableProps> = ({ credentials, onRefresh }) => {
   const { t } = useTranslation('setting');
   const [editingCred, setEditingCred] = useState<UserCredSummary | null>(null);
+  const [viewingCred, setViewingCred] = useState<UserCredSummary | null>(null);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => lambdaClient.market.creds.delete.mutate({ id }),
@@ -128,6 +130,16 @@ const CredsTable: FC<CredsTableProps> = ({ credentials, onRefresh }) => {
       key: 'actions',
       render: (_, cred) => (
         <Space size={4}>
+          {/* Only show view button for KV types that have values */}
+          {(cred.type === 'kv-env' || cred.type === 'kv-header') && (
+            <Button
+              icon={Eye}
+              size="small"
+              title={t('creds.actions.view')}
+              type="text"
+              onClick={() => setViewingCred(cred)}
+            />
+          )}
           <Button
             icon={Pencil}
             size="small"
@@ -153,7 +165,7 @@ const CredsTable: FC<CredsTableProps> = ({ credentials, onRefresh }) => {
         </Space>
       ),
       title: t('creds.table.actions'),
-      width: 100,
+      width: 120,
     },
   ];
 
@@ -174,6 +186,7 @@ const CredsTable: FC<CredsTableProps> = ({ credentials, onRefresh }) => {
         onClose={() => setEditingCred(null)}
         onSuccess={onRefresh}
       />
+      <ViewCredModal cred={viewingCred} open={!!viewingCred} onClose={() => setViewingCred(null)} />
     </>
   );
 };

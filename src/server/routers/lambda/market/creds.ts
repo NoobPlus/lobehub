@@ -24,9 +24,6 @@ const credsProcedure = publicProcedure
     });
   });
 
-// Zod schemas for validation
-const credTypeSchema = z.enum(['kv-env', 'kv-header', 'oauth', 'file']);
-
 export const credsRouter = router({
   // Create file credential
   createFile: credsProcedure
@@ -164,7 +161,7 @@ export const credsRouter = router({
         const result = await ctx.marketService.market.creds.get(input.id, {
           decrypt: input.decrypt,
         });
-        log('get success: id=%d', result.id);
+        log('get success: id=%d', input.id);
         return result;
       } catch (error) {
         log('get error: %O', error);
@@ -172,6 +169,46 @@ export const credsRouter = router({
           cause: error,
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to get credential',
+        });
+      }
+    }),
+
+  // Get single credential by key (optionally with decrypted values)
+  getByKey: credsProcedure
+    .input(
+      z.object({
+        decrypt: z.boolean().optional(),
+        key: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      log('getByKey input: %O', input);
+
+      try {
+        // First find the credential by key from the list
+        const listResult = await ctx.marketService.market.creds.list();
+        const cred = listResult.data?.find((c) => c.key === input.key);
+
+        if (!cred) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: `Credential not found: ${input.key}`,
+          });
+        }
+
+        // Then get the full credential with optional decryption
+        const result = await ctx.marketService.market.creds.get(cred.id, {
+          decrypt: input.decrypt,
+        });
+        log('getByKey success: key=%s, id=%d', input.key, cred.id);
+        return result;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        log('getByKey error: %O', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to get credential by key',
         });
       }
     }),
@@ -198,20 +235,30 @@ export const credsRouter = router({
       }
     }),
 
-  // Inject credentials for skill execution
+  // Inject credentials by keys (explicit injection)
   inject: credsProcedure
     .input(
       z.object({
+        keys: z.array(z.string()),
         sandbox: z.boolean().optional().default(true),
-        skillIdentifier: z.string(),
+        topicId: z.string(),
+        userId: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       log('inject input: %O', input);
 
       try {
-        const result = await ctx.marketService.market.creds.inject(input);
-        log('inject success: %O', { missing: result.missing?.length, success: result.success });
+        const result = await ctx.marketService.market.creds.inject({
+          keys: input.keys,
+          sandbox: input.sandbox,
+          topicId: input.topicId,
+          userId: input.userId || ctx.userId,
+        });
+        log('inject success: %O', {
+          notFound: result.notFound?.length,
+          success: result.success,
+        });
         return result;
       } catch (error) {
         log('inject error: %O', error);
@@ -219,6 +266,35 @@ export const credsRouter = router({
           cause: error,
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to inject credentials',
+        });
+      }
+    }),
+
+  // Inject credentials for skill execution (auto-inject based on skill declaration)
+  injectForSkill: credsProcedure
+    .input(
+      z.object({
+        sandbox: z.boolean().optional().default(true),
+        skillIdentifier: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      log('injectForSkill input: %O', input);
+
+      try {
+        // Note: SDK method is injectForSkill for skill-based injection
+        const result = await (ctx.marketService.market.creds as any).injectForSkill(input);
+        log('injectForSkill success: %O', {
+          missing: result.missing?.length,
+          success: result.success,
+        });
+        return result;
+      } catch (error) {
+        log('injectForSkill error: %O', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to inject credentials for skill',
         });
       }
     }),

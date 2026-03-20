@@ -86,7 +86,7 @@ const CredTypeSelector: FC<CredTypeSelectorProps> = ({ onSelect }) => {
           <Flexbox align="center">
             <div className={styles.icon}>{icon}</div>
             <div className={styles.title}>{t(`creds.types.${type}`)}</div>
-            <div className={styles.description}>{t(description)}</div>
+            <div className={styles.description}>{t(description as any)}</div>
           </Flexbox>
         </Card>
       ))}

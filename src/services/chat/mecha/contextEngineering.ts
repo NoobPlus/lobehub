@@ -1,5 +1,6 @@
 import { AgentBuilderIdentifier } from '@lobechat/builtin-tool-agent-builder';
 import { AgentManagementIdentifier } from '@lobechat/builtin-tool-agent-management';
+import { CredsIdentifier, type CredSummary, generateCredsList } from '@lobechat/builtin-tool-creds';
 import { GroupAgentBuilderIdentifier } from '@lobechat/builtin-tool-group-agent-builder';
 import { GTDIdentifier } from '@lobechat/builtin-tool-gtd';
 import { LobeToolIdentifier } from '@lobechat/builtin-tool-tools';
@@ -17,7 +18,11 @@ import type {
   ToolDiscoveryConfig,
   UserMemoryData,
 } from '@lobechat/context-engine';
-import { AGENT_DOCUMENT_INJECTION_POSITIONS, MessagesEngine, resolveTopicReferences } from '@lobechat/context-engine';
+import {
+  AGENT_DOCUMENT_INJECTION_POSITIONS,
+  MessagesEngine,
+  resolveTopicReferences,
+} from '@lobechat/context-engine';
 import { historySummaryPrompt } from '@lobechat/prompts';
 import type {
   OpenAIChatMessage,
@@ -29,6 +34,7 @@ import debug from 'debug';
 
 import { isCanUseFC } from '@/helpers/isCanUseFC';
 import { VARIABLE_GENERATORS } from '@/helpers/parserPlaceholder';
+import { lambdaClient } from '@/libs/trpc/client';
 import { agentDocumentService } from '@/services/agentDocument';
 import { notebookService } from '@/services/notebook';
 import { getAgentStoreState } from '@/store/agent';
@@ -423,6 +429,30 @@ export const contextEngineering = async ({
     }
   }
 
+  // Resolve user credentials context for creds tool
+  // Creds tool must be enabled to fetch credentials
+  const isCredsEnabled = tools?.includes(CredsIdentifier) ?? false;
+  let credsList: CredSummary[] | undefined;
+
+  if (isCredsEnabled) {
+    try {
+      const credsResult = await lambdaClient.market.creds.list.query();
+      const userCreds = (credsResult as any)?.data ?? [];
+      credsList = userCreds.map(
+        (cred: any): CredSummary => ({
+          description: cred.description,
+          key: cred.key,
+          name: cred.name,
+          type: cred.type,
+        }),
+      );
+      log('Creds context resolved: count=%d', credsList?.length ?? 0);
+    } catch (error) {
+      // Silently fail - creds context is optional
+      log('Failed to resolve creds context:', error);
+    }
+  }
+
   const userMemoryConfig =
     enableUserMemories && userMemoryData
       ? {
@@ -632,6 +662,8 @@ export const contextEngineering = async ({
     // Variable generators
     variableGenerators: {
       ...VARIABLE_GENERATORS,
+      // NOTICE: required by builtin-tool-creds/src/systemRole.ts
+      CREDS_LIST: () => (credsList ? generateCredsList(credsList) : ''),
       // NOTICE(@nekomeowww): required by builtin-tool-memory/src/systemRole.ts
       memory_effort: () => (userMemoryConfig ? (memoryContext?.effort ?? '') : ''),
     },
