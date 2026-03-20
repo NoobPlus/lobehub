@@ -23,7 +23,6 @@ import { isChunkingUnsupported } from '@/utils/isChunkingUnsupported';
 import { unzipFile } from '@/utils/unzipFile';
 
 import { type FileStore } from '../../store';
-import { revalidateResources } from '../resource/hooks';
 import { fileManagerSelectors } from './selectors';
 
 const serverFileService = new FileService();
@@ -386,6 +385,7 @@ export class FileManageActionImpl {
 
     if (options?.revalidateResources === false) return;
 
+    const { revalidateResources } = await import('../resource/hooks');
     await revalidateResources();
   };
 
