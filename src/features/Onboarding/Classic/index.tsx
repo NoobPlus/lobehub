@@ -1,8 +1,9 @@
 'use client';
 
 import { MAX_ONBOARDING_STEPS } from '@lobechat/types';
-import { Flexbox } from '@lobehub/ui';
-import { memo } from 'react';
+import { Button, Flexbox } from '@lobehub/ui';
+import { memo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Loading from '@/components/Loading/BrandTextLoading';
 import ModeSwitch from '@/features/Onboarding/components/ModeSwitch';
@@ -14,18 +15,33 @@ import ResponseLanguageStep from '@/routes/onboarding/features/ResponseLanguageS
 import TelemetryStep from '@/routes/onboarding/features/TelemetryStep';
 import { useUserStore } from '@/store/user';
 import { onboardingSelectors } from '@/store/user/selectors';
+import { isDev } from '@/utils/env';
 
 const ClassicOnboardingPage = memo(() => {
-  const [isUserStateInit, currentStep, goToNextStep, goToPreviousStep] = useUserStore((s) => [
-    s.isUserStateInit,
-    onboardingSelectors.currentStep(s),
-    s.goToNextStep,
-    s.goToPreviousStep,
-  ]);
+  const { t } = useTranslation('onboarding');
+  const [isUserStateInit, currentStep, goToNextStep, goToPreviousStep, resetOnboarding] =
+    useUserStore((s) => [
+      s.isUserStateInit,
+      onboardingSelectors.currentStep(s),
+      s.goToNextStep,
+      s.goToPreviousStep,
+      s.resetOnboarding,
+    ]);
+  const [isResetting, setIsResetting] = useState(false);
 
   if (!isUserStateInit) {
     return <Loading debugId="ClassicOnboarding" />;
   }
+
+  const handleReset = async () => {
+    setIsResetting(true);
+
+    try {
+      await resetOnboarding();
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const renderStep = () => {
     switch (currentStep) {
@@ -53,7 +69,15 @@ const ClassicOnboardingPage = memo(() => {
   return (
     <OnboardingContainer>
       <Flexbox gap={24} style={{ maxWidth: 480, width: '100%' }}>
-        <ModeSwitch />
+        <ModeSwitch
+          actions={
+            isDev ? (
+              <Button danger loading={isResetting} size={'small'} onClick={handleReset}>
+                {t('agent.modeSwitch.reset')}
+              </Button>
+            ) : undefined
+          }
+        />
         {renderStep()}
       </Flexbox>
     </OnboardingContainer>

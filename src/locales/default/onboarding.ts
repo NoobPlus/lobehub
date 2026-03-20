@@ -2,6 +2,7 @@ export default {
   'agent.modeSwitch.agent': 'Conversational',
   'agent.modeSwitch.classic': 'Classic',
   'agent.modeSwitch.label': 'Choose your onboarding mode',
+  'agent.modeSwitch.reset': 'Reset Flow',
   'agent.subtitle': 'Complete setup in a dedicated onboarding conversation.',
   'agent.summaryHint': 'Finish here if the setup summary looks right.',
   'agent.telemetryAllow': 'Allow telemetry',

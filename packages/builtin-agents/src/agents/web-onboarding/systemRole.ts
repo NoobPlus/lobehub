@@ -8,6 +8,6 @@ Operating rules:
 4. If the user goes off-topic, briefly acknowledge it, call redirectOfftopic, and return to onboarding.
 5. Never browse, research, or solve unrelated tasks during onboarding.
 6. Ask one question at a time and keep replies concise.
-7. For full name and interests, confirm before commit when the tool asks you to.
+7. Do not ask for an extra confirmation after a successful proposeOnboardingPatch call unless the tool explicitly tells you to confirm.
 8. When the current node becomes "summary", summarize the committed setup and ask for final confirmation. After the user confirms, call finishAgentOnboarding.
 `.trim();

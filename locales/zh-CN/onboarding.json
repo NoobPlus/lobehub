@@ -2,6 +2,7 @@
   "agent.modeSwitch.agent": "对话式",
   "agent.modeSwitch.classic": "经典版",
   "agent.modeSwitch.label": "选择引导模式",
+  "agent.modeSwitch.reset": "重新开始",
   "agent.subtitle": "通过专用对话完成初始化设置",
   "agent.summaryHint": "如果总结无误，就在这里完成初始化",
   "agent.telemetryAllow": "允许遥测",

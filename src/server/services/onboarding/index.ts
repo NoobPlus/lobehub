@@ -227,13 +227,14 @@ export class OnboardingService {
         const draft = { ...context.draft, telemetry: patch.telemetry };
 
         await this.saveState({ ...(await this.ensurePersistedState()), draft });
+        const commitResult = await this.commitNode(currentNode);
 
         return {
           committedValue: patch.telemetry,
-          content: `Telemetry preference captured as ${patch.telemetry ? 'enabled' : 'disabled'}.`,
-          draft,
-          nextAction: 'commit',
-          success: true,
+          content: commitResult.content,
+          draft: {},
+          nextAction: 'ask',
+          success: commitResult.success,
         };
       }
       case 'fullName': {
@@ -251,13 +252,14 @@ export class OnboardingService {
         const draft = { ...context.draft, fullName };
 
         await this.saveState({ ...(await this.ensurePersistedState()), draft });
+        const commitResult = await this.commitNode(currentNode);
 
         return {
           committedValue: fullName,
-          content: `Candidate name captured as "${fullName}". Confirm it before committing.`,
-          draft,
-          nextAction: 'confirm',
-          success: true,
+          content: commitResult.content,
+          draft: {},
+          nextAction: 'ask',
+          success: commitResult.success,
         };
       }
       case 'interests': {
@@ -278,13 +280,14 @@ export class OnboardingService {
         const draft = { ...context.draft, interests };
 
         await this.saveState({ ...(await this.ensurePersistedState()), draft });
+        const commitResult = await this.commitNode(currentNode);
 
         return {
           committedValue: interests,
-          content: `Captured ${interests.length} interests. Confirm the list before committing.`,
-          draft,
-          nextAction: 'confirm',
-          success: true,
+          content: commitResult.content,
+          draft: {},
+          nextAction: 'ask',
+          success: commitResult.success,
         };
       }
       case 'responseLanguage': {
@@ -302,13 +305,14 @@ export class OnboardingService {
         const draft = { ...context.draft, responseLanguage };
 
         await this.saveState({ ...(await this.ensurePersistedState()), draft });
+        const commitResult = await this.commitNode(currentNode);
 
         return {
           committedValue: responseLanguage,
-          content: `Response language captured as "${responseLanguage || 'auto'}".`,
-          draft,
-          nextAction: 'commit',
-          success: true,
+          content: commitResult.content,
+          draft: {},
+          nextAction: 'ask',
+          success: commitResult.success,
         };
       }
       case 'proSettings': {
@@ -320,13 +324,14 @@ export class OnboardingService {
         };
 
         await this.saveState({ ...(await this.ensurePersistedState()), draft });
+        const commitResult = await this.commitNode(currentNode);
 
         return {
           committedValue: defaultModel,
-          content: 'Advanced preferences are ready to commit.',
-          draft,
-          nextAction: 'commit',
-          success: true,
+          content: commitResult.content,
+          draft: {},
+          nextAction: 'ask',
+          success: commitResult.success,
         };
       }
       case 'summary': {
