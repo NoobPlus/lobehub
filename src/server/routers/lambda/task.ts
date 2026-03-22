@@ -1,4 +1,5 @@
 import { BriefIdentifier } from '@lobechat/builtin-tool-brief';
+import { NotebookIdentifier } from '@lobechat/builtin-tool-notebook';
 import { TaskIdentifier } from '@lobechat/builtin-tool-task';
 import { buildTaskRunPrompt } from '@lobechat/prompts';
 import { TRPCError } from '@trpc/server';
@@ -113,11 +114,19 @@ async function buildTaskPrompt(
       })),
       topics: (topics as any[]).map((t) => ({
         createdAt: t.createdAt,
-        id: t.id,
-        metadata: t.metadata,
+        handoff:
+          t.handoffSummary || t.handoffTitle
+            ? {
+                keyFindings: t.handoffKeyFindings as string[] | undefined,
+                nextAction: t.handoffNextAction as string | undefined,
+                summary: t.handoffSummary as string | undefined,
+                title: t.handoffTitle as string | undefined,
+              }
+            : null,
+        id: t.topicId || t.id,
         seq: t.seq,
         status: t.status,
-        title: t.title,
+        title: t.handoffTitle || t.title,
       })),
     },
     extraPrompt,
@@ -138,6 +147,59 @@ async function resolveOrThrow(model: TaskModel, id: string) {
 }
 
 export const taskRouter = router({
+  reorderSubtasks: taskProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        // Ordered list of subtask identifiers (e.g. ['TASK-2', 'TASK-4', 'TASK-3'])
+        order: z.array(z.string()),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const model = ctx.taskModel;
+        const task = await resolveOrThrow(model, input.id);
+        const subtasks = await model.findSubtasks(task.id);
+
+        // Build identifier → id map
+        const idMap = new Map<string, string>();
+        for (const s of subtasks) idMap.set(s.identifier, s.id);
+
+        // Validate all identifiers exist
+        const reorderItems: Array<{ id: string; sortOrder: number }> = [];
+        for (let i = 0; i < input.order.length; i++) {
+          const identifier = input.order[i].toUpperCase();
+          const taskId = idMap.get(identifier);
+          if (!taskId) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: `Subtask not found: ${identifier}`,
+            });
+          }
+          reorderItems.push({ id: taskId, sortOrder: i });
+        }
+
+        await model.reorder(reorderItems);
+
+        return {
+          data: reorderItems.map((item, i) => ({
+            identifier: input.order[i],
+            sortOrder: item.sortOrder,
+          })),
+          message: 'Subtasks reordered',
+          success: true,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('[task:reorderSubtasks]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to reorder subtasks',
+        });
+      }
+    }),
+
   addComment: taskProcedure
     .input(
       z.object({
@@ -598,14 +660,25 @@ export const taskRouter = router({
           });
         }
 
-        // Idempotency: if continuing a topic that's already running, reject
+        // Idempotency checks
+        const existingTopics = await ctx.taskTopicModel.findByTaskId(task.id);
+
         if (continueTopicId) {
-          const existingTopics = await ctx.taskTopicModel.findByTaskId(task.id);
+          // If continuing a topic that's already running, reject
           const target = existingTopics.find((t) => t.topicId === continueTopicId);
           if (target?.status === 'running') {
             throw new TRPCError({
               code: 'CONFLICT',
               message: `Topic ${continueTopicId} is already running.`,
+            });
+          }
+        } else {
+          // If there's already a running topic, reject creating a new one
+          const runningTopic = existingTopics.find((t) => t.status === 'running');
+          if (runningTopic) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: `Task already has a running topic (${runningTopic.topicId}). Cancel it first or use --continue.`,
             });
           }
         }
@@ -640,12 +713,11 @@ export const taskRouter = router({
         const db = ctx.serverDB;
         const userId = ctx.userId;
 
-        // Conditionally inject brief tool:
-        // - NOT injected when review is configured (system controls brief creation after review)
-        // - Injected when onAgentRequest checkpoint is enabled (agent can request review via brief)
+        // Task execution always injects: Task tool + Notebook tool (for document output)
+        // Conditionally inject Brief tool based on checkpoint/review config
         const checkpoint = model.getCheckpointConfig(task);
         const reviewConfig = model.getReviewConfig(task);
-        const pluginIds = [TaskIdentifier];
+        const pluginIds = [TaskIdentifier, NotebookIdentifier];
         if (!reviewConfig?.enabled && checkpoint.onAgentRequest !== false) {
           pluginIds.push(BriefIdentifier);
         }

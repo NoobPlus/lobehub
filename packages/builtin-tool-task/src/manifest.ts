@@ -31,6 +31,11 @@ export const TaskManifest: BuiltinToolManifest = {
             description: 'Priority level: 0=none, 1=urgent, 2=high, 3=normal, 4=low. Default is 0.',
             type: 'number',
           },
+          sortOrder: {
+            description:
+              'Sort order within parent task. Lower values appear first. Use to control display order (e.g. chapter 1=0, chapter 2=1, etc.).',
+            type: 'number',
+          },
           review: {
             description:
               'Review config. If omitted, inherits from parent task. Set to configure LLM-as-Judge auto-review.',

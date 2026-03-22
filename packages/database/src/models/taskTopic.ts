@@ -113,6 +113,15 @@ export class TaskTopicModel {
     return result.length;
   }
 
+  async findByTopicId(topicId: string): Promise<TaskTopicItem | null> {
+    const result = await this.db
+      .select()
+      .from(taskTopics)
+      .where(and(eq(taskTopics.topicId, topicId), eq(taskTopics.userId, this.userId)))
+      .limit(1);
+    return result[0] || null;
+  }
+
   async findByTaskId(taskId: string): Promise<TaskTopicItem[]> {
     return this.db
       .select()
@@ -152,6 +161,7 @@ export class TaskTopicModel {
   async findWithHandoff(taskId: string, limit = 4) {
     return this.db
       .select({
+        createdAt: taskTopics.createdAt,
         handoffKeyFindings: taskTopics.handoffKeyFindings,
         handoffNextAction: taskTopics.handoffNextAction,
         handoffSummary: taskTopics.handoffSummary,

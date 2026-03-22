@@ -19,6 +19,7 @@ const createTaskRuntime = (taskModel: TaskModel, taskId?: string) => ({
     name: string;
     parentIdentifier?: string;
     priority?: number;
+    sortOrder?: number;
     review?: {
       autoRetry?: boolean;
       criteria?: Array<{ name: string; threshold: number }>;
@@ -58,6 +59,7 @@ const createTaskRuntime = (taskModel: TaskModel, taskId?: string) => ({
       name: args.name,
       parentTaskId,
       priority: args.priority,
+      sortOrder: args.sortOrder,
     });
 
     return {

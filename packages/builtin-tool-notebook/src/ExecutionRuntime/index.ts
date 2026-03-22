@@ -28,6 +28,11 @@ interface DocumentServiceResult {
 
 interface NotebookService {
   /**
+   * Associate a document with a task (optional, for task execution context)
+   */
+  associateDocumentWithTask?: (documentId: string, taskId: string) => Promise<void>;
+
+  /**
    * Associate a document with a topic
    */
   associateDocumentWithTopic: (documentId: string, topicId: string) => Promise<void>;
@@ -115,7 +120,7 @@ export class NotebookExecutionRuntime {
    */
   async createDocument(
     args: CreateDocumentArgs,
-    options?: { topicId?: string | null },
+    options?: { taskId?: string | null; topicId?: string | null },
   ): Promise<BuiltinServerRuntimeOutput> {
     try {
       const { title, content, type = 'markdown' } = args;
@@ -140,6 +145,11 @@ export class NotebookExecutionRuntime {
 
       // Associate with topic
       await this.notebookService.associateDocumentWithTopic(doc.id, options.topicId);
+
+      // Associate with task if in task execution context
+      if (options.taskId && this.notebookService.associateDocumentWithTask) {
+        await this.notebookService.associateDocumentWithTask(doc.id, options.taskId);
+      }
 
       const notebookDoc = toNotebookDocument(doc);
       const state: CreateDocumentState = { document: notebookDoc };

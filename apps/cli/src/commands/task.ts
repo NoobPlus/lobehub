@@ -514,6 +514,14 @@ export function registerTaskCommand(program: Command) {
         },
       ) => {
         const client = await getTrpcClient();
+
+        // Check if already running
+        const taskDetail = await client.task.find.query({ id });
+        if (taskDetail.data.status === 'running') {
+          log.info(`Task ${pc.bold(taskDetail.data.identifier)} is already running.`);
+          return;
+        }
+
         const statusResult = await client.task.updateStatus.mutate({ id, status: 'running' });
         log.info(`Task ${pc.bold(statusResult.data.identifier)} started.`);
 
@@ -521,7 +529,6 @@ export function registerTaskCommand(program: Command) {
         if (options.run === false) return;
 
         // Default agent to inbox if not assigned
-        const taskDetail = await client.task.find.query({ id });
         if (!taskDetail.data.assigneeAgentId) {
           await client.task.update.mutate({ assigneeAgentId: 'inbox', id });
           log.info(`Assigned default agent: ${pc.dim('inbox')}`);
@@ -729,6 +736,24 @@ export function registerTaskCommand(program: Command) {
       const client = await getTrpcClient();
       const result = await client.task.updateStatus.mutate({ id, status: 'canceled' });
       log.info(`Task ${pc.bold(result.data.identifier)} canceled.`);
+    });
+
+  // ── sort ──────────────────────────────────────────────
+
+  task
+    .command('sort <id> <identifiers...>')
+    .description('Reorder subtasks (e.g. lh task sort TASK-1 TASK-2 TASK-4 TASK-3)')
+    .action(async (id: string, identifiers: string[]) => {
+      const client = await getTrpcClient();
+      const result = (await client.task.reorderSubtasks.mutate({
+        id,
+        order: identifiers,
+      })) as any;
+
+      log.info('Subtasks reordered:');
+      for (const item of result.data) {
+        console.log(`  ${pc.dim(`#${item.sortOrder}`)} ${item.identifier}`);
+      }
     });
 
   // ── tree ──────────────────────────────────────────────

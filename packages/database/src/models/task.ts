@@ -23,26 +23,47 @@ export class TaskModel {
   ): Promise<TaskItem> {
     const { identifierPrefix = 'TASK', ...rest } = data;
 
-    // Get next seq for this user
-    const seqResult = await this.db
-      .select({ maxSeq: sql<number>`COALESCE(MAX(${tasks.seq}), 0)` })
-      .from(tasks)
-      .where(eq(tasks.createdByUserId, this.userId));
+    // Retry loop to handle concurrent creates (parallel tool calls)
+    const maxRetries = 5;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Get next seq for this user
+        const seqResult = await this.db
+          .select({ maxSeq: sql<number>`COALESCE(MAX(${tasks.seq}), 0)` })
+          .from(tasks)
+          .where(eq(tasks.createdByUserId, this.userId));
 
-    const nextSeq = Number(seqResult[0].maxSeq) + 1;
-    const identifier = `${identifierPrefix}-${nextSeq}`;
+        const nextSeq = Number(seqResult[0].maxSeq) + 1;
+        const identifier = `${identifierPrefix}-${nextSeq}`;
 
-    const result = await this.db
-      .insert(tasks)
-      .values({
-        ...rest,
-        createdByUserId: this.userId,
-        identifier,
-        seq: nextSeq,
-      } as NewTask)
-      .returning();
+        const result = await this.db
+          .insert(tasks)
+          .values({
+            ...rest,
+            createdByUserId: this.userId,
+            identifier,
+            seq: nextSeq,
+          } as NewTask)
+          .returning();
 
-    return result[0];
+        return result[0];
+      } catch (error: any) {
+        // Retry on unique constraint violation (concurrent seq conflict)
+        // Check error itself, cause, and stringified message for PG error code 23505
+        const errStr =
+          String(error?.message || '') +
+          String(error?.cause?.code || '') +
+          String(error?.code || '');
+        const isUniqueViolation =
+          errStr.includes('23505') || errStr.includes('unique') || errStr.includes('duplicate');
+        if (isUniqueViolation && attempt < maxRetries - 1) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new Error('Failed to create task after max retries');
   }
 
   async findById(id: string): Promise<TaskItem | null> {
@@ -140,6 +161,19 @@ export class TaskModel {
       .offset(offset);
 
     return { tasks: taskList, total: Number(countResult[0].count) };
+  }
+
+  /**
+   * Batch update sortOrder for multiple tasks.
+   * @param order Array of { id, sortOrder } pairs
+   */
+  async reorder(order: Array<{ id: string; sortOrder: number }>): Promise<void> {
+    for (const item of order) {
+      await this.db
+        .update(tasks)
+        .set({ sortOrder: item.sortOrder, updatedAt: new Date() })
+        .where(and(eq(tasks.id, item.id), eq(tasks.createdByUserId, this.userId)));
+    }
   }
 
   async findSubtasks(parentTaskId: string): Promise<TaskItem[]> {

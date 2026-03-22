@@ -175,8 +175,13 @@ export interface TaskRunPromptComment {
 
 export interface TaskRunPromptTopic {
   createdAt: string;
+  handoff?: {
+    keyFindings?: string[];
+    nextAction?: string;
+    summary?: string;
+    title?: string;
+  } | null;
   id?: string;
-  metadata?: { handoff?: { result?: string; summary?: string } } | null;
   seq?: number | null;
   status?: string | null;
   title?: string | null;
@@ -317,16 +322,19 @@ export const buildTaskRunPrompt = (input: TaskRunPromptInput, now?: Date): strin
 
   if (activities?.topics) {
     for (const t of activities.topics) {
-      const handoff = t.metadata?.handoff;
-      const summary = handoff?.summary || handoff?.result || '';
       const ago = timeAgo(t.createdAt, now);
       const status = t.status || 'completed';
       const idAttr = t.id ? ` id="${t.id}"` : '';
+      const h = t.handoff;
       const lines = [
         `<topic${idAttr} seq="${t.seq || '?'}" status="${status}" time="${ago}">`,
-        `  ${t.title || 'Untitled'}`,
+        `  ${t.title || h?.title || 'Untitled'}`,
       ];
-      if (summary) lines.push(`  ${summary}`);
+      if (h?.summary) lines.push(`  ${h.summary}`);
+      if (h?.nextAction) lines.push(`  Next: ${h.nextAction}`);
+      if (h?.keyFindings && h.keyFindings.length > 0) {
+        lines.push(`  Key findings: ${h.keyFindings.join('; ')}`);
+      }
       lines.push('</topic>');
       timelineEntries.push({
         text: lines.join('\n'),

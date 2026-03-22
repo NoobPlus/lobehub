@@ -107,6 +107,29 @@ describe('TaskModel', () => {
       expect(task1.seq).toBe(1);
       expect(task2.seq).toBe(1);
     });
+
+    it('should handle concurrent creates without seq collision', async () => {
+      const model = new TaskModel(serverDB, userId);
+
+      // Create 5 tasks concurrently (simulates parallel tool calls)
+      const results = await Promise.all([
+        model.create({ instruction: 'Concurrent 1' }),
+        model.create({ instruction: 'Concurrent 2' }),
+        model.create({ instruction: 'Concurrent 3' }),
+        model.create({ instruction: 'Concurrent 4' }),
+        model.create({ instruction: 'Concurrent 5' }),
+      ]);
+
+      // All should succeed with unique seqs
+      const seqs = results.map((r) => r.seq);
+      const uniqueSeqs = new Set(seqs);
+      expect(uniqueSeqs.size).toBe(5);
+
+      // All identifiers should be unique
+      const identifiers = results.map((r) => r.identifier);
+      const uniqueIdentifiers = new Set(identifiers);
+      expect(uniqueIdentifiers.size).toBe(5);
+    });
   });
 
   describe('findById', () => {

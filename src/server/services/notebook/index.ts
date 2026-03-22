@@ -46,13 +46,23 @@ const toServiceResult = (doc: {
 });
 
 export class NotebookRuntimeService {
+  private db: LobeChatDatabase;
   private documentModel: DocumentModel;
   private topicDocumentModel: TopicDocumentModel;
+  private userId: string;
 
   constructor(options: NotebookRuntimeServiceOptions) {
+    this.db = options.serverDB;
+    this.userId = options.userId;
     this.documentModel = new DocumentModel(options.serverDB, options.userId);
     this.topicDocumentModel = new TopicDocumentModel(options.serverDB, options.userId);
   }
+
+  associateDocumentWithTask = async (documentId: string, taskId: string): Promise<void> => {
+    const { TaskModel } = await import('@/database/models/task');
+    const taskModel = new TaskModel(this.db, this.userId);
+    await taskModel.pinDocument(taskId, documentId, 'agent');
+  };
 
   associateDocumentWithTopic = async (documentId: string, topicId: string): Promise<void> => {
     await this.topicDocumentModel.associate({ documentId, topicId });
