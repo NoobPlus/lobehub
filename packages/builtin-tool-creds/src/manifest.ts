@@ -108,7 +108,8 @@ export const CredsManifest: BuiltinToolManifest = {
   identifier: CredsIdentifier,
   meta: {
     avatar: '🔐',
-    description: 'Securely manage and use credentials (API keys, tokens, secrets) for services',
+    description:
+      'Manage user credentials for authentication, environment variable injection, and API verification. Use this tool when tasks require API keys, OAuth tokens, or secrets - such as calling third-party APIs, authenticating with external services, or injecting credentials into sandbox environments.',
     title: 'Credentials',
   },
   systemRole: systemPrompt,
