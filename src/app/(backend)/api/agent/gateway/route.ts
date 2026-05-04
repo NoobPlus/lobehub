@@ -131,20 +131,9 @@ export async function GET(request: NextRequest) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  // Reconnect shared messenger platforms (Telegram setWebhook, Discord gateway,
-  // etc.). Idempotent and runs unconditionally — the per-user gateway sync
-  // below is a separate concern, and we want messenger bots online whether
-  // or not MESSAGE_GATEWAY is enabled. Failures are logged inside
-  // ensureConnected so we never block per-user gateway work.
-  //
-  // Pass durationMs + waitUntil so gateway-mode platforms (Discord) keep
-  // their WS connection alive via `after()` for the cron window. The next
-  // cron tick re-fires ensureConnected and starts a fresh listener.
-  const { getMessengerRouter } = await import('@/server/services/messenger');
-  await getMessengerRouter().ensureConnected({
-    durationMs: GATEWAY_DURATION_MS,
-    waitUntil,
-  });
+  // Note: messenger system bot connections are NOT touched here — dc-center
+  // owns that lifecycle (save / enable / forceReconnect mutations call
+  // MessageGateway directly). This cron only reconciles per-agent bots below.
 
   // When the external message gateway is enabled, sync connections via gateway.
   if (process.env.MESSAGE_GATEWAY_URL && process.env.MESSAGE_GATEWAY_SERVICE_TOKEN) {
