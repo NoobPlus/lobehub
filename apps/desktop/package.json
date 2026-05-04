@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "@lobehub/fluent-emoji": "^4.1.0",
-    "@napi-rs/canvas": "^0.1.70",
+    "@napi-rs/canvas": "^0.1.100",
     "get-windows": "^9.3.0",
     "node-screenshots": "^0.2.8"
   },
