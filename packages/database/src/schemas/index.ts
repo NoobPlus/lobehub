@@ -23,6 +23,7 @@ export * from './ragEvals';
 export * from './rbac';
 export * from './relations';
 export * from './session';
+export * from './systemBotProvider';
 export * from './task';
 export * from './topic';
 export * from './user';
