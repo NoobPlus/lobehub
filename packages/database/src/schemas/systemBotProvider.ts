@@ -52,9 +52,6 @@ export const systemBotProviders = pgTable(
      */
     connectionMode: varchar('connection_mode', { length: 20 }),
 
-    /** Free-form ops note (e.g. "rotated 2026-04 by liner"). */
-    notes: text('notes'),
-
     ...timestamps,
   },
   (t) => [

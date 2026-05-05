@@ -121,19 +121,14 @@ describe('SystemBotProviderModel', () => {
       mockGateKeeper.encrypt.mockClear();
 
       // No credentials in update — encrypt should not be called
-      await SystemBotProviderModel.update(
-        serverDB,
-        created.id,
-        { notes: 'rotated' },
-        mockGateKeeper,
-      );
+      await SystemBotProviderModel.update(serverDB, created.id, { enabled: false }, mockGateKeeper);
       expect(mockGateKeeper.encrypt).not.toHaveBeenCalled();
       const afterMetadata = await SystemBotProviderModel.findById(
         serverDB,
         created.id,
         mockGateKeeper,
       );
-      expect(afterMetadata?.notes).toBe('rotated');
+      expect(afterMetadata?.enabled).toBe(false);
       expect(afterMetadata?.credentials).toEqual({ botToken: 'initial' });
 
       // Now update credentials — encrypt should fire

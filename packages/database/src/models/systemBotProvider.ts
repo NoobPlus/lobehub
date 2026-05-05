@@ -20,7 +20,6 @@ interface UpsertParams {
   credentials: Record<string, unknown>;
   enabled?: boolean;
   metadata?: Record<string, unknown>;
-  notes?: string | null;
   platform: string;
 }
 
@@ -30,7 +29,6 @@ interface UpdateParams {
   credentials?: Record<string, unknown>;
   enabled?: boolean;
   metadata?: Record<string, unknown>;
-  notes?: string | null;
 }
 
 /**
@@ -120,7 +118,6 @@ export class SystemBotProviderModel {
       credentials: credentialsCipher,
       enabled: params.enabled ?? true,
       metadata: params.metadata ?? {},
-      notes: params.notes ?? null,
       platform: params.platform,
     };
 
@@ -133,7 +130,6 @@ export class SystemBotProviderModel {
           credentials: insertValue.credentials,
           enabled: insertValue.enabled,
           metadata: insertValue.metadata,
-          notes: insertValue.notes,
           updatedAt: new Date(),
         },
         target: systemBotProviders.platform,
@@ -158,7 +154,6 @@ export class SystemBotProviderModel {
     if (params.enabled !== undefined) updateValue.enabled = params.enabled;
     if (params.metadata !== undefined) updateValue.metadata = params.metadata;
     if (params.connectionMode !== undefined) updateValue.connectionMode = params.connectionMode;
-    if (params.notes !== undefined) updateValue.notes = params.notes;
     if (params.credentials !== undefined) {
       updateValue.credentials = await encryptCredentials(params.credentials, gateKeeper);
     }
