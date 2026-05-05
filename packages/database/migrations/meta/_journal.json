@@ -704,29 +704,8 @@
     {
       "idx": 100,
       "version": "7",
-      "when": 1777471876790,
-      "tag": "0100_add_messenger_account_links",
-      "breakpoints": true
-    },
-    {
-      "idx": 101,
-      "version": "7",
-      "when": 1777656666510,
-      "tag": "0101_add_messenger_installations",
-      "breakpoints": true
-    },
-    {
-      "idx": 102,
-      "version": "7",
-      "when": 1777659783540,
-      "tag": "0102_messenger_account_links_tenant_id",
-      "breakpoints": true
-    },
-    {
-      "idx": 103,
-      "version": "7",
-      "when": 1777998470434,
-      "tag": "0103_add_system_bot_providers",
+      "when": 1778001684260,
+      "tag": "0100_add_messenger_tables",
       "breakpoints": true
     }
   ],
