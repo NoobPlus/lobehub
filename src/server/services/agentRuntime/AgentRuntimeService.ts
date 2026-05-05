@@ -28,6 +28,7 @@ import { ToolExecutionService } from '@/server/services/toolExecution';
 import { BuiltinToolsExecutor } from '@/server/services/toolExecution/builtin';
 
 import { isAbortError, throwIfAborted } from './abort';
+import { CompletionLifecycle } from './CompletionLifecycle';
 import { hookDispatcher } from './hooks';
 import { OperationTraceRecorder } from './OperationTraceRecorder';
 import {
@@ -150,6 +151,7 @@ export interface AgentRuntimeServiceOptions {
  */
 export class AgentRuntimeService {
   private agentFactory?: (config: GeneralAgentConfig) => Agent;
+  private completionLifecycle: CompletionLifecycle;
   private coordinator: AgentRuntimeCoordinator;
   private streamManager: IStreamEventManager;
   private queueService: QueueService | null;
@@ -183,6 +185,7 @@ export class AgentRuntimeService {
     this.serverDB = db;
     this.userId = userId;
     this.messageModel = new MessageModel(db, this.userId);
+    this.completionLifecycle = new CompletionLifecycle(db, userId, this.messageModel);
 
     // Initialize ToolExecutionService with dependencies
     const builtinToolsExecutor = new BuiltinToolsExecutor(db, userId);
@@ -513,10 +516,10 @@ export class AgentRuntimeService {
 
         const reason = this.determineCompletionReason(agentState);
 
-        await this.emitCompletionSignalEvents(operationId, agentState, reason);
+        await this.completionLifecycle.emitSignalEvents(operationId, agentState, reason);
 
         // Dispatch completion hooks so consumers (e.g., bot local-mode promise) can finalize
-        await this.dispatchCompletionHooks(operationId, agentState, reason);
+        await this.completionLifecycle.dispatchHooks(operationId, agentState, reason);
 
         return {
           nextStepScheduled: false,
@@ -952,14 +955,14 @@ export class AgentRuntimeService {
       if (!shouldContinue) {
         const reason = this.determineCompletionReason(stepResult.newState);
 
-        const completionSignalEvents = await this.emitCompletionSignalEvents(
+        const completionSignalEvents = await this.completionLifecycle.emitSignalEvents(
           operationId,
           stepResult.newState,
           reason,
         );
 
         // Dispatch completion hooks
-        await this.dispatchCompletionHooks(operationId, stepResult.newState, reason);
+        await this.completionLifecycle.dispatchHooks(operationId, stepResult.newState, reason);
 
         // Finalize tracing snapshot. The error catch below uses the same
         // recorder so propagated failures still write the canonical S3
@@ -970,7 +973,7 @@ export class AgentRuntimeService {
           error: stepResult.newState.error
             ? {
                 message:
-                  this.extractErrorMessage(stepResult.newState.error) ??
+                  this.completionLifecycle.extractErrorMessage(stepResult.newState.error) ??
                   JSON.stringify(stepResult.newState.error),
                 type: String(
                   stepResult.newState.error.type ??
@@ -1045,10 +1048,10 @@ export class AgentRuntimeService {
         log('[%s] Failed to save error state (infra may be down): %O', operationId, saveError);
       }
 
-      await this.emitCompletionSignalEvents(operationId, finalStateWithError, 'error');
+      await this.completionLifecycle.emitSignalEvents(operationId, finalStateWithError, 'error');
 
       // Dispatch onComplete + onError hooks
-      await this.dispatchCompletionHooks(operationId, finalStateWithError, 'error');
+      await this.completionLifecycle.dispatchHooks(operationId, finalStateWithError, 'error');
 
       // Finalize the partial snapshot into the canonical S3 path so the
       // failed op is observable in the same place as a successful run.
@@ -1716,175 +1719,6 @@ export class AgentRuntimeService {
     return { newState: state, nextContext: undefined };
   }
 
-  private buildCompletionLifecycleEvent(operationId: string, state: any, reason: string) {
-    const metadata = state?.metadata || {};
-    const lastAssistantContent = state?.messages
-      ?.slice()
-      .reverse()
-      .find(
-        (m: { content?: string; role: string }) => m.role === 'assistant' && m.content,
-      )?.content;
-    const duration = state?.createdAt
-      ? Date.now() - new Date(state.createdAt).getTime()
-      : undefined;
-
-    return {
-      event: {
-        agentId: metadata?.agentId || '',
-        cost: state?.cost?.total,
-        duration,
-        errorDetail: state?.error,
-        errorMessage: this.extractErrorMessage?.(state?.error) || String(state?.error || ''),
-        finalState: state,
-        lastAssistantContent,
-        llmCalls: state?.usage?.llm?.apiCalls,
-        operationId,
-        reason,
-        status: state?.status || reason,
-        steps: state?.stepCount || 0,
-        toolCalls: state?.usage?.tools?.totalCalls,
-        topicId: metadata?.topicId,
-        totalTokens: state?.usage?.llm?.tokens?.total,
-        userId: metadata?.userId || this.userId,
-      },
-      metadata,
-    };
-  }
-
-  /**
-   * Emits completion AgentSignal source events and returns compact snapshot events.
-   * Fire-and-forget: errors are logged but never thrown.
-   */
-  private async emitCompletionSignalEvents(
-    operationId: string,
-    state: any,
-    reason: string,
-  ): Promise<Array<{ [key: string]: unknown; type: string }>> {
-    try {
-      const { metadata } = this.buildCompletionLifecycleEvent(operationId, state, reason);
-      const completionSignalEmission =
-        reason === 'error'
-          ? await emitAgentSignalSourceEvent(
-              {
-                payload: {
-                  agentId: metadata?.agentId,
-                  errorMessage: this.extractErrorMessage?.(state?.error),
-                  operationId,
-                  reason,
-                  serializedContext: undefined,
-                  topicId: metadata?.topicId,
-                  turnCount: state?.stepCount || 0,
-                },
-                sourceId: `${operationId}:complete:${reason}`,
-                sourceType: 'agent.execution.failed',
-              },
-              {
-                agentId: metadata?.agentId,
-                db: this.serverDB,
-                userId: metadata?.userId || this.userId,
-              },
-              { ignoreError: true },
-            )
-          : await emitAgentSignalSourceEvent(
-              {
-                payload: {
-                  agentId: metadata?.agentId,
-                  operationId,
-                  serializedContext: undefined,
-                  steps: state?.stepCount || 0,
-                  topicId: metadata?.topicId,
-                  turnCount: state?.stepCount || 0,
-                },
-                sourceId: `${operationId}:complete:${reason}`,
-                sourceType: 'agent.execution.completed',
-              },
-              {
-                agentId: metadata?.agentId,
-                db: this.serverDB,
-                userId: metadata?.userId || this.userId,
-              },
-              { ignoreError: true },
-            );
-
-      return toAgentSignalSnapshotEvents(completionSignalEmission);
-    } catch (error) {
-      log('[%s] Completion signal emission error (non-fatal): %O', operationId, error);
-      return [];
-    }
-  }
-
-  /**
-   * Dispatch onComplete (and onError) hooks via HookDispatcher.
-   * Fire-and-forget: errors are logged but never thrown.
-   */
-  private async dispatchCompletionHooks(operationId: string, state: any, reason: string) {
-    try {
-      const { event, metadata } = this.buildCompletionLifecycleEvent(operationId, state, reason);
-
-      await hookDispatcher.dispatch(operationId, 'onComplete', event, metadata._hooks);
-
-      if (reason === 'error') {
-        await hookDispatcher.dispatch(operationId, 'onError', event, metadata._hooks);
-
-        const assistantMessageId = metadata?.assistantMessageId;
-        if (assistantMessageId && state?.error) {
-          const errorMessage = this.extractErrorMessage(state.error) || String(state.error);
-          try {
-            await this.messageModel.update(assistantMessageId, {
-              error: {
-                body: { message: errorMessage },
-                message: errorMessage,
-                type: 'AgentRuntimeError',
-              },
-            });
-          } catch (updateError) {
-            log(
-              '[%s] Failed to update assistant message with error (non-fatal): %O',
-              operationId,
-              updateError,
-            );
-          }
-        }
-      }
-    } catch (error) {
-      log('[%s] Hook dispatch error (non-fatal): %O', operationId, error);
-    } finally {
-      hookDispatcher.unregister(operationId);
-    }
-  }
-
-  /**
-   * Extract a human-readable error message from the agent state error object.
-   * Handles both raw ChatCompletionErrorPayload (from runtime.step catch) and
-   * formatted ChatMessageError (from executeStep catch).
-   */
-  private extractErrorMessage(error: any): string | undefined {
-    if (!error) return undefined;
-
-    // Path B: formatted ChatMessageError — { body, message, type }
-    // Try to extract meaningful info from body first
-    if (error.body) {
-      const body = error.body;
-      // OpenAI-style: body.error.message
-      if (body.error?.message) return body.error.message;
-      // Direct message on body
-      if (body.message) return body.message;
-    }
-
-    // Path A: raw ChatCompletionErrorPayload — { errorType, error: {...}, provider }
-    if (error.error) {
-      const inner = error.error;
-      if (inner.error?.message) return inner.error.message;
-      if (inner.message) return inner.message;
-    }
-
-    // Fallback to message or type
-    if (error.message && error.message !== 'error') return error.message;
-    if (error.type || error.errorType) return String(error.type || error.errorType);
-
-    return undefined;
-  }
-
   /**
    * Decide whether to continue execution
    */
@@ -2067,8 +1901,8 @@ export class AgentRuntimeService {
       // If stopped due to executeSync's maxSteps limit, need to manually dispatch onComplete hooks
       // Note: If stopped due to state.maxSteps being reached, onComplete has already been called in executeStep
       if (state.status !== 'done' && state.status !== 'error') {
-        await this.emitCompletionSignalEvents(operationId, state, 'max_steps');
-        await this.dispatchCompletionHooks(operationId, state, 'max_steps');
+        await this.completionLifecycle.emitSignalEvents(operationId, state, 'max_steps');
+        await this.completionLifecycle.dispatchHooks(operationId, state, 'max_steps');
       }
     }
 
