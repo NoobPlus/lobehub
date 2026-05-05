@@ -108,7 +108,7 @@ export class MessengerInstallationModel {
   /**
    * Insert or update by `(platform, application_id, tenant_id)`. Re-installing
    * the same workspace overwrites credentials / metadata / expiry but keeps
-   * the row id (and `installed_at`).
+   * the row id (and `created_at`).
    */
   static upsert = async (
     db: LobeChatDatabase,

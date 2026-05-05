@@ -6,7 +6,7 @@
   },
   "dialect": "postgresql",
   "enums": {},
-  "id": "b4a9b43f-f236-4e24-bc7c-946dc6fe5856",
+  "id": "c39874e2-8848-4fed-a45a-85880d4e735c",
   "policies": {},
   "prevId": "784a820a-8a43-4a02-9057-b230420f0c39",
   "roles": {},
@@ -6875,13 +6875,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "linked_at": {
-          "name": "linked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
         "accessed_at": {
           "name": "accessed_at",
           "type": "timestamp with time zone",
@@ -7066,13 +7059,6 @@
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
-        },
-        "installed_at": {
-          "name": "installed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
         },
         "revoked_at": {
           "name": "revoked_at",

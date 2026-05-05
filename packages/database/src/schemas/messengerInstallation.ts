@@ -69,8 +69,6 @@ export const messengerInstallations = pgTable(
     /** Platform user id of the installer (Slack `authed_user.id`, …). */
     installedByPlatformUserId: varchar('installed_by_platform_user_id', { length: 255 }),
 
-    installedAt: timestamptz('installed_at').defaultNow().notNull(),
-
     /** Set on `app_uninstalled` / `tokens_revoked` so resolver can short-circuit. */
     revokedAt: timestamptz('revoked_at'),
 

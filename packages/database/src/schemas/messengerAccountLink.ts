@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
+import { index, pgTable, text, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 
 import { timestamps } from './_helpers';
@@ -55,8 +55,6 @@ export const messengerAccountLinks = pgTable(
     activeAgentId: text('active_agent_id').references(() => agents.id, {
       onDelete: 'set null',
     }),
-
-    linkedAt: timestamp('linked_at', { withTimezone: true }).defaultNow().notNull(),
 
     ...timestamps,
   },
