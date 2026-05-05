@@ -28,9 +28,10 @@ describe('SystemBotProviderModel', () => {
       const created = await SystemBotProviderModel.upsertByPlatform(
         serverDB,
         {
-          credentials: { applicationId: 'app-1', botToken: 'bot-token-1', publicKey: 'pk-1' },
-          metadata: { displayName: 'LobeAI Discord' },
+          applicationId: 'app-1',
+          credentials: { botToken: 'bot-token-1', publicKey: 'pk-1' },
           platform: 'discord',
+          settings: { connectionMode: 'webhook' },
         },
         mockGateKeeper,
       );
@@ -38,16 +39,18 @@ describe('SystemBotProviderModel', () => {
       expect(created.id).toBeDefined();
       expect(created.platform).toBe('discord');
       expect(created.enabled).toBe(true);
+      expect(created.applicationId).toBe('app-1');
+      expect(created.settings).toEqual({ connectionMode: 'webhook' });
       expect(mockGateKeeper.encrypt).toHaveBeenCalledWith(
-        JSON.stringify({ applicationId: 'app-1', botToken: 'bot-token-1', publicKey: 'pk-1' }),
+        JSON.stringify({ botToken: 'bot-token-1', publicKey: 'pk-1' }),
       );
 
       const found = await SystemBotProviderModel.findById(serverDB, created.id, mockGateKeeper);
       expect(found?.credentials).toEqual({
-        applicationId: 'app-1',
         botToken: 'bot-token-1',
         publicKey: 'pk-1',
       });
+      expect(found?.applicationId).toBe('app-1');
     });
 
     it('overwrites existing credentials when called again with the same platform', async () => {

@@ -20,9 +20,13 @@ import { timestamps } from './_helpers';
  * `credentials` is AES-GCM encrypted JSON via `KeyVaultsGateKeeper`. The
  * decrypted plaintext shape varies per platform:
  *
- *   - discord:  { applicationId, botToken, publicKey, botUsername? }
+ *   - discord:  { botToken, publicKey, botUsername? }
  *   - telegram: { botToken, botUsername?, webhookSecret? }
- *   - slack:    { appId, clientId, clientSecret, signingSecret }
+ *   - slack:    { clientId, clientSecret, signingSecret }
+ *
+ * Public app identifiers (`applicationId` / Slack `appId`) live in the
+ * top-level `application_id` column — they're not secrets and the consumer
+ * needs them without paying the decrypt cost.
  */
 export const systemBotProviders = pgTable(
   'system_bot_providers',
@@ -39,11 +43,20 @@ export const systemBotProviders = pgTable(
     credentials: text('credentials').notNull(),
 
     /**
-     * Plaintext metadata safe to read without decryption — display name,
-     * last-sync timestamp, dc-center-managed flag, etc. Kept separate from
-     * `credentials` so the admin UI can render summary rows cheaply.
+     * Public application identifier — Discord App ID, Slack App ID, etc.
+     * Plaintext: it's a public ID and consumers (and the admin UI) read it
+     * without decrypting credentials. Null for telegram (no notion of an
+     * App ID — the bot token's prefix is the closest analogue, but we don't
+     * persist it).
      */
-    metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}).notNull(),
+    applicationId: varchar('application_id', { length: 255 }),
+
+    /**
+     * Per-platform tunable settings (e.g. Slack `connectionMode`). Plaintext
+     * JSONB — the shape is owned by `PlatformDefinition.schema` in
+     * develop-center / lobehub-dev.
+     */
+    settings: jsonb('settings').$type<Record<string, unknown>>().default({}).notNull(),
 
     /**
      * 'websocket' | 'webhook' — passed through to MessageGateway.connect()

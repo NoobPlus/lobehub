@@ -15,20 +15,22 @@ export interface DecryptedSystemBotProvider extends Omit<SystemBotProviderItem, 
 }
 
 interface UpsertParams {
+  applicationId?: string | null;
   connectionMode?: string | null;
   /** Plaintext credentials JSON; the model encrypts before writing. */
   credentials: Record<string, unknown>;
   enabled?: boolean;
-  metadata?: Record<string, unknown>;
   platform: string;
+  settings?: Record<string, unknown>;
 }
 
 interface UpdateParams {
+  applicationId?: string | null;
   connectionMode?: string | null;
   /** Plaintext credentials JSON. Pass `undefined` to leave existing ciphertext untouched. */
   credentials?: Record<string, unknown>;
   enabled?: boolean;
-  metadata?: Record<string, unknown>;
+  settings?: Record<string, unknown>;
 }
 
 /**
@@ -114,11 +116,12 @@ export class SystemBotProviderModel {
     const credentialsCipher = await encryptCredentials(params.credentials, gateKeeper);
 
     const insertValue: NewSystemBotProvider = {
+      applicationId: params.applicationId ?? null,
       connectionMode: params.connectionMode ?? null,
       credentials: credentialsCipher,
       enabled: params.enabled ?? true,
-      metadata: params.metadata ?? {},
       platform: params.platform,
+      settings: params.settings ?? {},
     };
 
     const [result] = await db
@@ -126,10 +129,11 @@ export class SystemBotProviderModel {
       .values(insertValue)
       .onConflictDoUpdate({
         set: {
+          applicationId: insertValue.applicationId,
           connectionMode: insertValue.connectionMode,
           credentials: insertValue.credentials,
           enabled: insertValue.enabled,
-          metadata: insertValue.metadata,
+          settings: insertValue.settings,
           updatedAt: new Date(),
         },
         target: systemBotProviders.platform,
@@ -152,7 +156,8 @@ export class SystemBotProviderModel {
       updatedAt: new Date(),
     };
     if (params.enabled !== undefined) updateValue.enabled = params.enabled;
-    if (params.metadata !== undefined) updateValue.metadata = params.metadata;
+    if (params.applicationId !== undefined) updateValue.applicationId = params.applicationId;
+    if (params.settings !== undefined) updateValue.settings = params.settings;
     if (params.connectionMode !== undefined) updateValue.connectionMode = params.connectionMode;
     if (params.credentials !== undefined) {
       updateValue.credentials = await encryptCredentials(params.credentials, gateKeeper);
