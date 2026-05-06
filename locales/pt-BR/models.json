@@ -773,6 +773,7 @@
   "grok-4.20-0309-non-reasoning.description": "Variante sem raciocínio para casos de uso simples.",
   "grok-4.20-0309-reasoning.description": "Modelo inteligente e extremamente rápido que raciocina antes de responder.",
   "grok-4.20-multi-agent-0309.description": "Equipe de 4 ou 16 agentes. Excelente para pesquisas, sem suporte atual a ferramentas do lado do cliente. Suporta apenas ferramentas do servidor xAI (como X Search e Web Search) e ferramentas MCP remotas.",
+  "grok-4.3.description": "O modelo de linguagem grande mais voltado para a busca da verdade no mundo",
   "grok-4.description": "Último carro-chefe Grok com desempenho incomparável em linguagem, matemática e raciocínio — um verdadeiro polivalente. Atualmente aponta para grok-4-0709; devido a recursos limitados, está temporariamente 10% acima do preço oficial e espera-se que retorne ao preço oficial posteriormente.",
   "grok-code-fast-1.description": "Estamos entusiasmados em lançar o grok-code-fast-1, um modelo de raciocínio rápido e econômico que se destaca em codificação com agentes.",
   "grok-imagine-image-pro.description": "Gere imagens a partir de prompts de texto, edite imagens existentes com linguagem natural ou refine imagens iterativamente por meio de conversas de múltiplas interações.",

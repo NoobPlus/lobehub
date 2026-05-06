@@ -773,6 +773,7 @@
   "grok-4.20-0309-non-reasoning.description": "Een niet-redenerende variant voor eenvoudige gebruiksscenario's.",
   "grok-4.20-0309-reasoning.description": "Intelligent, razendsnel model dat redeneert voordat het reageert.",
   "grok-4.20-multi-agent-0309.description": "Een team van 4 of 16 agents, uitblinkend in onderzoeksgebruiksscenario's. Ondersteunt momenteel geen client-side tools. Ondersteunt alleen xAI server-side tools (bijv. X Search, Web Search tools) en remote MCP tools.",
+  "grok-4.3.description": "Het meest waarheidszoekende grote taalmodel ter wereld",
   "grok-4.description": "Laatste Grok-vlaggenschip met ongeëvenaarde prestaties in taal, wiskunde en redeneren — een echte alleskunner. Momenteel wijst het naar grok-4-0709; vanwege beperkte middelen is het tijdelijk 10% hoger dan de officiële prijs en wordt verwacht later terug te keren naar de officiële prijs.",
   "grok-code-fast-1.description": "We zijn verheugd om grok-code-fast-1 te lanceren, een snel en kosteneffectief redeneermodel dat uitblinkt in agentmatig programmeren.",
   "grok-imagine-image-pro.description": "Genereer beelden vanuit tekstprompts, bewerk bestaande beelden met natuurlijke taal, of verfijn beelden iteratief via meerstapsgesprekken.",

@@ -773,6 +773,7 @@
   "grok-4.20-0309-non-reasoning.description": "Biến thể không lý luận dành cho các trường hợp sử dụng đơn giản.",
   "grok-4.20-0309-reasoning.description": "Mô hình thông minh, siêu nhanh, lý luận trước khi phản hồi.",
   "grok-4.20-multi-agent-0309.description": "Một nhóm gồm 4 hoặc 16 tác nhân, xuất sắc trong các trường hợp nghiên cứu. Hiện không hỗ trợ công cụ phía khách hàng. Chỉ hỗ trợ công cụ phía máy chủ xAI (ví dụ: X Search, công cụ tìm kiếm web) và công cụ MCP từ xa.",
+  "grok-4.3.description": "Mô hình ngôn ngữ lớn tìm kiếm sự thật nhất trên thế giới",
   "grok-4.description": "Grok flagship mới nhất với hiệu suất vô song trong ngôn ngữ, toán học và suy luận — một người toàn diện thực sự. Hiện tại chỉ đến grok-4-0709; do nguồn lực hạn chế, giá tạm thời cao hơn 10% so với giá chính thức và dự kiến sẽ trở lại giá chính thức sau.",
   "grok-code-fast-1.description": "Chúng tôi rất vui mừng ra mắt grok-code-fast-1, một mô hình suy luận nhanh và tiết kiệm chi phí, nổi bật trong lập trình tác vụ tự động.",
   "grok-imagine-image-pro.description": "Tạo hình ảnh từ các gợi ý văn bản, chỉnh sửa hình ảnh hiện có bằng ngôn ngữ tự nhiên hoặc tinh chỉnh hình ảnh thông qua hội thoại nhiều lượt.",

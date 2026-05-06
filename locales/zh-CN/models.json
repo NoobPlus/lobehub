@@ -773,6 +773,7 @@
   "grok-4.20-0309-non-reasoning.description": "无推理模式版本，适用于简单场景。",
   "grok-4.20-0309-reasoning.description": "智能、高速的推理模型，先思考后回答。",
   "grok-4.20-multi-agent-0309.description": "由 4 至 16 个 Agent 组成的团队，擅长科研类任务。目前不支持客户端工具，只支持 xAI 服务器端工具（如 X Search、Web Search）及远程 MCP 工具。",
+  "grok-4.3.description": "世界上最追求真理的大型语言模型",
   "grok-4.description": "最新的 Grok 旗舰，语言、数学和推理方面表现无与伦比——真正的全能选手。目前指向 grok-4-0709；由于资源有限，暂时比官方定价高 10%，预计稍后会恢复到官方价格。",
   "grok-code-fast-1.description": "我们很高兴推出 grok-code-fast-1，这是一款快速且高性价比的推理模型，擅长智能体编程。",
   "grok-imagine-image-pro.description": "通过文本提示生成图像，用自然语言编辑现有图像，或通过多轮对话迭代优化图像。",

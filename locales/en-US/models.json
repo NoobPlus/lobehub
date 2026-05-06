@@ -773,6 +773,7 @@
   "grok-4.20-0309-non-reasoning.description": "A non-reasoning variant for simple use cases",
   "grok-4.20-0309-reasoning.description": "Intelligent, blazing-fast model that reasons before responding",
   "grok-4.20-multi-agent-0309.description": "A team of 4 or 16 agents, Excels at research use cases, Does not currently support client-side tools. Only supports xAI server side tools (eg X Search, Web Search tools) and remote MCP tools.",
+  "grok-4.3.description": "The most truth-seeking large language model in the world",
   "grok-4.description": "Latest Grok flagship with unmatched performance in language, math, and reasoning — a true all-rounder. Currently points to grok-4-0709; due to limited resources it is temporarily 10% higher than official pricing and is expected to return to official price later.",
   "grok-code-fast-1.description": "We’re excited to launch grok-code-fast-1, a fast and cost-effective reasoning model that excels at agentic coding.",
   "grok-imagine-image-pro.description": "Generate images from text prompts, edit existing images with natural language, or iteratively refine images through multi-turn conversations.",

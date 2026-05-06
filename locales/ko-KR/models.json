@@ -773,6 +773,7 @@
   "grok-4.20-0309-non-reasoning.description": "간단한 사용 사례를 위한 비추론 변형",
   "grok-4.20-0309-reasoning.description": "응답 전에 추론하는 지능적이고 매우 빠른 모델",
   "grok-4.20-multi-agent-0309.description": "4명 또는 16명의 에이전트 팀, 연구 사용 사례에서 뛰어남, 현재 클라이언트 측 도구를 지원하지 않음. xAI 서버 측 도구(예: X Search, Web Search 도구) 및 원격 MCP 도구만 지원.",
+  "grok-4.3.description": "세계에서 가장 진실을 탐구하는 대형 언어 모델",
   "grok-4.description": "언어, 수학, 추론에서 비할 데 없는 성능을 자랑하는 최신 Grok 플래그십 — 진정한 만능 모델입니다. 현재 grok-4-0709를 가리키고 있으며, 제한된 자원으로 인해 공식 가격보다 일시적으로 10% 높으며, 나중에 공식 가격으로 돌아갈 예정입니다.",
   "grok-code-fast-1.description": "에이전트 기반 코딩에 특화된 빠르고 비용 효율적인 추론 모델 grok-code-fast-1을 출시하게 되어 기쁩니다.",
   "grok-imagine-image-pro.description": "텍스트 프롬프트에서 이미지를 생성하거나 자연어로 기존 이미지를 편집하거나 다중 턴 대화를 통해 이미지를 반복적으로 개선합니다.",

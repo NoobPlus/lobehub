@@ -773,6 +773,7 @@
   "grok-4.20-0309-non-reasoning.description": "Une variante sans raisonnement pour des cas d'utilisation simples.",
   "grok-4.20-0309-reasoning.description": "Modèle intelligent et ultra-rapide qui raisonne avant de répondre.",
   "grok-4.20-multi-agent-0309.description": "Une équipe de 4 ou 16 agents, excelle dans les cas d'utilisation de recherche. Ne prend actuellement pas en charge les outils côté client. Prend uniquement en charge les outils côté serveur xAI (par exemple X Search, outils de recherche Web) et les outils MCP distants.",
+  "grok-4.3.description": "Le modèle de langage le plus en quête de vérité au monde",
   "grok-4.description": "Dernier fleuron de Grok avec des performances inégalées en langue, mathématiques et raisonnement — un véritable polyvalent. Actuellement pointé vers grok-4-0709 ; en raison de ressources limitées, il est temporairement 10 % plus cher que le prix officiel et devrait revenir au prix officiel plus tard.",
   "grok-code-fast-1.description": "Nous sommes ravis de lancer grok-code-fast-1, un modèle de raisonnement rapide et économique, excellent pour le codage agentique.",
   "grok-imagine-image-pro.description": "Générez des images à partir de prompts textuels, modifiez des images existantes avec un langage naturel ou affinez les images de manière itérative via des conversations multi-tours.",

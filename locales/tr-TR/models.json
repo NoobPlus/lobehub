@@ -773,6 +773,7 @@
   "grok-4.20-0309-non-reasoning.description": "Basit kullanım senaryoları için akıl yürütme içermeyen varyant.",
   "grok-4.20-0309-reasoning.description": "Yanıt vermeden önce akıl yürüten, son derece hızlı ve akıllı model.",
   "grok-4.20-multi-agent-0309.description": "4 veya 16 ajanlık bir ekip; araştırma senaryolarında üstündür. Şu anda istemci tarafı araçları desteklemez. Yalnızca xAI sunucu tarafı araçlarını (örn. X Search, Web Search araçları) ve uzak MCP araçlarını destekler.",
+  "grok-4.3.description": "Dünyanın en doğruyu arayan büyük dil modeli",
   "grok-4.description": "Dil, matematik ve akıl yürütme konularında eşsiz performansa sahip en yeni Grok amiral gemisi — gerçek bir çok yönlü. Şu anda grok-4-0709'a işaret ediyor; sınırlı kaynaklar nedeniyle geçici olarak resmi fiyatlandırmadan %10 daha yüksek ve daha sonra resmi fiyata dönmesi bekleniyor.",
   "grok-code-fast-1.description": "Ajan tabanlı kodlama görevlerinde öne çıkan, hızlı ve uygun maliyetli bir akıl yürütme modeli olan grok-code-fast-1 modelini sunmaktan heyecan duyuyoruz.",
   "grok-imagine-image-pro.description": "Metin istemlerinden görüntüler oluşturun, mevcut görüntüleri doğal dil ile düzenleyin veya çoklu dönüşlü konuşmalarla görüntüleri iteratif olarak geliştirin.",

@@ -773,6 +773,7 @@
   "grok-4.20-0309-non-reasoning.description": "Wariant bez rozumowania do prostych przypadków użycia.",
   "grok-4.20-0309-reasoning.description": "Inteligentny, błyskawiczny model, który rozumuje przed odpowiedzią.",
   "grok-4.20-multi-agent-0309.description": "Zespół 4 lub 16 agentów, doskonały w przypadkach badawczych. Obecnie nie obsługuje narzędzi po stronie klienta. Obsługuje tylko narzędzia po stronie serwera xAI (np. X Search, Web Search tools) i zdalne narzędzia MCP.",
+  "grok-4.3.description": "Najbardziej poszukujący prawdy duży model językowy na świecie",
   "grok-4.description": "Najnowszy flagowy model Grok z niezrównaną wydajnością w języku, matematyce i rozumowaniu — prawdziwy wszechstronny. Obecnie wskazuje na grok-4-0709; z powodu ograniczonych zasobów jest tymczasowo o 10% wyższy niż oficjalna cena i oczekuje się, że powróci do oficjalnej ceny później.",
   "grok-code-fast-1.description": "Z radością ogłaszamy premierę grok-code-fast-1 — szybkiego i opłacalnego modelu rozumowania, który doskonale radzi sobie z programowaniem agentowym.",
   "grok-imagine-image-pro.description": "Generuj obrazy na podstawie tekstowych wskazówek, edytuj istniejące obrazy za pomocą naturalnego języka lub iteracyjnie udoskonalaj obrazy w trakcie wieloetapowych rozmów.",
